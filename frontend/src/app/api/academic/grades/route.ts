@@ -1,20 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 
-const DEFAULT_GRADES = [
-  { id: 'grd-prim-1', name: '1ro Primaria', level: 'PRIMARIA' },
-  { id: 'grd-prim-2', name: '2do Primaria', level: 'PRIMARIA' },
-  { id: 'grd-prim-3', name: '3ro Primaria', level: 'PRIMARIA' },
-  { id: 'grd-prim-4', name: '4to Primaria', level: 'PRIMARIA' },
-  { id: 'grd-prim-5', name: '5to Primaria', level: 'PRIMARIA' },
-  { id: 'grd-prim-6', name: '6to Primaria', level: 'PRIMARIA' },
-  { id: 'grd-sec-1', name: '1ro Secundaria', level: 'SECUNDARIA' },
-  { id: 'grd-sec-2', name: '2do Secundaria', level: 'SECUNDARIA' },
-  { id: 'grd-sec-3', name: '3ro Secundaria', level: 'SECUNDARIA' },
-  { id: 'grd-sec-4', name: '4to Secundaria', level: 'SECUNDARIA' },
-  { id: 'grd-sec-5', name: '5to Secundaria', level: 'SECUNDARIA' },
-];
-
 export async function GET() {
   if (sql) {
     try {
@@ -27,21 +13,9 @@ export async function GET() {
         );
       `);
 
-      let rows = await (sql as any).query(`
+      const rows = await (sql as any).query(`
         SELECT id, name, level FROM academic_grades ORDER BY level, name;
       `);
-
-      if (!rows || rows.length === 0) {
-        for (const g of DEFAULT_GRADES) {
-          await (sql as any).query(
-            `INSERT INTO academic_grades (id, name, level) VALUES ($1, $2, $3) ON CONFLICT (name) DO NOTHING;`,
-            [g.id, g.name, g.level]
-          );
-        }
-        rows = await (sql as any).query(`
-          SELECT id, name, level FROM academic_grades ORDER BY level, name;
-        `);
-      }
 
       return NextResponse.json({ success: true, data: rows || [] });
     } catch (err: any) {
@@ -94,12 +68,19 @@ export async function DELETE(request: Request) {
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const name = searchParams.get('name');
-
-    if (!id && !name) {
-      return NextResponse.json({ success: false, message: 'ID o nombre de grado requerido' }, { status: 400 });
-    }
+    const all = searchParams.get('all');
 
     if (sql) {
+      if (all === 'true') {
+        await (sql as any).query(`DELETE FROM academic_grades;`);
+        await (sql as any).query(`DELETE FROM academic_classes;`);
+        return NextResponse.json({ success: true, message: 'Todos los grados y aulas han sido eliminados correctamente' });
+      }
+
+      if (!id && !name) {
+        return NextResponse.json({ success: false, message: 'ID o nombre de grado requerido' }, { status: 400 });
+      }
+
       // Verificar si hay alumnos asignados a este grado
       const targetName = name || (await (sql as any).query(`SELECT name FROM academic_grades WHERE id = $1;`, [id]))?.[0]?.name;
       if (targetName) {
@@ -134,4 +115,3 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
   }
 }
-

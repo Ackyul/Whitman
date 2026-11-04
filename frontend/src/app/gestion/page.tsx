@@ -1001,13 +1001,19 @@ export default function GestionAcademicaPage() {
                           }
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white text-slate-800 focus:outline-none focus:border-burgundy-700"
                         >
-                          {gradesList
-                            .filter((g) => g.level === studentForm.level)
-                            .map((g) => (
-                              <option key={g.id || g.name} value={g.name}>
-                                {g.name}
-                              </option>
-                            ))}
+                          {gradesList.filter((g) => g.level === studentForm.level).length === 0 ? (
+                            <option value="">
+                              ⚠️ No hay grados creados en {studentForm.level}. Créalos en la pestaña 2
+                            </option>
+                          ) : (
+                            gradesList
+                              .filter((g) => g.level === studentForm.level)
+                              .map((g) => (
+                                <option key={g.id || g.name} value={g.name}>
+                                  {g.name}
+                                </option>
+                              ))
+                          )}
                         </select>
                       </div>
                     </div>
@@ -1344,45 +1350,56 @@ export default function GestionAcademicaPage() {
                 )}
 
                 {/* Chips de Grados */}
-                <div className="flex flex-wrap gap-2 pt-1">
-                  {filteredGrades.map((g) => {
-                    const countInGrade = users.filter((u) => {
-                      if (u.role !== 'ALUMNO') return false;
-                      const gOrC = (u.gradeOrClass || '').toLowerCase();
-                      return gOrC.includes(g.toLowerCase()) || (u.level === getLevelForGrade(g) && gOrC.includes('sin asignar'));
-                    }).length;
+                {filteredGrades.length === 0 ? (
+                  <div className="p-8 text-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl">
+                    <Layers className="w-10 h-10 text-slate-300 mx-auto mb-2" />
+                    <h4 className="font-black text-slate-700 text-sm">No hay grados creados en el colegio todavía</h4>
+                    <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
+                      Usa el botón <strong>&quot;+ Crear Grado&quot;</strong> arriba para comenzar a agregar los grados escolares (ej. 1ro Primaria, 2do Primaria, etc.).
+                    </p>
+                  </div>
+                ) : (
+                  <div className="flex flex-wrap gap-2 pt-1">
+                    {filteredGrades.map((g) => {
+                      const countInGrade = users.filter((u) => {
+                        if (u.role !== 'ALUMNO') return false;
+                        const gOrC = (u.gradeOrClass || '').toLowerCase();
+                        return gOrC.includes(g.toLowerCase()) || (u.level === getLevelForGrade(g) && gOrC.includes('sin asignar'));
+                      }).length;
 
-                    const isSelected = selectedGrade === g;
+                      const isSelected = selectedGrade === g;
 
-                    return (
-                      <button
-                        key={g}
-                        onClick={() => {
-                          setSelectedGrade(g);
-                          setIsCreatingClass(false);
-                        }}
-                        className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-2 border ${
-                          isSelected
-                            ? 'bg-burgundy-900 text-white border-burgundy-950 shadow-md font-black'
-                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                        }`}
-                      >
-                        <span>{g}</span>
-                        <span
-                          className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
-                            isSelected ? 'bg-lionGold-500 text-burgundy-950 font-black' : 'bg-slate-200 text-slate-600'
+                      return (
+                        <button
+                          key={g}
+                          onClick={() => {
+                            setSelectedGrade(g);
+                            setIsCreatingClass(false);
+                          }}
+                          className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-2 border ${
+                            isSelected
+                              ? 'bg-burgundy-900 text-white border-burgundy-950 shadow-md font-black'
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
                           }`}
                         >
-                          {countInGrade}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
+                          <span>{g}</span>
+                          <span
+                            className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                              isSelected ? 'bg-lionGold-500 text-burgundy-950 font-black' : 'bg-slate-200 text-slate-600'
+                            }`}
+                          >
+                            {countInGrade}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* Panel del Grado Seleccionado */}
-              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+              {selectedGrade && filteredGrades.includes(selectedGrade) && (
+                <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
                 
                 {/* Cabecera del Grado + Estadísticas + Botones de Acción */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-slate-100 pb-6">
@@ -1547,71 +1564,8 @@ export default function GestionAcademicaPage() {
                   </form>
                 )}
 
-                {/* COLUMNAS: 1) SIN ASIGNAR + 2) AULAS CREADAS */}
+                {/* COLUMNAS PARA CADA AULA CREADA */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 items-start">
-                  
-                  {/* COLUMNA: ALUMNOS SIN ASIGNAR (PENDIENTES) */}
-                  <div className="bg-amber-50/70 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 space-y-3 shadow-sm">
-                    <div className="flex items-center justify-between border-b border-amber-200/80 pb-2.5">
-                      <div className="flex items-center gap-2">
-                        <Clock className="w-4 h-4 text-amber-700" />
-                        <h4 className="font-black text-xs uppercase tracking-wider text-amber-950">
-                          Sin Aula (Pendientes)
-                        </h4>
-                      </div>
-                      <span className="bg-amber-200 text-amber-900 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full">
-                        {unassignedStudents.length}
-                      </span>
-                    </div>
-
-                    <p className="text-[11px] text-amber-800">
-                      Alumnos recién matriculados en {selectedGrade}. Puedes usar la <strong>Mezcla Automática</strong> o moverlos manualmente:
-                    </p>
-
-                    <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
-                      {unassignedStudents.length === 0 ? (
-                        <div className="p-6 text-center text-amber-700 text-xs font-bold bg-white/70 rounded-2xl border border-amber-200/60">
-                          ✓ Todos los alumnos de este grado ya tienen aula asignada.
-                        </div>
-                      ) : (
-                        unassignedStudents.map((stu) => (
-                          <div
-                            key={stu.id}
-                            className="bg-white p-3 rounded-2xl border border-amber-200 shadow-xs space-y-2 hover:border-amber-400 transition"
-                          >
-                            <div>
-                              <p className="font-black text-xs text-slate-900 leading-tight truncate">{stu.name}</p>
-                              <p className="text-[10px] font-mono text-slate-500 mt-0.5">DNI: {stu.dni}</p>
-                            </div>
-
-                            {/* Dropdown de Asignación Rápida */}
-                            <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
-                              <span className="text-[10px] font-bold text-slate-500 shrink-0">Asignar a:</span>
-                              <select
-                                defaultValue=""
-                                onChange={(e) => {
-                                  if (e.target.value) {
-                                    handleMoveStudent(stu.id, stu.name, e.target.value);
-                                  }
-                                }}
-                                className="w-full text-[11px] font-bold bg-slate-50 border border-slate-300 rounded-lg p-1 text-slate-800 focus:outline-none focus:border-burgundy-700"
-                              >
-                                <option value="" disabled>
-                                  Elegir Aula...
-                                </option>
-                                {classesForSelectedGrade.map((c) => (
-                                  <option key={c.id || c.code} value={c.name}>
-                                    {c.name}
-                                  </option>
-                                ))}
-                              </select>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-
                   {/* COLUMNAS PARA CADA AULA CREADA */}
                   {classesForSelectedGrade.map((cls) => {
                     const studentsInThisClass = studentsInSelectedGrade.filter(
@@ -1731,6 +1685,7 @@ export default function GestionAcademicaPage() {
                 </div>
 
               </div>
+              )}
 
             </div>
           )}
