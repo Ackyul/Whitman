@@ -1,0 +1,25 @@
+{
+  "name": "whitman-platform",
+  "version": "1.0.0",
+  "description": "Plataforma de Asistencia en Tiempo Real, Usuarios y Notas - Academia y Colegio WHITMAN",
+  "scripts": {
+    "dev": "node run-dev.js",
+    "dev:backend": "npm --prefix backend run dev",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:backend": "npm --prefix backend run build",
+    "build:frontend": "npm --prefix frontend run build",
+    "start:backend": "npm --prefix backend run start",
+    "start:frontend": "npm --prefix frontend run start"
+  },
+  "keywords": [
+    "whitman",
+    "academia",
+    "colegio",
+    "realtime",
+    "socket.io",
+    "nextjs",
+    "tailwind"
+  ],
+  "author": "Academia y Colegio Whitman",
+  "license": "ISC"
+}
