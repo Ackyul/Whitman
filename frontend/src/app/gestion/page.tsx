@@ -45,6 +45,11 @@ export default function GestionAcademicaPage() {
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
   // --- SEGURIDAD CON GOOGLE ---
+  const AUTHORIZED_ADMIN_EMAILS = [
+    (process.env.NEXT_PUBLIC_ADMIN_EMAIL || '949237217yoshua@gmail.com').toLowerCase().trim(),
+    '949237217yoshua@gmail.com'
+  ];
+
   const [googleAdmin, setGoogleAdmin] = useState<GoogleAdminProfile | null>(null);
   const [googleClientId, setGoogleClientId] = useState<string>(
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '213494948984-lb44lfqtdpujebr0osd34dgjmdq46c5l.apps.googleusercontent.com'
@@ -57,7 +62,12 @@ export default function GestionAcademicaPage() {
     try {
       const savedGoogle = localStorage.getItem('whitman_google_admin_session');
       if (savedGoogle) {
-        setGoogleAdmin(JSON.parse(savedGoogle));
+        const parsed = JSON.parse(savedGoogle);
+        if (parsed?.email && AUTHORIZED_ADMIN_EMAILS.includes(parsed.email.toLowerCase().trim())) {
+          setGoogleAdmin(parsed);
+        } else {
+          localStorage.removeItem('whitman_google_admin_session');
+        }
       }
       const savedClientId = localStorage.getItem('whitman_custom_google_client_id');
       if (savedClientId) {
@@ -107,6 +117,16 @@ export default function GestionAcademicaPage() {
           .join('')
       );
       const payload = JSON.parse(jsonPayload);
+      const email = (payload.email || '').toLowerCase().trim();
+
+      // Validación estricta de cuenta autorizada
+      if (!AUTHORIZED_ADMIN_EMAILS.includes(email)) {
+        notify(
+          'error',
+          `⛔ Acceso denegado: La cuenta ${email} no tiene permisos de Dirección. Solo está autorizada la cuenta principal del director (949237217yoshua@gmail.com).`
+        );
+        return;
+      }
 
       const profile: GoogleAdminProfile = {
         email: payload.email,
@@ -116,7 +136,7 @@ export default function GestionAcademicaPage() {
 
       setGoogleAdmin(profile);
       localStorage.setItem('whitman_google_admin_session', JSON.stringify(profile));
-      notify('success', `¡Autenticado con Google como ${profile.email}! Acceso concedido.`);
+      notify('success', `¡Bienvenido Director! Acceso verificado con Google (${profile.email}).`);
     } catch (err) {
       console.error('Error decodificando credencial de Google:', err);
       notify('error', 'Error al procesar la autenticación de Google.');
@@ -125,20 +145,29 @@ export default function GestionAcademicaPage() {
 
   const handleManualGoogleAuth = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!customEmailInput.trim() || !customEmailInput.includes('@')) {
-      notify('error', 'Por favor ingresa un correo de Google válido (ej: director@whitman.edu.pe o tu@gmail.com).');
+    const cleanEmail = customEmailInput.trim().toLowerCase();
+    if (!cleanEmail || !cleanEmail.includes('@')) {
+      notify('error', 'Por favor ingresa un correo de Google válido.');
+      return;
+    }
+
+    if (!AUTHORIZED_ADMIN_EMAILS.includes(cleanEmail)) {
+      notify(
+        'error',
+        `⛔ Acceso denegado: El correo "${cleanEmail}" no está autorizado. Solo 949237217yoshua@gmail.com tiene permisos de Dirección.`
+      );
       return;
     }
 
     const profile: GoogleAdminProfile = {
-      email: customEmailInput.trim().toLowerCase(),
-      name: customEmailInput.split('@')[0],
+      email: cleanEmail,
+      name: cleanEmail.split('@')[0],
       picture: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
     };
 
     setGoogleAdmin(profile);
     localStorage.setItem('whitman_google_admin_session', JSON.stringify(profile));
-    notify('success', `¡Acceso concedido a la cuenta de Google: ${profile.email}!`);
+    notify('success', `¡Acceso concedido a la cuenta de Dirección: ${profile.email}!`);
   };
 
   const handleLogoutGoogle = () => {
@@ -488,13 +517,13 @@ export default function GestionAcademicaPage() {
             <form onSubmit={handleManualGoogleAuth} className="w-full max-w-sm space-y-3 pt-4 border-t border-slate-100">
               <div>
                 <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                  O ingresa tu cuenta de Google Autorizada:
+                  O ingresa tu cuenta autorizada de Dirección:
                 </label>
                 <div className="flex gap-2">
                   <input
                     type="email"
                     required
-                    placeholder="tucorreo@gmail.com o @whitman.edu.pe"
+                    placeholder="949237217yoshua@gmail.com"
                     value={customEmailInput}
                     onChange={(e) => setCustomEmailInput(e.target.value)}
                     className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-burgundy-700 font-semibold"
@@ -506,6 +535,9 @@ export default function GestionAcademicaPage() {
                     Verificar
                   </button>
                 </div>
+                <p className="text-[10px] text-slate-400 mt-1.5 text-center">
+                  🛡️ Acceso exclusivo por ahora: <span className="font-bold text-burgundy-900">949237217yoshua@gmail.com</span>
+                </p>
               </div>
             </form>
           </div>
