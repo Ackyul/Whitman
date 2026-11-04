@@ -35,22 +35,22 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ activeTab, onTabChange }) 
 
   return (
     <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200/90 shadow-sm transition-all">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 h-14 sm:h-16 flex items-center justify-between gap-2 sm:gap-4">
         
         {/* LADO IZQUIERDO: LOGO INSTITUCIONAL + NAVEGACIÓN */}
-        <div className="flex items-center gap-6 sm:gap-8">
+        <div className="flex items-center gap-3 sm:gap-6">
           
-          <Link href="/dashboard" className="flex items-center gap-2 group shrink-0">
-            <span className="font-serif font-black text-lg sm:text-xl tracking-wider text-burgundy-950 uppercase group-hover:text-burgundy-800 transition">
+          <Link href="/dashboard" className="flex items-center gap-1.5 sm:gap-2 group shrink-0">
+            <span className="font-serif font-black text-base sm:text-xl tracking-wider text-burgundy-950 uppercase group-hover:text-burgundy-800 transition">
               WHITMAN
             </span>
-            <span className="hidden sm:inline text-[10px] bg-burgundy-100 text-burgundy-900 font-black px-2 py-0.5 rounded-full border border-burgundy-200 uppercase">
+            <span className="hidden md:inline text-[10px] bg-burgundy-100 text-burgundy-900 font-black px-2 py-0.5 rounded-full border border-burgundy-200 uppercase">
               Aula Virtual
             </span>
           </Link>
 
           {/* BARRA DE NAVEGACIÓN: INICIO / ASISTENCIAS */}
-          <nav className="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200/80 gap-1 text-xs font-bold">
+          <nav className="flex items-center bg-slate-100/90 p-1 rounded-2xl border border-slate-200/80 gap-1 text-[11px] sm:text-xs font-bold">
             
             {onTabChange ? (
               <button

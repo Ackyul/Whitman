@@ -115,7 +115,7 @@ export const UserBubbleMenu: React.FC = () => {
 
         {/* 2. MENÚ DESPLEGABLE DE LA BURBUJA */}
         {menuOpen && (
-          <div className="absolute right-0 mt-2 w-72 bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 z-50">
+          <div className="absolute right-0 mt-2 w-72 max-w-[calc(100vw-1.5rem)] bg-white rounded-2xl shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in-95 duration-150 z-50">
             {/* Cabecera del Menú */}
             <div className="bg-gradient-to-r from-burgundy-950 to-burgundy-900 p-4 text-white">
               <div className="flex items-center gap-3">

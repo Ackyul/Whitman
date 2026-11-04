@@ -26,7 +26,7 @@ router.post('/login', (req, res) => {
       return res.status(404).json({
         success: false,
         message: `No se encontró ningún estudiante vinculado al DNI ${cleanId}.`,
-        suggestion: 'Ingresa el DNI de la Madre, Padre o Apoderado registrado en la matrícula (ej: 40112233).',
+        suggestion: 'Ingresa el DNI de la Madre, Padre o Apoderado registrado en la secretaría del colegio.',
       });
     }
 
@@ -72,7 +72,7 @@ router.post('/login', (req, res) => {
       return res.status(404).json({
         success: false,
         message: `No se encontró ningún estudiante con el DNI o Código "${cleanId}".`,
-        suggestion: 'Prueba con DNI de alumno: 72345671 o código WHT-2026-001.',
+        suggestion: 'Verifica tu número de DNI o comunícate con la dirección para regularizar tu matrícula.',
       });
     }
 
@@ -96,7 +96,7 @@ router.post('/login', (req, res) => {
     return res.status(404).json({
       success: false,
       message: `No se encontró personal docente con el DNI ${cleanId}.`,
-      suggestion: 'Pruebas: Director (10000001), Coordinador (20000001), Jefe de Normas (20000004), Profesora (20000002).',
+      suggestion: 'Verifica tu número de DNI docente registrado en administración.',
     });
   }
 

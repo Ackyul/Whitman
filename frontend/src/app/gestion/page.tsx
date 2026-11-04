@@ -398,36 +398,38 @@ export default function GestionAcademicaPage() {
         onLoad={initializeGoogleOneTap}
       />
 
-      {/* 1. CABECERA INSTITUCIONAL COMPACTA */}
-      <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-2xl px-5 py-3 shadow-md border border-lionGold-500/30 flex items-center justify-between gap-4">
+      {/* 1. CABECERA INSTITUCIONAL COMPACTA (RESPONSIVE CELULAR & DESKTOP) */}
+      <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-2xl px-4 sm:px-5 py-2.5 sm:py-3 shadow-md border border-lionGold-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-4">
         <div className="flex items-center gap-2.5">
           <h1 className="text-base sm:text-lg font-black font-serif tracking-tight text-white">
             Gestión & Matrícula Whitman
           </h1>
-          <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
+          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
             <span>Neon DB</span>
           </span>
         </div>
 
         {/* Badge Compacto de Verificación con Google */}
-        <div className="shrink-0 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-xl flex items-center gap-2.5">
+        <div className="w-full sm:w-auto shrink-0 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-xl flex items-center justify-between sm:justify-start gap-2.5">
           {googleAdmin ? (
             <>
-              <div className="w-7 h-7 rounded-full overflow-hidden bg-emerald-500 flex items-center justify-center text-white shrink-0">
-                {googleAdmin.picture ? (
-                  <img src={googleAdmin.picture} alt={googleAdmin.name} className="w-full h-full object-cover" />
-                ) : (
-                  <ShieldCheck className="w-4 h-4 text-white" />
-                )}
-              </div>
-              <div className="min-w-0">
-                <p className="text-[9px] font-bold text-emerald-300 uppercase leading-none">
-                  Verificado
-                </p>
-                <p className="text-xs font-bold text-white truncate max-w-[170px] leading-tight mt-0.5">
-                  {googleAdmin.email}
-                </p>
+              <div className="flex items-center gap-2 min-w-0">
+                <div className="w-7 h-7 rounded-full overflow-hidden bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                  {googleAdmin.picture ? (
+                    <img src={googleAdmin.picture} alt={googleAdmin.name} className="w-full h-full object-cover" />
+                  ) : (
+                    <ShieldCheck className="w-4 h-4 text-white" />
+                  )}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-[9px] font-bold text-emerald-300 uppercase leading-none">
+                    Director Verificado
+                  </p>
+                  <p className="text-xs font-bold text-white truncate max-w-[190px] leading-tight mt-0.5">
+                    {googleAdmin.email}
+                  </p>
+                </div>
               </div>
               <button
                 onClick={handleLogoutGoogle}

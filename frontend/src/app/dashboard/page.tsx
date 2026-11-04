@@ -214,7 +214,7 @@ export default function SecureDashboardPage() {
     <div className="space-y-6">
       
       {/* Cabecera compacta y limpia Docente / Dirección */}
-      <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-2xl px-6 py-3.5 sm:py-4 shadow-lg border border-lionGold-500/40 flex items-center justify-between gap-4">
+      <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-2xl px-4 sm:px-6 py-3 sm:py-4 shadow-lg border border-lionGold-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
           <h1 className="text-lg sm:text-2xl font-black font-serif text-white tracking-wide">
             Bienvenido, {currentUser.name}
@@ -224,11 +224,11 @@ export default function SecureDashboardPage() {
           </p>
         </div>
 
-        <div className="flex items-center gap-2.5 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
           {canAccessGarita && (
             <Link
               href="/garita"
-              className="bg-lionGold-500 hover:bg-lionGold-400 text-burgundy-950 font-black px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow active:scale-95"
+              className="bg-lionGold-500 hover:bg-lionGold-400 text-burgundy-950 font-black px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow active:scale-95"
             >
               <ScanLine className="w-4 h-4" />
               <span>Garita (Lector DNI)</span>
@@ -240,9 +240,9 @@ export default function SecureDashboardPage() {
               logout();
               router.push('/login');
             }}
-            className="bg-burgundy-950/80 hover:bg-burgundy-800 text-white font-bold px-4 py-2 rounded-xl border border-lionGold-500/30 text-xs transition flex items-center gap-2 active:scale-95"
+            className="bg-burgundy-950/80 hover:bg-burgundy-800 text-white font-bold px-3.5 py-2 rounded-xl border border-lionGold-500/30 text-xs transition flex items-center gap-1.5 active:scale-95"
           >
-            <LogOut className="w-4 h-4 text-lionGold-400" />
+            <LogOut className="w-3.5 h-3.5 text-lionGold-400" />
             <span>Cerrar Sesión</span>
           </button>
         </div>
@@ -314,20 +314,26 @@ export default function SecureDashboardPage() {
             </Link>
           </div>
           <div className="divide-y divide-slate-100">
-            {recentAttendance.map((a) => (
-              <div key={a.id} className="py-2.5 flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-xs text-slate-800">{a.userName}</p>
-                  <p className="text-[10px] text-slate-400">DNI: {a.userDni} • {a.gradeOrClass}</p>
+            {recentAttendance.length > 0 ? (
+              recentAttendance.map((a) => (
+                <div key={a.id} className="py-2.5 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-xs text-slate-800">{a.userName}</p>
+                    <p className="text-[10px] text-slate-400">DNI: {a.userDni} • {a.gradeOrClass}</p>
+                  </div>
+                  <div className="text-right">
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${a.status === 'PRESENTE' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
+                      {a.status}
+                    </span>
+                    <p className="text-[10px] font-mono text-slate-500 mt-0.5">{a.time}</p>
+                  </div>
                 </div>
-                <div className="text-right">
-                  <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${a.status === 'PRESENTE' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                    {a.status}
-                  </span>
-                  <p className="text-[10px] font-mono text-slate-500 mt-0.5">{a.time}</p>
-                </div>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-xs text-slate-400 py-6 text-center">
+                Aún no hay ingresos marcados hoy en portería.
+              </p>
+            )}
           </div>
         </div>
 
@@ -339,17 +345,23 @@ export default function SecureDashboardPage() {
             </Link>
           </div>
           <div className="divide-y divide-slate-100">
-            {topGrades.map((g, idx) => (
-              <div key={g.id} className="py-2.5 flex items-center justify-between">
-                <div>
-                  <p className="font-bold text-xs text-slate-800">#{idx + 1} {g.userName}</p>
-                  <p className="text-[10px] text-burgundy-700 font-semibold">{g.course} • {g.title}</p>
+            {topGrades.length > 0 ? (
+              topGrades.map((g, idx) => (
+                <div key={g.id} className="py-2.5 flex items-center justify-between">
+                  <div>
+                    <p className="font-bold text-xs text-slate-800">#{idx + 1} {g.userName}</p>
+                    <p className="text-[10px] text-burgundy-700 font-semibold">{g.course} • {g.title}</p>
+                  </div>
+                  <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
+                    {g.score.toFixed(1)} / 20
+                  </span>
                 </div>
-                <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                  {g.score.toFixed(1)} / 20
-                </span>
-              </div>
-            ))}
+              ))
+            ) : (
+              <p className="text-xs text-slate-400 py-6 text-center">
+                Aún no hay evaluaciones registradas en el ciclo.
+              </p>
+            )}
           </div>
         </div>
       </div>

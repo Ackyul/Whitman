@@ -430,11 +430,11 @@ class Store {
     }
 
     const initial: DatabaseSchema = {
-      users: INITIAL_USERS,
-      attendance: INITIAL_ATTENDANCE,
-      grades: INITIAL_GRADES,
+      users: [],
+      attendance: [],
+      grades: [],
       academicClasses: INITIAL_CLASSES,
-      studentAssignments: INITIAL_ASSIGNMENTS
+      studentAssignments: []
     };
     this.persist(initial);
     return initial;
@@ -456,70 +456,64 @@ class Store {
       const dbAttendance = await (sql as any).query(`SELECT * FROM attendance ORDER BY date DESC, time DESC;`);
       const dbGrades = await (sql as any).query(`SELECT * FROM grades ORDER BY date DESC;`);
 
-      if (dbUsers.length > 0) {
-        this.data.users = dbUsers.map((u: any) => ({
-          id: u.id,
-          dni: u.dni,
-          studentCode: u.student_code || undefined,
-          name: u.name,
-          email: u.email,
-          role: u.role,
-          hierarchy: u.hierarchy || undefined,
-          hierarchyTitle: u.hierarchy_title || undefined,
-          level: u.level,
-          gradeOrClass: u.grade_or_class,
-          parentDni: u.parent_dni || undefined,
-          parentName: u.parent_name || undefined,
-          parentRelationship: u.parent_relationship || undefined,
-          motherDni: u.mother_dni || undefined,
-          motherName: u.mother_name || undefined,
-          motherPhone: u.mother_phone || undefined,
-          fatherDni: u.father_dni || undefined,
-          fatherName: u.father_name || undefined,
-          fatherPhone: u.father_phone || undefined,
-          avatar: u.avatar,
-          phone: u.phone,
-          parentPhone: u.parent_phone,
-          active: u.active,
-          createdAt: u.created_at,
-        }));
-      }
+      this.data.users = (dbUsers || []).map((u: any) => ({
+        id: u.id,
+        dni: u.dni,
+        studentCode: u.student_code || undefined,
+        name: u.name,
+        email: u.email,
+        role: u.role,
+        hierarchy: u.hierarchy || undefined,
+        hierarchyTitle: u.hierarchy_title || undefined,
+        level: u.level,
+        gradeOrClass: u.grade_or_class,
+        parentDni: u.parent_dni || undefined,
+        parentName: u.parent_name || undefined,
+        parentRelationship: u.parent_relationship || undefined,
+        motherDni: u.mother_dni || undefined,
+        motherName: u.mother_name || undefined,
+        motherPhone: u.mother_phone || undefined,
+        fatherDni: u.father_dni || undefined,
+        fatherName: u.father_name || undefined,
+        fatherPhone: u.father_phone || undefined,
+        avatar: u.avatar,
+        phone: u.phone,
+        parentPhone: u.parent_phone,
+        active: u.active,
+        createdAt: u.created_at,
+      }));
 
-      if (dbAttendance.length > 0) {
-        this.data.attendance = dbAttendance.map((a: any) => ({
-          id: a.id,
-          userId: a.user_id,
-          userName: a.user_name,
-          userDni: a.user_dni,
-          level: a.level,
-          gradeOrClass: a.grade_or_class,
-          date: a.date instanceof Date ? a.date.toISOString().split('T')[0] : String(a.date),
-          time: a.time,
-          status: a.status,
-          method: a.method,
-          notes: a.notes,
-        }));
-      }
+      this.data.attendance = (dbAttendance || []).map((a: any) => ({
+        id: a.id,
+        userId: a.user_id,
+        userName: a.user_name,
+        userDni: a.user_dni,
+        level: a.level,
+        gradeOrClass: a.grade_or_class,
+        date: a.date instanceof Date ? a.date.toISOString().split('T')[0] : String(a.date),
+        time: a.time,
+        status: a.status,
+        method: a.method,
+        notes: a.notes,
+      }));
 
-      if (dbGrades.length > 0) {
-        this.data.grades = dbGrades.map((g: any) => ({
-          id: g.id,
-          userId: g.user_id,
-          userName: g.user_name,
-          userDni: g.user_dni,
-          course: g.course,
-          level: g.level,
-          gradeOrClass: g.grade_or_class,
-          evaluationType: g.evaluation_type,
-          title: g.title,
-          score: Number(g.score),
-          maxScore: Number(g.max_score),
-          period: g.period,
-          teacherName: g.teacher_name,
-          date: g.date instanceof Date ? g.date.toISOString().split('T')[0] : String(g.date),
-          feedback: g.feedback,
-        }));
-      }
+      this.data.grades = (dbGrades || []).map((g: any) => ({
+        id: g.id,
+        userId: g.user_id,
+        userName: g.user_name,
+        userDni: g.user_dni,
+        course: g.course,
+        level: g.level,
+        gradeOrClass: g.grade_or_class,
+        evaluationType: g.evaluation_type,
+        title: g.title,
+        score: Number(g.score),
+        maxScore: Number(g.max_score),
+        period: g.period,
+        teacherName: g.teacher_name,
+        date: g.date instanceof Date ? g.date.toISOString().split('T')[0] : String(g.date),
+        feedback: g.feedback,
+      }));
 
       try {
         const dbClasses = await (sql as any).query(`SELECT * FROM academic_classes ORDER BY level, grade;`);
