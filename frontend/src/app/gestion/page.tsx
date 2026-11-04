@@ -364,66 +364,51 @@ export default function GestionAcademicaPage() {
         onLoad={initializeGoogleOneTap}
       />
 
-      {/* 1. CABECERA INSTITUCIONAL CON ESTADO DE SEGURIDAD GOOGLE */}
-      <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-3xl p-6 sm:p-8 shadow-xl border-2 border-lionGold-500/40 relative overflow-hidden">
-        <div className="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <div>
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-black uppercase tracking-wider text-lionGold-300 bg-lionGold-500/20 px-3 py-0.5 rounded-full border border-lionGold-400/30">
-                SISTEMA DE GESTIÓN ACADÉMICA 2026
-              </span>
-              <span className="inline-flex items-center gap-1.5 text-[11px] font-bold text-emerald-300 bg-emerald-950/60 px-2.5 py-0.5 rounded-full border border-emerald-500/40">
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-                <span>Base de Datos Neon PostgreSQL</span>
-              </span>
-            </div>
+      {/* 1. CABECERA INSTITUCIONAL COMPACTA */}
+      <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-2xl px-5 py-3 shadow-md border border-lionGold-500/30 flex items-center justify-between gap-4">
+        <div className="flex items-center gap-2.5">
+          <h1 className="text-base sm:text-lg font-black font-serif tracking-tight text-white">
+            Gestión & Matrícula Whitman
+          </h1>
+          <span className="hidden sm:inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+            <span>Neon DB</span>
+          </span>
+        </div>
 
-            <h1 className="text-2xl sm:text-3xl font-black font-serif tracking-tight text-white mt-2">
-              Gestión, Matrícula & Cuentas Whitman
-            </h1>
-            <p className="text-xs sm:text-sm text-burgundy-200 max-w-2xl mt-1">
-              Crea alumnos, docentes, importa promociones completas desde Excel y asigna sus aulas oficiales en la base de datos.
-            </p>
-          </div>
-
-          {/* Badge de Verificación con Google */}
-          <div className="shrink-0 bg-white/10 backdrop-blur-md border border-white/20 p-3 rounded-2xl flex items-center gap-3">
-            {googleAdmin ? (
-              <>
-                <div className="w-9 h-9 rounded-full overflow-hidden bg-emerald-500 flex items-center justify-center text-white shrink-0">
-                  {googleAdmin.picture ? (
-                    <img src={googleAdmin.picture} alt={googleAdmin.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <ShieldCheck className="w-5 h-5 text-white" />
-                  )}
-                </div>
-                <div className="min-w-0 pr-2">
-                  <div className="flex items-center gap-1 text-[10px] font-bold text-emerald-300 uppercase">
-                    <ShieldCheck className="w-3 h-3 text-emerald-400" />
-                    <span>Verificado con Google</span>
-                  </div>
-                  <p className="text-xs font-bold text-white truncate max-w-[180px]">
-                    {googleAdmin.email}
-                  </p>
-                </div>
-                <button
-                  onClick={handleLogoutGoogle}
-                  title="Cerrar sesión de Google"
-                  className="p-1.5 text-white/70 hover:text-rose-300 hover:bg-white/10 rounded-lg transition"
-                >
-                  <LogOut className="w-4 h-4" />
-                </button>
-              </>
-            ) : (
-              <div className="flex items-center gap-2">
-                <Lock className="w-5 h-5 text-amber-400" />
-                <div>
-                  <p className="text-[10px] font-bold text-amber-300 uppercase">Seguridad Requerida</p>
-                  <p className="text-xs font-semibold text-white">Requiere cuenta de Google</p>
-                </div>
+        {/* Badge Compacto de Verificación con Google */}
+        <div className="shrink-0 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-xl flex items-center gap-2.5">
+          {googleAdmin ? (
+            <>
+              <div className="w-7 h-7 rounded-full overflow-hidden bg-emerald-500 flex items-center justify-center text-white shrink-0">
+                {googleAdmin.picture ? (
+                  <img src={googleAdmin.picture} alt={googleAdmin.name} className="w-full h-full object-cover" />
+                ) : (
+                  <ShieldCheck className="w-4 h-4 text-white" />
+                )}
               </div>
-            )}
-          </div>
+              <div className="min-w-0">
+                <p className="text-[9px] font-bold text-emerald-300 uppercase leading-none">
+                  Verificado
+                </p>
+                <p className="text-xs font-bold text-white truncate max-w-[170px] leading-tight mt-0.5">
+                  {googleAdmin.email}
+                </p>
+              </div>
+              <button
+                onClick={handleLogoutGoogle}
+                title="Cerrar sesión de Google"
+                className="p-1 text-white/70 hover:text-rose-300 hover:bg-white/10 rounded-lg transition ml-1"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+              </button>
+            </>
+          ) : (
+            <div className="flex items-center gap-2">
+              <Lock className="w-4 h-4 text-amber-400" />
+              <span className="text-xs font-semibold text-white">Seguridad Requerida</span>
+            </div>
+          )}
         </div>
       </div>
 
