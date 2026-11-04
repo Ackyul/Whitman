@@ -282,6 +282,14 @@ export default function SecureDashboardPage() {
     currentUser.role === 'DOCENTE' &&
     (currentUser.hierarchy === 'JEFE_NORMAS' || currentUser.hierarchy === 'DIRECTOR');
 
+  // La gestión académica está disponible para Coordinadores, Jefes de Normas y el Director
+  const canAccessGestion =
+    currentUser.role === 'ADMIN' ||
+    (currentUser.role === 'DOCENTE' &&
+      (currentUser.hierarchy === 'DIRECTOR' ||
+       currentUser.hierarchy === 'COORDINADOR' ||
+       currentUser.hierarchy === 'JEFE_NORMAS'));
+
   return (
     <div className="space-y-6">
       
@@ -297,6 +305,16 @@ export default function SecureDashboardPage() {
         </div>
 
         <div className="flex flex-wrap items-center gap-2 shrink-0">
+          {canAccessGestion && (
+            <Link
+              href="/gestion"
+              className="bg-burgundy-900 hover:bg-burgundy-950 text-white font-black px-3.5 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow active:scale-95 border border-lionGold-400/40"
+            >
+              <GraduationCap className="w-4 h-4 text-lionGold-400" />
+              <span>Gestión & Matrícula</span>
+            </Link>
+          )}
+
           {canAccessGarita && (
             <Link
               href="/garita"
@@ -319,6 +337,35 @@ export default function SecureDashboardPage() {
           </button>
         </div>
       </div>
+
+      {/* Módulo de Gestión Académica para Coordinadores, Jefes de Normas y Director */}
+      {canAccessGestion && (
+        <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white border-2 border-lionGold-500/50 rounded-2xl p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-md">
+          <div className="flex items-center gap-3.5">
+            <div className="w-12 h-12 rounded-xl bg-lionGold-500 text-burgundy-950 flex items-center justify-center font-bold shadow shrink-0">
+              <GraduationCap className="w-6 h-6" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-white text-sm">Gestión Académica & Matrícula Whitman</h3>
+                <span className="bg-lionGold-500 text-burgundy-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+                  Exclusivo {currentUser.hierarchyTitle || 'Dirección / Normas / Coordinación'}
+                </span>
+              </div>
+              <p className="text-xs text-burgundy-200 mt-0.5">
+                Crea alumnos, docentes, administra grados, distribuye alumnos en aulas y realiza cargas masivas.
+              </p>
+            </div>
+          </div>
+          <Link
+            href="/gestion"
+            className="bg-lionGold-500 hover:bg-lionGold-400 text-burgundy-950 font-black px-5 py-2.5 rounded-xl text-xs transition shrink-0 flex items-center justify-center gap-2 shadow active:scale-95"
+          >
+            <GraduationCap className="w-4 h-4" />
+            <span>Abrir Módulo de Gestión</span>
+          </Link>
+        </div>
+      )}
 
       {/* Módulo de Control de Garita Exclusivo para Normas y Dirección */}
       {canAccessGarita && (

@@ -67,21 +67,31 @@ const BASE_GRADES_BY_LEVEL: Record<'PRIMARIA' | 'SECUNDARIA', string[]> = {
 };
 
 export default function GestionAcademicaPage() {
-  const { users, refreshData } = useWhitman();
+  const { users, currentUser, refreshData } = useWhitman();
   const [activeTab, setActiveTab] = useState<'individual' | 'classes' | 'staff' | 'bulk'>('individual');
 
   const [classes, setClasses] = useState<AcademicClass[]>([]);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // --- SEGURIDAD CON GOOGLE (ACCESO EXCLUSIVO PARA EL DIRECTOR) ---
+  // --- SEGURIDAD: ACCESO PARA COORDINADORES, JEFES DE NORMAS Y DIRECTOR O VÍA GOOGLE ---
   const AUTHORIZED_ADMIN_EMAIL = '949237217yoshua@gmail.com';
+
+  const isInstitutionalAuthorized =
+    currentUser &&
+    (currentUser.role === 'ADMIN' ||
+      (currentUser.role === 'DOCENTE' &&
+        (currentUser.hierarchy === 'DIRECTOR' ||
+         currentUser.hierarchy === 'COORDINADOR' ||
+         currentUser.hierarchy === 'JEFE_NORMAS')));
 
   const [googleAdmin, setGoogleAdmin] = useState<GoogleAdminProfile | null>(null);
   const [googleClientId] = useState<string>(
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '213494948984-lb44lfqtdpujebr0osd34dgjmdq46c5l.apps.googleusercontent.com'
   );
   const [googleBtnRendered, setGoogleBtnRendered] = useState(false);
+
+  const hasAccess = Boolean(googleAdmin || isInstitutionalAuthorized);
 
   // Cargar sesión de Google guardada
   useEffect(() => {
@@ -743,31 +753,37 @@ export default function GestionAcademicaPage() {
           </p>
         </div>
 
-        {googleAdmin ? (
+        {hasAccess ? (
           <div className="flex items-center gap-3 bg-burgundy-950/70 p-2.5 rounded-2xl border border-lionGold-500/40">
-            {googleAdmin.picture ? (
+            {googleAdmin?.picture ? (
               <img src={googleAdmin.picture} alt="Google Avatar" className="w-9 h-9 rounded-full border border-lionGold-400" />
             ) : (
-              <div className="w-9 h-9 rounded-full bg-lionGold-500 text-burgundy-950 font-black flex items-center justify-center text-xs">
-                👤
+              <div className="w-9 h-9 rounded-full bg-lionGold-500 text-burgundy-950 font-black flex items-center justify-center text-xs shadow-inner">
+                {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : '👤'}
               </div>
             )}
             <div className="text-left pr-2">
-              <span className="text-[10px] font-mono text-emerald-400 font-bold block">✓ VERIFICADO CON GOOGLE</span>
-              <p className="text-xs font-bold text-white max-w-[180px] truncate">{googleAdmin.email}</p>
+              <span className="text-[10px] font-mono text-emerald-400 font-bold block">
+                {currentUser?.hierarchyTitle ? `✓ ${currentUser.hierarchyTitle.toUpperCase()}` : '✓ ACCESO AUTORIZADO'}
+              </span>
+              <p className="text-xs font-bold text-white max-w-[200px] truncate">
+                {currentUser?.name || googleAdmin?.name || googleAdmin?.email}
+              </p>
             </div>
-            <button
-              onClick={handleLogoutGoogle}
-              title="Cerrar sesión de Google"
-              className="p-1.5 text-burgundy-200 hover:text-white hover:bg-burgundy-800 rounded-lg transition"
-            >
-              <LogOut className="w-4 h-4" />
-            </button>
+            {googleAdmin && (
+              <button
+                onClick={handleLogoutGoogle}
+                title="Cerrar sesión de Google"
+                className="p-1.5 text-burgundy-200 hover:text-white hover:bg-burgundy-800 rounded-lg transition"
+              >
+                <LogOut className="w-4 h-4" />
+              </button>
+            )}
           </div>
         ) : (
           <div className="flex items-center gap-2 bg-burgundy-950/50 p-2.5 rounded-2xl border border-lionGold-500/20 text-xs text-lionGold-300">
             <Lock className="w-4 h-4 text-lionGold-400" />
-            <span>Seguridad: Requiere cuenta autorizada</span>
+            <span>Seguridad: Coordinación, Normas & Dirección</span>
           </div>
         )}
       </div>
@@ -790,8 +806,8 @@ export default function GestionAcademicaPage() {
         </div>
       )}
 
-      {/* BLOQUEO DE SEGURIDAD SI NO ESTÁ AUTENTICADO CON GOOGLE */}
-      {!googleAdmin ? (
+      {/* BLOQUEO DE SEGURIDAD SI NO ESTÁ AUTENTICADO */}
+      {!hasAccess ? (
         <div className="max-w-md mx-auto bg-white rounded-3xl p-8 sm:p-10 border-2 border-slate-200 shadow-xl text-center space-y-6 animate-in zoom-in-95">
           <div className="w-16 h-16 rounded-2xl bg-burgundy-100 text-burgundy-900 flex items-center justify-center mx-auto border-2 border-burgundy-300">
             <Lock className="w-8 h-8 text-burgundy-800" />
@@ -799,17 +815,17 @@ export default function GestionAcademicaPage() {
 
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
-              ACCESO RESTRINGIDO A DIRECCIÓN
+              ACCESO A COORDINACIÓN, NORMAS Y DIRECCIÓN
             </span>
             <h2 className="text-2xl font-black font-serif text-slate-900 mt-2">
               Gestión Académica Whitman
             </h2>
             <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1 leading-relaxed">
-              Inicia sesión con tu cuenta oficial de Google para acceder a la matrícula y administración de cuentas.
+              Inicia sesión con tu cuenta oficial de Google o ingresa con tu cuenta institucional de directivo / docente.
             </p>
           </div>
 
-          <div className="flex flex-col items-center justify-center pt-2 w-full space-y-2">
+          <div className="flex flex-col items-center justify-center pt-2 w-full space-y-3">
             {/* Contenedor oficial para el botón de Google Identity Services */}
             <div id="googleSignInBtnContainer" className="flex justify-center w-full" />
 
@@ -829,6 +845,17 @@ export default function GestionAcademicaPage() {
                 <span>Continuar con Google</span>
               </button>
             )}
+
+            {/* Acceso con DNI Institucional */}
+            <div className="pt-2 border-t border-slate-100 w-full flex justify-center">
+              <Link
+                href="/login"
+                className="text-xs text-burgundy-900 hover:text-burgundy-950 font-bold hover:underline flex items-center gap-1.5"
+              >
+                <span>Ingresar con DNI Institucional</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
           </div>
         </div>
       ) : (

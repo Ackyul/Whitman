@@ -40,6 +40,12 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ activeTab, onTabChange }) 
   const isAuthorizedGarita =
     currentUser.role === 'DOCENTE' &&
     (currentUser.hierarchy === 'JEFE_NORMAS' || currentUser.hierarchy === 'DIRECTOR');
+  const canAccessGestion =
+    currentUser.role === 'ADMIN' ||
+    (currentUser.role === 'DOCENTE' &&
+      (currentUser.hierarchy === 'DIRECTOR' ||
+       currentUser.hierarchy === 'COORDINADOR' ||
+       currentUser.hierarchy === 'JEFE_NORMAS'));
 
   const avatarInitial = currentUser.name.trim().charAt(0).toUpperCase();
 
@@ -120,7 +126,7 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ activeTab, onTabChange }) 
                 </Link>
               )}
 
-              {isDocenteOrAdmin && (
+              {canAccessGestion && (
                 <Link
                   href="/gestion"
                   className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
@@ -261,8 +267,8 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ activeTab, onTabChange }) 
           </Link>
         )}
 
-        {/* Pestaña: GESTIÓN (DOCENTE O DIRECTIVO) */}
-        {isDocenteOrAdmin && (
+        {/* Pestaña: GESTIÓN (COORDINADOR, JEFE DE NORMAS O DIRECTOR) */}
+        {canAccessGestion && (
           <Link
             href="/gestion"
             className="flex flex-col items-center justify-center flex-1 py-1 transition-transform active:scale-90 group"
