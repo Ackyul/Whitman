@@ -7,7 +7,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Check,
-  ScanLine,
+  CheckCheck,
+  LogIn,
+  LogOut,
+  Clock,
 } from 'lucide-react';
 
 interface Props {
@@ -69,13 +72,14 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
   let startDayOfWeek = firstDayOfMonth.getDay() - 1;
   if (startDayOfWeek === -1) startDayOfWeek = 6;
 
-  // Filtrar asistencias del mes actual
+  // Filtrar asistencias del mes actual (normalizando fecha a YYYY-MM)
   const monthPrefix = `${currentYear}-${String(currentMonth + 1).padStart(2, '0')}`;
   const monthAttendance = attendanceRecords.filter((rec) => rec.date?.startsWith(monthPrefix));
 
   // Estadísticas del mes
   const totalPresente = monthAttendance.filter((r) => r.status === 'PRESENTE').length;
   const totalTardanza = monthAttendance.filter((r) => r.status === 'TARDANZA').length;
+  const totalSalidas = monthAttendance.filter((r) => Boolean(r.exitTime)).length;
 
   // Formato para comparar fecha de hoy
   const todayDateStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -123,9 +127,9 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* 2. LEYENDA RÁPIDA COMPACTA */}
-      <div className="flex items-center justify-between text-[11px] bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-200/80">
-        <div className="flex items-center gap-3">
+      {/* 2. LEYENDA RÁPIDA COMPACTA: PUNTUALES, TARDANZAS Y SALIDAS */}
+      <div className="flex flex-wrap items-center justify-between text-[11px] bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/80 gap-2">
+        <div className="flex flex-wrap items-center gap-3">
           <span className="flex items-center gap-1.5 text-slate-700 font-bold">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
             {totalPresente} Puntuales
@@ -134,9 +138,13 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
             <span className="w-2.5 h-2.5 rounded-full bg-amber-500 inline-block" />
             {totalTardanza} Tardanzas
           </span>
+          <span className="flex items-center gap-1.5 text-slate-700 font-bold">
+            <span className="w-2.5 h-2.5 rounded-full bg-lionGold-500 inline-block" />
+            {totalSalidas} Salidas Registradas
+          </span>
         </div>
         <span className="text-slate-400 font-medium hidden sm:inline">
-          Bolita con check = Asistió
+          Haz clic en un día para ver detalle de Ingreso y Salida
         </span>
       </div>
 
@@ -163,6 +171,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
             const isSelected = dateStr === selectedDateStr;
             const hasMarked = Boolean(record);
             const isLate = record?.status === 'TARDANZA';
+            const hasExit = Boolean(record?.exitTime);
 
             return (
               <div
@@ -188,16 +197,20 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
                   )}
                 </div>
 
-                {/* Bolita compacta con check */}
-                <div className="flex items-center justify-center my-auto">
+                {/* Bolita compacta con check y badge de salida */}
+                <div className="flex items-center justify-center my-auto relative">
                   {hasMarked ? (
                     <div
                       className={`w-5 h-5 sm:w-6 sm:h-6 rounded-full flex items-center justify-center text-white font-black shadow-sm ${
                         isLate ? 'bg-amber-500 ring-1 ring-amber-200' : 'bg-emerald-600 ring-1 ring-emerald-200'
                       }`}
-                      title={`${record?.status} a las ${record?.time}`}
+                      title={`${record?.status} a las ${record?.time}${hasExit ? ` • Salida: ${record?.exitTime}` : ''}`}
                     >
-                      <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" />
+                      {hasExit ? (
+                        <CheckCheck className="w-3.5 h-3.5 sm:w-4 sm:h-4 stroke-[2.5]" />
+                      ) : (
+                        <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" />
+                      )}
                     </div>
                   ) : (
                     <span className="text-[10px] text-slate-200">•</span>
@@ -209,32 +222,89 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* 4. DETALLE RÁPIDO SI SE SELECCIONA UN DÍA */}
-      {selectedDayRecord && (
-        <div className="bg-gradient-to-r from-burgundy-950 to-burgundy-900 text-white p-3.5 rounded-xl text-xs flex items-center justify-between gap-3 animate-in fade-in">
-          <div className="flex items-center gap-2.5">
-            <div
-              className={`w-8 h-8 rounded-lg flex items-center justify-center text-white shrink-0 ${
-                selectedDayRecord.status === 'TARDANZA' ? 'bg-amber-500' : 'bg-emerald-600'
-              }`}
-            >
-              <Check className="w-4 h-4 stroke-[3]" />
+      {/* 4. DETALLE RÁPIDO SI SE SELECCIONA UN DÍA (INGRESO Y SALIDA) */}
+      {selectedDayRecord ? (
+        <div className="bg-gradient-to-r from-burgundy-950 to-burgundy-900 text-white p-4 rounded-2xl text-xs space-y-3 animate-in fade-in border border-lionGold-500/30">
+          <div className="flex items-center justify-between border-b border-burgundy-800/80 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="font-bold text-white text-sm">
+                Fecha: {selectedDayRecord.date}
+              </span>
+              <span
+                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                  selectedDayRecord.status === 'PRESENTE'
+                    ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
+                    : 'bg-amber-500/20 text-amber-300 border border-amber-400/30'
+                }`}
+              >
+                {selectedDayRecord.status}
+              </span>
             </div>
-            <div>
-              <p className="font-bold text-white leading-tight">
-                {selectedDayRecord.date} — {selectedDayRecord.status}
-              </p>
-              <p className="text-[11px] text-burgundy-200">
-                Hora: <span className="font-mono font-bold text-lionGold-300">{selectedDayRecord.time}</span> • {selectedDayRecord.notes || 'Ingreso en garita'}
-              </p>
+
+            <span className="text-[10px] bg-burgundy-900 px-2 py-0.5 rounded border border-lionGold-400/30 font-mono text-lionGold-300">
+              Método: {selectedDayRecord.method}
+            </span>
+          </div>
+
+          {/* Dos tarjetas: Ingreso y Salida */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            {/* Hora de Ingreso */}
+            <div className="bg-burgundy-900/60 p-3 rounded-xl border border-burgundy-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-emerald-500/20 text-emerald-300 border border-emerald-400/30 flex items-center justify-center shrink-0">
+                  <LogIn className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-emerald-300 block">
+                    🟢 Hora de Ingreso
+                  </span>
+                  <span className="font-mono font-black text-sm text-white">
+                    {selectedDayRecord.time || '—'}
+                  </span>
+                </div>
+              </div>
+              <span className="text-[10px] text-emerald-300 font-bold">
+                {selectedDayRecord.status === 'PRESENTE' ? 'Puntual' : 'Tardanza'}
+              </span>
+            </div>
+
+            {/* Hora de Salida */}
+            <div className="bg-burgundy-900/60 p-3 rounded-xl border border-burgundy-800 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-300 border border-amber-400/30 flex items-center justify-center shrink-0">
+                  <LogOut className="w-4 h-4" />
+                </div>
+                <div>
+                  <span className="text-[10px] uppercase font-bold text-amber-300 block">
+                    🟠 Hora de Salida
+                  </span>
+                  <span className="font-mono font-black text-sm text-white">
+                    {selectedDayRecord.exitTime ? selectedDayRecord.exitTime : 'Sin registrar'}
+                  </span>
+                </div>
+              </div>
+              <span
+                className={`text-[10px] font-bold ${
+                  selectedDayRecord.exitTime ? 'text-amber-300' : 'text-slate-400'
+                }`}
+              >
+                {selectedDayRecord.exitTime ? 'Salida confirmada' : 'Pendiente'}
+              </span>
             </div>
           </div>
 
-          <span className="text-[10px] bg-burgundy-900 px-2 py-1 rounded border border-lionGold-400/30 font-mono text-lionGold-300 shrink-0">
-            {selectedDayRecord.method}
-          </span>
+          {selectedDayRecord.notes && (
+            <p className="text-[11px] text-burgundy-200 italic pt-1 border-t border-burgundy-800/50">
+              Observación: {selectedDayRecord.notes}
+            </p>
+          )}
         </div>
-      )}
+      ) : selectedDateStr ? (
+        <div className="bg-slate-50 border border-slate-200 text-slate-600 p-3.5 rounded-xl text-xs flex items-center justify-between animate-in fade-in">
+          <span>Fecha seleccionada: <span className="font-mono font-bold text-slate-800">{selectedDateStr}</span></span>
+          <span className="text-slate-400 font-medium">No se registran marcas de ingreso ni salida para este día.</span>
+        </div>
+      ) : null}
 
     </div>
   );

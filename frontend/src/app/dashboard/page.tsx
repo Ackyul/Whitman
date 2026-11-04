@@ -97,33 +97,67 @@ export default function SecureDashboardPage() {
                     <h2 className="text-xl sm:text-2xl font-black text-slate-900">{student.name}</h2>
                   </div>
 
-                  {/* Asistencia de ese día */}
-                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center gap-3">
-                    {todayRecord ? (
-                      <>
-                        <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                          <CheckCircle2 className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">Ingreso Registrado Hoy</p>
-                          <p className="text-sm font-black text-slate-900">
-                            {todayRecord.status} ({todayRecord.time})
-                          </p>
-                          <p className="text-[11px] text-slate-500">{todayRecord.notes || 'Ingreso puntual puerta principal'}</p>
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
-                          <Clock className="w-6 h-6" />
-                        </div>
-                        <div>
-                          <p className="text-[10px] font-bold text-slate-400 uppercase">Asistencia de Hoy</p>
-                          <p className="text-sm font-bold text-slate-700">Aún no ingresa a garita</p>
-                          <p className="text-[11px] text-slate-400">Torniquete activo desde las 07:00 AM</p>
-                        </div>
-                      </>
-                    )}
+                  {/* Asistencia de ese día: Ingreso y Salida */}
+                  <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                    {/* Tarjeta Ingreso */}
+                    <div className="flex items-center gap-3">
+                      {todayRecord ? (
+                        <>
+                          <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Ingreso Hoy</p>
+                            <p className="text-sm font-black text-slate-900">
+                              {todayRecord.status} ({todayRecord.time})
+                            </p>
+                            <p className="text-[11px] text-slate-500">{todayRecord.notes || 'Ingreso en garita'}</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
+                            <Clock className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Ingreso Hoy</p>
+                            <p className="text-sm font-bold text-slate-700">Aún no ingresa</p>
+                            <p className="text-[11px] text-slate-400">Garita activa desde las 07:00 AM</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
+
+                    {/* Tarjeta Salida */}
+                    <div className="flex items-center gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-200 sm:pl-4">
+                      {todayRecord?.exitTime ? (
+                        <>
+                          <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                            <CheckCircle2 className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Salida Registrada</p>
+                            <p className="text-sm font-black text-slate-900">
+                              Retiro a las {todayRecord.exitTime}
+                            </p>
+                            <p className="text-[11px] text-emerald-700 font-semibold">Alumno salió del colegio</p>
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+                            <Clock className="w-6 h-6" />
+                          </div>
+                          <div>
+                            <p className="text-[10px] font-bold text-slate-400 uppercase">Salida Hoy</p>
+                            <p className="text-sm font-medium text-slate-600">
+                              {todayRecord ? 'En clases (Pendiente)' : 'Pendiente de marcar'}
+                            </p>
+                            <p className="text-[11px] text-slate-400">Se registrará en portería</p>
+                          </div>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               );
@@ -154,38 +188,76 @@ export default function SecureDashboardPage() {
           </h1>
         </div>
 
-        {/* Resumen Hoy */}
+        {/* Resumen Hoy: Ingreso y Salida */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 md:col-span-2 flex items-center gap-4">
-            {todayRecord ? (
-              <>
-                <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                  <CheckCircle2 className="w-8 h-8" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded">
-                    Ingreso Hoy Confirmado
-                  </span>
-                  <p className="text-lg font-black text-slate-900 mt-1">
-                    Marcaste {todayRecord.status} a las {todayRecord.time}
-                  </p>
-                  <p className="text-xs text-slate-500">{todayRecord.notes || 'Entrada registrada en portería'}</p>
-                </div>
-              </>
-            ) : (
-              <>
-                <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
-                  <Clock className="w-8 h-8" />
-                </div>
-                <div>
-                  <span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded">
-                    Pendiente
-                  </span>
-                  <p className="text-base font-bold text-slate-800 mt-1">Aún no registras ingreso hoy</p>
-                  <p className="text-xs text-slate-400">Pasa tu carnet o DNI por la pistola lectora de portería.</p>
-                </div>
-              </>
-            )}
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 md:col-span-2 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            {/* Estado de Ingreso */}
+            <div className="flex items-center gap-4">
+              {todayRecord ? (
+                <>
+                  <div className="w-12 h-12 rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded">
+                      Ingreso Hoy Confirmado
+                    </span>
+                    <p className="text-base sm:text-lg font-black text-slate-900 mt-1">
+                      {todayRecord.status} a las {todayRecord.time}
+                    </p>
+                    <p className="text-xs text-slate-500">{todayRecord.notes || 'Entrada registrada en garita'}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">
+                    <Clock className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded">
+                      Pendiente
+                    </span>
+                    <p className="text-base font-bold text-slate-800 mt-1">Aún no registras ingreso</p>
+                    <p className="text-xs text-slate-400">Pasa tu carnet por la pistola lectora.</p>
+                  </div>
+                </>
+              )}
+            </div>
+
+            {/* Estado de Salida */}
+            <div className="flex items-center gap-4 pt-3 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-100 sm:pl-4">
+              {todayRecord?.exitTime ? (
+                <>
+                  <div className="w-12 h-12 rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    <CheckCircle2 className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-black uppercase text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-200">
+                      Salida Confirmada
+                    </span>
+                    <p className="text-base sm:text-lg font-black text-slate-900 mt-1">
+                      Saliste a las {todayRecord.exitTime}
+                    </p>
+                    <p className="text-xs text-emerald-700 font-semibold">Marcado de salida completado</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+                    <Clock className="w-8 h-8" />
+                  </div>
+                  <div>
+                    <span className="text-[10px] font-bold uppercase text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded">
+                      Salida Pendiente
+                    </span>
+                    <p className="text-base font-medium text-slate-600 mt-1">
+                      {todayRecord ? 'En clases (Por marcar)' : 'Pendiente'}
+                    </p>
+                    <p className="text-xs text-slate-400">Marca tu salida al retirarte.</p>
+                  </div>
+                </>
+              )}
+            </div>
           </div>
 
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 flex flex-col justify-between">

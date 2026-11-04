@@ -368,7 +368,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
               <tr>
                 <th className="px-6 py-3.5">Estudiante</th>
                 <th className="px-4 py-3.5">Nivel / Aula</th>
-                <th className="px-4 py-3.5">Hora de Ingreso</th>
+                <th className="px-4 py-3.5">Ingreso / Salida</th>
                 <th className="px-4 py-3.5">Método</th>
                 <th className="px-4 py-3.5">Estado</th>
                 <th className="px-4 py-3.5">Observación</th>
@@ -428,7 +428,20 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                     </td>
 
                     <td className="px-4 py-4 font-mono font-semibold text-slate-800">
-                      {item.time}
+                      <div className="flex flex-col gap-0.5 text-xs">
+                        <span className="text-emerald-700 font-bold flex items-center gap-1">
+                          🟢 In: {item.time}
+                        </span>
+                        {item.exitTime ? (
+                          <span className="text-amber-800 font-bold flex items-center gap-1">
+                            🟠 Out: {item.exitTime}
+                          </span>
+                        ) : (
+                          <span className="text-slate-400 font-normal text-[10px]">
+                            Salida: Pendiente
+                          </span>
+                        )}
+                      </div>
                     </td>
 
                     <td className="px-4 py-4">

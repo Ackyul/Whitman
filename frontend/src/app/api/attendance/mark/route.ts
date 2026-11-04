@@ -4,7 +4,7 @@ import { sql } from '@/lib/db';
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { dni, method = 'BARCODE_SCAN', customStatus, notes } = body;
+    const { dni, method = 'BARCODE_SCAN', customStatus, notes, scanType = 'INGRESO' } = body;
 
     const cleanDni = String(dni || '').trim();
     if (!cleanDni) {
@@ -19,6 +19,31 @@ export async function POST(request: Request) {
         { success: false, message: 'Base de datos no configurada' },
         { status: 500 }
       );
+    }
+
+    // 0. Asegurar esquema de tabla y columna exit_time en Neon DB
+    await (sql as any).query(`
+      CREATE TABLE IF NOT EXISTS attendance (
+        id VARCHAR(64) PRIMARY KEY,
+        user_id VARCHAR(64) REFERENCES users(id) ON DELETE CASCADE,
+        user_name VARCHAR(150) NOT NULL,
+        user_dni VARCHAR(15) NOT NULL,
+        level VARCHAR(20) NOT NULL CHECK (level IN ('COLEGIO', 'ACADEMIA', 'PRIMARIA', 'SECUNDARIA')),
+        grade_or_class VARCHAR(100) NOT NULL,
+        date DATE NOT NULL DEFAULT CURRENT_DATE,
+        time VARCHAR(20) NOT NULL,
+        exit_time VARCHAR(20),
+        status VARCHAR(20) NOT NULL CHECK (status IN ('PRESENTE', 'TARDANZA', 'FALTA', 'JUSTIFICADO')),
+        method VARCHAR(30) NOT NULL DEFAULT 'QR',
+        notes TEXT,
+        created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
+    try {
+      await (sql as any).query(`ALTER TABLE attendance ADD COLUMN IF NOT EXISTS exit_time VARCHAR(20);`);
+    } catch {
+      // Ignorar si la columna ya existe
     }
 
     // 1. Buscar estudiante o usuario por DNI o Código en Neon DB
@@ -45,7 +70,6 @@ export async function POST(request: Request) {
 
     // 2. Determinar hora y fecha (Zona horaria Perú UTC-5)
     const now = new Date();
-    // Obtener componentes en hora peruana
     const peruTimeFormatter = new Intl.DateTimeFormat('es-PE', {
       timeZone: 'America/Lima',
       hour: '2-digit',
@@ -67,6 +91,112 @@ export async function POST(request: Request) {
     const dd = dateParts.find((p) => p.type === 'day')?.value;
     const dateStr = `${yyyy}-${mm}-${dd}`;
 
+    const isExit = scanType === 'SALIDA';
+
+    // 3. Buscar si ya existe un registro de asistencia para este alumno el día de hoy
+    const existingRows = await (sql as any).query(
+      `SELECT id, user_id as "userId", user_name as "userName", user_dni as "userDni",
+              level, grade_or_class as "gradeOrClass", TO_CHAR(date, 'YYYY-MM-DD') as date,
+              time, exit_time as "exitTime", status, method, notes
+       FROM attendance
+       WHERE (user_id = $1 OR user_dni = $2) AND date = $3::date
+       ORDER BY time DESC
+       LIMIT 1;`,
+      [user.id, user.dni, dateStr]
+    );
+
+    const existingRecord = existingRows && existingRows.length > 0 ? existingRows[0] : null;
+
+    // CASO A: REGISTRO DE SALIDA
+    if (isExit) {
+      if (existingRecord) {
+        // Actualizar registro existente con hora de salida
+        const exitNotes = notes || (existingRecord.notes ? `${existingRecord.notes} • Salida registrada: ${timeStr}` : `Salida registrada en portería a las ${timeStr}`);
+        
+        await (sql as any).query(
+          `UPDATE attendance
+           SET exit_time = $1, notes = $2
+           WHERE id = $3;`,
+          [timeStr, exitNotes, existingRecord.id]
+        );
+
+        const updatedRecord = {
+          ...existingRecord,
+          exitTime: timeStr,
+          scanType: 'SALIDA',
+          notes: exitNotes,
+        };
+
+        return NextResponse.json({
+          success: true,
+          message: `¡Salida registrada para ${user.name} a las ${timeStr}!`,
+          data: updatedRecord,
+          user,
+        });
+      } else {
+        // Alumno no marcó entrada matutina, pero marca su salida
+        const recordId = `att-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const exitNotes = notes || `Salida registrada en garita a las ${timeStr}`;
+
+        await (sql as any).query(
+          `INSERT INTO attendance (id, user_id, user_name, user_dni, level, grade_or_class, date, time, exit_time, status, method, notes)
+           VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12);`,
+          [
+            recordId,
+            user.id,
+            user.name,
+            user.dni,
+            user.level || 'COLEGIO',
+            user.gradeOrClass || 'Sin Aula Asignada',
+            dateStr,
+            timeStr,
+            timeStr,
+            'PRESENTE',
+            method,
+            exitNotes,
+          ]
+        );
+
+        const newExitRecord = {
+          id: recordId,
+          userId: user.id,
+          userName: user.name,
+          userDni: user.dni,
+          level: user.level,
+          gradeOrClass: user.gradeOrClass,
+          date: dateStr,
+          time: timeStr,
+          exitTime: timeStr,
+          scanType: 'SALIDA',
+          status: 'PRESENTE',
+          method,
+          notes: exitNotes,
+        };
+
+        return NextResponse.json({
+          success: true,
+          message: `¡Salida registrada para ${user.name} a las ${timeStr}!`,
+          data: newExitRecord,
+          user,
+        });
+      }
+    }
+
+    // CASO B: REGISTRO DE INGRESO (ENTRADA)
+    if (existingRecord) {
+      // El alumno ya había registrado ingreso hoy
+      return NextResponse.json({
+        success: true,
+        message: `${user.name} ya registró su ingreso a las ${existingRecord.time} [${existingRecord.status}]`,
+        data: {
+          ...existingRecord,
+          scanType: 'INGRESO',
+        },
+        user,
+        alreadyMarked: true,
+      });
+    }
+
     // Determinar tardanza (Límite: 08:05:00)
     let status = customStatus || 'PRESENTE';
     if (!customStatus) {
@@ -85,7 +215,7 @@ export async function POST(request: Request) {
         ? 'Ingreso registrado con tardanza en portería'
         : 'Ingreso puntual registrado con pistola lectora');
 
-    // 3. Insertar en tabla attendance
+    // Insertar nuevo ingreso en tabla attendance
     await (sql as any).query(
       `INSERT INTO attendance (id, user_id, user_name, user_dni, level, grade_or_class, date, time, status, method, notes)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11);`,
@@ -113,6 +243,8 @@ export async function POST(request: Request) {
       gradeOrClass: user.gradeOrClass,
       date: dateStr,
       time: timeStr,
+      exitTime: undefined,
+      scanType: 'INGRESO',
       status,
       method,
       notes: finalNotes,
@@ -132,4 +264,3 @@ export async function POST(request: Request) {
     );
   }
 }
-

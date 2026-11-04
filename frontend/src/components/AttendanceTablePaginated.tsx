@@ -95,7 +95,8 @@ export const AttendanceTablePaginated: React.FC<Props> = ({
           <thead className="bg-slate-50 text-[11px] font-black uppercase text-slate-500 border-b border-slate-200">
             <tr>
               <th className="px-4 py-3.5">Día y Fecha</th>
-              <th className="px-4 py-3.5">Hora Exacta</th>
+              <th className="px-4 py-3.5">Hora Ingreso</th>
+              <th className="px-4 py-3.5">Hora Salida</th>
               <th className="px-4 py-3.5">Estado</th>
               <th className="px-4 py-3.5">Método de Marcado</th>
               <th className="px-4 py-3.5">Observación</th>
@@ -104,7 +105,7 @@ export const AttendanceTablePaginated: React.FC<Props> = ({
           <tbody className="divide-y divide-slate-100">
             {currentRecords.length === 0 ? (
               <tr>
-                <td colSpan={5} className="text-center py-12 text-slate-400 text-xs">
+                <td colSpan={6} className="text-center py-12 text-slate-400 text-xs">
                   No hay registros de asistencia en este período.
                 </td>
               </tr>
@@ -128,12 +129,26 @@ export const AttendanceTablePaginated: React.FC<Props> = ({
                       </div>
                     </td>
 
-                    {/* HORA EXACTA (con segundos) */}
+                    {/* HORA INGRESO */}
                     <td className="px-4 py-3.5">
                       <div className="inline-flex items-center gap-1.5 font-mono font-bold text-slate-800 text-xs sm:text-sm bg-slate-100/80 px-2.5 py-1 rounded-lg border border-slate-200">
-                        <Clock className="w-3.5 h-3.5 text-slate-500 shrink-0" />
+                        <Clock className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
                         <span>{rec.time || '00:00:00'}</span>
                       </div>
+                    </td>
+
+                    {/* HORA SALIDA */}
+                    <td className="px-4 py-3.5">
+                      {rec.exitTime ? (
+                        <div className="inline-flex items-center gap-1.5 font-mono font-bold text-amber-900 text-xs sm:text-sm bg-amber-50 px-2.5 py-1 rounded-lg border border-amber-200">
+                          <Clock className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                          <span>{rec.exitTime}</span>
+                        </div>
+                      ) : (
+                        <span className="text-slate-400 text-xs italic">
+                          Pendiente
+                        </span>
+                      )}
                     </td>
 
                     {/* ESTADO CON BOLITA/BADGE */}

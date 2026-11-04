@@ -41,7 +41,9 @@ export interface AttendanceRecord {
   level: EducationLevel;
   gradeOrClass: string;
   date: string;
-  time: string;
+  time: string;           // Hora de Ingreso
+  exitTime?: string;      // Hora de Salida registrada en garita
+  scanType?: 'INGRESO' | 'SALIDA';
   status: AttendanceStatus;
   method: 'QR' | 'DNI_MANUAL' | 'BIOMETRICO' | 'DOCENTE';
   notes?: string;

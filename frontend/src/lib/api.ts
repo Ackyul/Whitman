@@ -202,7 +202,14 @@ export async function markAttendance(payload: {
   method?: string;
   customStatus?: string;
   notes?: string;
-}): Promise<{ success: boolean; message: string; data?: AttendanceRecord; user?: User }> {
+  scanType?: 'INGRESO' | 'SALIDA';
+}): Promise<{
+  success: boolean;
+  message: string;
+  data?: AttendanceRecord;
+  user?: User;
+  alreadyMarked?: boolean;
+}> {
   try {
     const res = await fetchWithTimeout(`${API_BASE}/api/attendance/mark`, {
       method: 'POST',
@@ -221,6 +228,7 @@ export async function markAttendance(payload: {
     const now = new Date();
     const timeStr = now.toLocaleTimeString('es-PE', { hour12: false });
     const isLate = now.getHours() > 8 || (now.getHours() === 8 && now.getMinutes() > 5);
+    const isExit = payload.scanType === 'SALIDA';
 
     const newRecord: AttendanceRecord = {
       id: `att-${Date.now()}`,
@@ -230,15 +238,19 @@ export async function markAttendance(payload: {
       level: user.level,
       gradeOrClass: user.gradeOrClass,
       date: now.toISOString().split('T')[0],
-      time: timeStr,
-      status: (payload.customStatus as any) || (isLate ? 'TARDANZA' : 'PRESENTE'),
+      time: isExit ? '07:45:00' : timeStr,
+      exitTime: isExit ? timeStr : undefined,
+      scanType: payload.scanType || 'INGRESO',
+      status: (payload.customStatus as any) || (isLate && !isExit ? 'TARDANZA' : 'PRESENTE'),
       method: (payload.method as any) || 'QR',
-      notes: payload.notes || 'Marcado en terminal local',
+      notes: payload.notes || (isExit ? 'Salida registrada en garita' : 'Marcado en terminal local'),
     };
 
     return {
       success: true,
-      message: `¡Asistencia registrada para ${user.name}! [${newRecord.status}]`,
+      message: isExit
+        ? `¡Salida registrada para ${user.name}! [${timeStr}]`
+        : `¡Asistencia registrada para ${user.name}! [${newRecord.status}]`,
       data: newRecord,
       user,
     };

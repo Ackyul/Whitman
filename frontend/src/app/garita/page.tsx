@@ -17,6 +17,8 @@ import {
   Lock,
   ArrowLeft,
   ShieldCheck,
+  LogIn,
+  LogOut,
 } from 'lucide-react';
 
 export default function GaritaTotemRoute() {
@@ -26,6 +28,9 @@ export default function GaritaTotemRoute() {
   const [lastScanResult, setLastScanResult] = useState<any | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [soundEnabled, setSoundEnabled] = useState(true);
+
+  // Modo de escaneo: INGRESO (Entrada) o SALIDA (Despacho)
+  const [scanMode, setScanMode] = useState<'INGRESO' | 'SALIDA'>('INGRESO');
 
   const clearTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -38,12 +43,29 @@ export default function GaritaTotemRoute() {
   const barcodeBufferRef = useRef<string>('');
   const lastKeyTimeRef = useRef<number>(0);
 
-  // 1. LISTENER GLOBAL PARA PISTOLA LECTORA DE CÓDIGO DE BARRAS FÍSICA (USB/Bluetooth)
+  // Ajustar modo inicial según hora del día (antes de mediodía = INGRESO, después = SALIDA)
+  useEffect(() => {
+    const hour = new Date().getHours();
+    if (hour >= 12) {
+      setScanMode('SALIDA');
+    } else {
+      setScanMode('INGRESO');
+    }
+  }, []);
+
+  // 1. LISTENER GLOBAL PARA PISTOLA LECTORA DE CÓDIGO DE BARRAS FÍSICA (USB/Bluetooth) Y TECLA F2
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
       const now = Date.now();
       const diff = now - lastKeyTimeRef.current;
       lastKeyTimeRef.current = now;
+
+      // Tecla rápida F2 para alternar entre MODO INGRESO y MODO SALIDA
+      if (e.key === 'F2') {
+        e.preventDefault();
+        setScanMode((prev) => (prev === 'INGRESO' ? 'SALIDA' : 'INGRESO'));
+        return;
+      }
 
       // Si el usuario presiona Enter, procesar el buffer del escáner
       if (e.key === 'Enter') {
@@ -70,12 +92,12 @@ export default function GaritaTotemRoute() {
 
     window.addEventListener('keydown', handleGlobalKeyDown);
     return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, []);
+  }, [scanMode]);
 
   // Mantener el input visible enfocado
   useEffect(() => {
     inputRef.current?.focus();
-  }, [lastScanResult]);
+  }, [lastScanResult, scanMode]);
 
   const processScan = async (dniToProcess: string) => {
     const cleanDni = dniToProcess.trim();
@@ -94,13 +116,16 @@ export default function GaritaTotemRoute() {
       const res = await markAttendance({
         dni: cleanDni,
         method: 'DNI_MANUAL',
+        scanType: scanMode,
       });
 
       const record = res.data;
 
-      // Reproducir sonido de confirmación
+      // Reproducir sonido de confirmación adecuado
       if (soundEnabled) {
-        if (record?.status === 'PRESENTE') {
+        if (scanMode === 'SALIDA') {
+          soundFX.playSalida();
+        } else if (record?.status === 'PRESENTE') {
           soundFX.playPuntual();
         } else {
           soundFX.playTardanza();
@@ -110,6 +135,7 @@ export default function GaritaTotemRoute() {
       setLastScanResult({
         record,
         user: res.user,
+        scanMode,
         timestamp: new Date().toLocaleTimeString('es-PE'),
       });
 
@@ -140,7 +166,11 @@ export default function GaritaTotemRoute() {
     }
   };
 
-  const totalMarkedToday = stats?.todayAttendance?.totalMarked ?? attendance.length;
+  // Contadores de hoy
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayAttendance = attendance.filter((a) => a.date?.startsWith(todayStr));
+  const totalIngresos = todayAttendance.filter((a) => a.time).length;
+  const totalSalidas = todayAttendance.filter((a) => Boolean(a.exitTime)).length;
 
   // PROTECCIÓN DE RUTA: Solo Jefe de Normas y Disciplina o Dirección General
   if (!isAuthorized) {
@@ -195,7 +225,7 @@ export default function GaritaTotemRoute() {
         </Link>
       </div>
 
-      {/* Cabecera del Tótem de Entrada */}
+      {/* Cabecera del Tótem de Entrada y Salida */}
       <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-lionGold-500/50 flex flex-col md:flex-row items-center justify-between gap-6">
         <div className="flex items-center gap-4">
           <div className="p-2.5 bg-burgundy-900 rounded-2xl border border-lionGold-400/40 shadow-inner shrink-0">
@@ -208,10 +238,10 @@ export default function GaritaTotemRoute() {
               <span>PISTOLA LECTORA USB ACTIVA</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black font-serif tracking-tight">
-              Garita de Control Físico con Código de Barras
+              Garita de Control Físico: Ingreso y Salida
             </h1>
             <p className="text-xs text-burgundy-200 mt-0.5">
-              Optimizado para escanear el DNI o Carnet con pistola lectora láser. Registra automáticamente en Neon.
+              Escanea con la pistola lectora láser el DNI o carnet físico del alumno para registrar su entrada o su salida en Neon DB.
             </p>
           </div>
         </div>
@@ -242,82 +272,174 @@ export default function GaritaTotemRoute() {
         </div>
       </div>
 
-      {/* Flujo de Ingresos de Hoy (Limpio, Sin Aforo) */}
-      <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-        <div>
-          <span className="text-xs font-black text-slate-400 uppercase tracking-wider block">
-            FLUJO DE INGRESO HOY
-          </span>
-          <div className="flex flex-wrap items-center gap-3 mt-1">
-            <span className="text-2xl font-black text-slate-900">{totalMarkedToday} alumnos ingresaron</span>
-            <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
-              {stats?.todayAttendance?.present || 0} puntuales
+      {/* Flujo de Hoy: Ingresos y Salidas (Sin Aforo) */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+        {/* Flujo Ingresos */}
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-50 text-emerald-700 border border-emerald-200 flex items-center justify-center shrink-0">
+            <LogIn className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+              INGRESOS REGISTRADOS HOY
             </span>
-            <span className="text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-0.5 rounded-full border border-amber-300">
-              {stats?.todayAttendance?.late || 0} tardanzas
+            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+              <span className="text-xl sm:text-2xl font-black text-slate-900">{totalIngresos} alumnos</span>
+              <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
+                {stats?.todayAttendance?.present || 0} puntuales
+              </span>
+              <span className="text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-0.5 rounded-full border border-amber-300">
+                {stats?.todayAttendance?.late || 0} tardanzas
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Flujo Salidas */}
+        <div className="flex items-center gap-4 border-t md:border-t-0 md:border-l border-slate-100 pt-3 md:pt-0 md:pl-4">
+          <div className="w-12 h-12 rounded-2xl bg-amber-50 text-amber-700 border border-amber-200 flex items-center justify-center shrink-0">
+            <LogOut className="w-6 h-6" />
+          </div>
+          <div>
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
+              SALIDAS REGISTRADAS HOY
             </span>
+            <div className="flex flex-wrap items-center gap-2 mt-0.5">
+              <span className="text-xl sm:text-2xl font-black text-slate-900">{totalSalidas} alumnos salieron</span>
+              <span className="text-xs bg-amber-100 text-amber-900 font-bold px-2.5 py-0.5 rounded-full border border-amber-300">
+                Marcado de salida activo
+              </span>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Área Central: Dos Columnas (Izquierda: Escáner Láser / Derecha: Confirmación con Check Gigante) */}
+      {/* Área Central: Dos Columnas (Izquierda: Selector Entrada/Salida & Escáner / Derecha: Confirmación con Check Gigante) */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         
         {/* Columna Izquierda: Terminal Láser */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-md border border-slate-200 flex flex-col justify-between space-y-6">
-          <div>
-            <div className="flex items-center justify-between text-slate-800 font-bold mb-3">
-              <div className="flex items-center gap-2">
-                <ScanLine className="w-5 h-5 text-burgundy-800 animate-pulse" />
-                <span className="text-sm">Lector Láser Activo (Dispara el escáner sobre el código de barras)</span>
+          <div className="space-y-4">
+            
+            {/* SELECTOR DE MODO: ENTRADA / SALIDA */}
+            <div>
+              <div className="flex items-center justify-between text-xs font-bold text-slate-600 mb-2">
+                <span>SELECCIONA QUÉ DESEAS REGISTRAR:</span>
+                <span className="text-[11px] font-mono text-slate-400">Atajo: Tecla [F2]</span>
               </div>
-              <span className="text-[11px] font-mono text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200">
-                ● ESCÁNER LISTO
+              <div className="grid grid-cols-2 gap-2 p-1.5 bg-slate-100 rounded-2xl border border-slate-200">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScanMode('INGRESO');
+                    inputRef.current?.focus();
+                  }}
+                  className={`py-3 px-3 sm:px-4 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition ${
+                    scanMode === 'INGRESO'
+                      ? 'bg-emerald-600 text-white shadow-md'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+                  }`}
+                >
+                  <LogIn className="w-4 h-4 shrink-0" />
+                  <span>🟢 MODO INGRESO</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setScanMode('SALIDA');
+                    inputRef.current?.focus();
+                  }}
+                  className={`py-3 px-3 sm:px-4 rounded-xl font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition ${
+                    scanMode === 'SALIDA'
+                      ? 'bg-amber-600 text-white shadow-md'
+                      : 'text-slate-600 hover:text-slate-900 hover:bg-white/70'
+                  }`}
+                >
+                  <LogOut className="w-4 h-4 shrink-0" />
+                  <span>🟠 MODO SALIDA</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Cabecera del Escáner */}
+            <div className="flex items-center justify-between text-slate-800 font-bold pt-1">
+              <div className="flex items-center gap-2">
+                <ScanLine className={`w-5 h-5 animate-pulse ${scanMode === 'INGRESO' ? 'text-emerald-700' : 'text-amber-700'}`} />
+                <span className="text-xs sm:text-sm">
+                  {scanMode === 'INGRESO'
+                    ? 'Pistola Láser lista para marcar INGRESO'
+                    : 'Pistola Láser lista para marcar SALIDA'}
+                </span>
+              </div>
+              <span
+                className={`text-[11px] font-mono px-2 py-0.5 rounded border ${
+                  scanMode === 'INGRESO'
+                    ? 'text-emerald-700 bg-emerald-50 border-emerald-200'
+                    : 'text-amber-700 bg-amber-50 border-amber-200'
+                }`}
+              >
+                ● {scanMode === 'INGRESO' ? 'ENTRADA' : 'SALIDA'} ACTIVA
               </span>
             </div>
 
+            {/* Input de Lectura de Código de Barras */}
             <div className="relative">
               <input
                 ref={inputRef}
                 type="text"
-                placeholder="Pase el carnet físico o digite los 8 dígitos..."
+                placeholder={
+                  scanMode === 'INGRESO'
+                    ? 'Pase carnet o digite DNI para INGRESO...'
+                    : 'Pase carnet o digite DNI para SALIDA...'
+                }
                 value={dniScan}
                 onChange={(e) => setDniScan(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && processScan(dniScan)}
-                className="w-full pl-5 pr-32 py-5 text-2xl font-mono font-black text-slate-900 border-4 border-burgundy-800 rounded-2xl focus:outline-none focus:ring-4 focus:ring-burgundy-200 shadow-inner"
+                className={`w-full pl-5 pr-32 py-5 text-2xl font-mono font-black text-slate-900 border-4 rounded-2xl focus:outline-none focus:ring-4 shadow-inner ${
+                  scanMode === 'INGRESO'
+                    ? 'border-emerald-600 focus:ring-emerald-200'
+                    : 'border-amber-500 focus:ring-amber-200'
+                }`}
               />
               <button
                 onClick={() => processScan(dniScan)}
                 disabled={loading}
-                className="absolute right-3 top-3 bottom-3 bg-burgundy-800 hover:bg-burgundy-900 text-white font-black px-6 rounded-xl text-xs uppercase tracking-wider transition disabled:opacity-50"
+                className={`absolute right-3 top-3 bottom-3 text-white font-black px-6 rounded-xl text-xs uppercase tracking-wider transition disabled:opacity-50 ${
+                  scanMode === 'INGRESO'
+                    ? 'bg-emerald-600 hover:bg-emerald-700'
+                    : 'bg-amber-600 hover:bg-amber-700'
+                }`}
               >
                 {loading ? 'Leyendo...' : 'ESCANEAR'}
               </button>
             </div>
-            <p className="text-[11px] text-slate-400 mt-2">
+            <p className="text-[11px] text-slate-400">
               💡 La pistola lectora USB funciona automáticamente aun si el cursor no está dentro de la caja de texto.
             </p>
           </div>
 
           {/* Información de Operación de Garita */}
-          <div className="p-8 rounded-3xl border-2 border-dashed border-slate-200 text-center text-slate-400 bg-slate-50/50 space-y-3">
-            <ScanLine className="w-12 h-12 mx-auto text-slate-300 animate-pulse" />
-            <h3 className="text-base font-black text-slate-700">
-              Terminal de Control de Asistencia Activo
+          <div className="p-6 rounded-3xl border-2 border-dashed border-slate-200 text-center text-slate-400 bg-slate-50/50 space-y-2.5">
+            <ScanLine className="w-10 h-10 mx-auto text-slate-300 animate-pulse" />
+            <h3 className="text-sm font-black text-slate-700">
+              Terminal de Garita Whitman • {scanMode === 'INGRESO' ? 'Ingreso Matutino' : 'Marcado de Salida'}
             </h3>
             <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              Apunta la pistola lectora al código de barras del DNI o carnet físico del alumno para registrar el ingreso al instante.
+              {scanMode === 'INGRESO'
+                ? 'Apunta la pistola lectora al código de barras del carnet para registrar la entrada del alumno.'
+                : 'Apunta la pistola lectora al código de barras del carnet para marcar la salida y retiro del alumno.'}
             </p>
-            <div className="inline-flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-slate-200 text-[11px] text-slate-500 font-semibold shadow-sm">
-              <span>Hora límite puntual: 08:00 AM</span>
+            <div className="inline-flex items-center gap-2 bg-white px-3 py-1 rounded-full border border-slate-200 text-[11px] text-slate-500 font-semibold shadow-sm">
+              <span>Ingreso puntual: hasta 08:05 AM</span>
               <span>•</span>
-              <span>Tolerancia de garita: 5 min</span>
+              <span>Salida: Todo el turno escolar</span>
             </div>
           </div>
 
           <div className="pt-2 text-xs text-slate-400 flex items-center justify-between border-t border-slate-100">
             <span>Sincronizado con Neon PostgreSQL en la nube</span>
-            <span>Academia y Colegio Whitman • Portería Central</span>
+            <span>Colegio Whitman • Portería Central</span>
           </div>
         </div>
 
@@ -325,8 +447,10 @@ export default function GaritaTotemRoute() {
         <div className="flex flex-col">
           {lastScanResult ? (
             <div
-              className={`h-full min-h-[380px] rounded-3xl p-6 sm:p-8 border-3 shadow-xl animate-in zoom-in-95 duration-150 flex flex-col items-center justify-center text-center space-y-5 ${
-                lastScanResult.record.status === 'PRESENTE'
+              className={`h-full min-h-[400px] rounded-3xl p-6 sm:p-8 border-3 shadow-xl animate-in zoom-in-95 duration-150 flex flex-col items-center justify-center text-center space-y-5 ${
+                lastScanResult.scanMode === 'SALIDA'
+                  ? 'bg-amber-50/90 border-amber-400 text-amber-950'
+                  : lastScanResult.record.status === 'PRESENTE'
                   ? 'bg-emerald-50/90 border-emerald-400 text-emerald-950'
                   : 'bg-amber-50/90 border-amber-400 text-amber-950'
               }`}
@@ -335,7 +459,9 @@ export default function GaritaTotemRoute() {
               <div className="relative">
                 <div
                   className={`w-28 h-28 sm:w-36 sm:h-36 rounded-full flex items-center justify-center shadow-xl border-4 ${
-                    lastScanResult.record.status === 'PRESENTE'
+                    lastScanResult.scanMode === 'SALIDA'
+                      ? 'bg-amber-500 border-white text-white'
+                      : lastScanResult.record.status === 'PRESENTE'
                       ? 'bg-emerald-500 border-white text-white'
                       : 'bg-amber-500 border-white text-white'
                   }`}
@@ -348,12 +474,16 @@ export default function GaritaTotemRoute() {
               <div>
                 <span
                   className={`font-black text-xs sm:text-sm px-5 py-1.5 rounded-full uppercase tracking-wider text-white shadow-sm inline-flex items-center gap-1.5 ${
-                    lastScanResult.record.status === 'PRESENTE'
+                    lastScanResult.scanMode === 'SALIDA'
+                      ? 'bg-amber-600'
+                      : lastScanResult.record.status === 'PRESENTE'
                       ? 'bg-emerald-600'
                       : 'bg-amber-600'
                   }`}
                 >
-                  {lastScanResult.record.status === 'PRESENTE'
+                  {lastScanResult.scanMode === 'SALIDA'
+                    ? '✓ SALIDA CONFIRMADA'
+                    : lastScanResult.record.status === 'PRESENTE'
                     ? '✓ INGRESO PUNTUAL CONFIRMADO'
                     : '⚠ REGISTRO CON TARDANZA'}
                 </span>
@@ -369,19 +499,27 @@ export default function GaritaTotemRoute() {
                 </p>
               </div>
 
-              {/* Detalles de DNI y Hora */}
-              <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-slate-200/80 w-full max-w-xs text-xs font-mono font-bold text-slate-700">
+              {/* Detalles de DNI y Horas */}
+              <div className="flex flex-wrap items-center justify-center gap-2 pt-2 border-t border-slate-200/80 w-full max-w-sm text-xs font-mono font-bold text-slate-700">
                 <span className="bg-white/90 px-3 py-1 rounded-lg border border-slate-200 shadow-sm">
                   DNI: {lastScanResult.record.userDni}
                 </span>
-                <span className="bg-white/90 px-3 py-1 rounded-lg border border-slate-200 shadow-sm flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-slate-500" />
-                  {lastScanResult.record.time}
-                </span>
+
+                {lastScanResult.scanMode === 'SALIDA' ? (
+                  <span className="bg-white/90 px-3 py-1 rounded-lg border border-slate-200 shadow-sm flex items-center gap-1 text-amber-900">
+                    <LogOut className="w-3.5 h-3.5 text-amber-600" />
+                    Salida: {lastScanResult.record.exitTime || lastScanResult.record.time}
+                  </span>
+                ) : (
+                  <span className="bg-white/90 px-3 py-1 rounded-lg border border-slate-200 shadow-sm flex items-center gap-1 text-emerald-900">
+                    <LogIn className="w-3.5 h-3.5 text-emerald-600" />
+                    Ingreso: {lastScanResult.record.time}
+                  </span>
+                )}
               </div>
             </div>
           ) : errorMessage ? (
-            <div className="h-full min-h-[380px] rounded-3xl p-6 sm:p-8 border-3 border-rose-300 bg-rose-50 text-rose-950 flex flex-col items-center justify-center text-center space-y-4 shadow-xl animate-in zoom-in-95 duration-150">
+            <div className="h-full min-h-[400px] rounded-3xl p-6 sm:p-8 border-3 border-rose-300 bg-rose-50 text-rose-950 flex flex-col items-center justify-center text-center space-y-4 shadow-xl animate-in zoom-in-95 duration-150">
               <div className="w-24 h-24 rounded-full bg-rose-500 text-white flex items-center justify-center shadow-lg border-4 border-white">
                 <AlertCircle className="w-14 h-14 stroke-[2.5]" />
               </div>
@@ -401,15 +539,15 @@ export default function GaritaTotemRoute() {
               </p>
             </div>
           ) : (
-            <div className="h-full min-h-[380px] rounded-3xl p-8 border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-center space-y-3 shadow-sm">
+            <div className="h-full min-h-[400px] rounded-3xl p-8 border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-center space-y-3 shadow-sm">
               <div className="w-24 h-24 rounded-full bg-slate-100 flex items-center justify-center text-slate-400">
                 <ScanLine className="w-12 h-12 text-slate-400 animate-pulse" />
               </div>
               <h3 className="text-xl font-black text-slate-800">
-                Esperando Registro de Alumno
+                Esperando Registro • {scanMode === 'INGRESO' ? 'Entrada' : 'Salida'}
               </h3>
               <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-                Al escanear el carnet o DNI, aquí se mostrará el nombre del alumno y el check de confirmación de asistencia en tiempo real.
+                Al escanear el carnet o DNI, aquí se mostrará el nombre del alumno y el check de confirmación de {scanMode === 'INGRESO' ? 'ingreso' : 'salida'} en tiempo real.
               </p>
             </div>
           )}

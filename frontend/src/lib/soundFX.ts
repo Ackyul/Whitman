@@ -70,6 +70,33 @@ class SoundFX {
     }
   }
 
+  // Beep de salida confirmada (Tono cálido descendente tipo checkout)
+  playSalida() {
+    try {
+      const ctx = this.getContext();
+      if (!ctx) return;
+
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(784, now); // G5
+      osc.frequency.setValueAtTime(587.33, now + 0.1); // D5
+
+      gain.gain.setValueAtTime(0.3, now);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.22);
+
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+
+      osc.start();
+      osc.stop(now + 0.22);
+    } catch (e) {
+      console.warn('Audio feedback error:', e);
+    }
+  }
+
   // Alerta de DNI no registrado o error
   playError() {
     try {

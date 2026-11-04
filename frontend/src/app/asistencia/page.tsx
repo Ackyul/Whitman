@@ -82,39 +82,73 @@ export default function AsistenciaRoute() {
                 </div>
               </div>
 
-              {/* Estado de Hoy */}
-              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex items-center gap-3">
-                {todayRecord ? (
-                  <>
-                    {todayRecord.status === 'PRESENTE' ? (
-                      <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
-                        <CheckCircle2 className="w-6 h-6" />
+              {/* Estado de Hoy (Ingreso y Salida) */}
+              <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                {/* Ingreso */}
+                <div className="flex items-center gap-3">
+                  {todayRecord ? (
+                    <>
+                      {todayRecord.status === 'PRESENTE' ? (
+                        <div className="w-10 h-10 rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-6 h-6" />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                          <Clock className="w-6 h-6" />
+                        </div>
+                      )}
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Ingreso de Hoy</p>
+                        <p className="text-sm font-black text-slate-900">
+                          {todayRecord.status} ({todayRecord.time})
+                        </p>
+                        <p className="text-[11px] text-slate-500">{todayRecord.notes || 'Ingreso en garita'}</p>
                       </div>
-                    ) : (
-                      <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
                         <Clock className="w-6 h-6" />
                       </div>
-                    )}
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Asistencia de Hoy</p>
-                      <p className="text-sm font-black text-slate-900">
-                        {todayRecord.status} ({todayRecord.time})
-                      </p>
-                      <p className="text-[11px] text-slate-500">{todayRecord.notes || 'Ingreso registrado en portería'}</p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-10 h-10 rounded-xl bg-slate-200 text-slate-500 flex items-center justify-center shrink-0">
-                      <Clock className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <p className="text-[10px] font-bold text-slate-400 uppercase">Asistencia de Hoy</p>
-                      <p className="text-sm font-bold text-slate-700">Aún no registra ingreso</p>
-                      <p className="text-[11px] text-slate-400">Garita activa desde las 07:00 AM</p>
-                    </div>
-                  </>
-                )}
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Ingreso de Hoy</p>
+                        <p className="text-sm font-bold text-slate-700">Aún no registra ingreso</p>
+                        <p className="text-[11px] text-slate-400">Garita activa desde las 07:00 AM</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Salida */}
+                <div className="flex items-center gap-3 pt-2 sm:pt-0 border-t sm:border-t-0 sm:border-l border-slate-200 sm:pl-4">
+                  {todayRecord?.exitTime ? (
+                    <>
+                      <div className="w-10 h-10 rounded-xl bg-amber-100 text-amber-700 flex items-center justify-center shrink-0">
+                        <CheckCircle2 className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Salida Registrada</p>
+                        <p className="text-sm font-black text-slate-900">
+                          Salida a las {todayRecord.exitTime}
+                        </p>
+                        <p className="text-[11px] text-emerald-700 font-semibold">Alumno retirado del colegio</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+                        <Clock className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Salida de Hoy</p>
+                        <p className="text-sm font-medium text-slate-600">
+                          {todayRecord ? 'En clases (Pendiente de salida)' : 'Pendiente'}
+                        </p>
+                        <p className="text-[11px] text-slate-400">Se registrará en portería</p>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -207,38 +241,66 @@ export default function AsistenciaRoute() {
                 </span>
               </div>
 
-              <div className="pt-3 flex items-center gap-3.5">
-                {todayRecord ? (
-                  <>
-                    <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-md shrink-0">
-                      <CheckCircle2 className="w-7 h-7" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-500 font-bold">Ingreso Confirmado en Garita</p>
-                      <p className="text-xl font-black font-mono text-slate-900 leading-tight">
-                        {todayRecord.time}
-                      </p>
-                      <p className="text-[11px] text-slate-500 mt-0.5">
-                        {todayRecord.notes || 'Entrada registrada en portería con código de barras en DNI'}
-                      </p>
-                    </div>
-                  </>
-                ) : (
-                  <>
-                    <div className="w-12 h-12 rounded-2xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
-                      <Clock className="w-7 h-7 text-slate-400" />
-                    </div>
-                    <div>
-                      <p className="text-xs text-slate-400 font-bold">Sin Registro de Ingreso</p>
-                      <p className="text-base font-black text-slate-700 leading-tight">
-                        Aún no has registrado asistencia hoy
-                      </p>
-                      <p className="text-[11px] text-slate-400 mt-0.5">
-                        Pasa tu carnet o DNI por la pistola lectora de portería
-                      </p>
-                    </div>
-                  </>
-                )}
+              <div className="pt-3 grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Bloque Ingreso */}
+                <div className="flex items-center gap-3 bg-white/80 p-3 rounded-2xl border border-slate-200/80">
+                  {todayRecord ? (
+                    <>
+                      <div className="w-10 h-10 rounded-xl bg-emerald-600 text-white flex items-center justify-center font-black shadow-sm shrink-0">
+                        <CheckCircle2 className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-emerald-800 font-bold uppercase">🟢 Ingreso Confirmado</p>
+                        <p className="text-lg font-black font-mono text-slate-900 leading-tight">
+                          {todayRecord.time}
+                        </p>
+                        <p className="text-[10px] text-slate-500">{todayRecord.status === 'PRESENTE' ? 'Puntual' : 'Tardanza'}</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+                        <Clock className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">🟢 Ingreso</p>
+                        <p className="text-sm font-bold text-slate-700">Sin registrar hoy</p>
+                        <p className="text-[10px] text-slate-400">Pasa carnet por garita</p>
+                      </div>
+                    </>
+                  )}
+                </div>
+
+                {/* Bloque Salida */}
+                <div className="flex items-center gap-3 bg-white/80 p-3 rounded-2xl border border-slate-200/80">
+                  {todayRecord?.exitTime ? (
+                    <>
+                      <div className="w-10 h-10 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black shadow-sm shrink-0">
+                        <CheckCircle2 className="w-6 h-6" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-amber-800 font-bold uppercase">🟠 Salida Confirmada</p>
+                        <p className="text-lg font-black font-mono text-slate-900 leading-tight">
+                          {todayRecord.exitTime}
+                        </p>
+                        <p className="text-[10px] text-emerald-700 font-bold">Retiro registrado</p>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 text-slate-400 flex items-center justify-center shrink-0">
+                        <Clock className="w-6 h-6 text-slate-400" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase">🟠 Salida</p>
+                        <p className="text-sm font-bold text-slate-700">
+                          {todayRecord ? 'En clases (Por marcar)' : 'Pendiente'}
+                        </p>
+                        <p className="text-[10px] text-slate-400">Marca salida al salir</p>
+                      </div>
+                    </>
+                  )}
+                </div>
               </div>
             </div>
 
