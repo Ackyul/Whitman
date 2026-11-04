@@ -43,14 +43,34 @@ router.post('/assign', async (req, res) => {
   }
 });
 
-// Matricular alumno individual con vinculación de apoderado y asignación
+// Matricular alumno individual con vinculación de Madre, Padre y/o Apoderado
 router.post('/enroll', async (req, res) => {
-  const { dni, name, level, gradeOrClass, phone, parentDni, parentName, parentPhone, email } = req.body;
+  const {
+    dni,
+    name,
+    level,
+    gradeOrClass,
+    phone,
+    email,
+    // Datos Familiares
+    motherDni,
+    motherName,
+    motherPhone,
+    fatherDni,
+    fatherName,
+    fatherPhone,
+    parentDni,
+    parentName,
+    parentPhone,
+    parentRelationship
+  } = req.body;
 
-  if (!dni || !name || !level || !gradeOrClass || !parentDni) {
+  const hasFamilyDni = (motherDni && motherDni.trim()) || (fatherDni && fatherDni.trim()) || (parentDni && parentDni.trim());
+
+  if (!dni || !name || !level || !gradeOrClass || !hasFamilyDni) {
     return res.status(400).json({
       success: false,
-      message: 'DNI, Nombre, Nivel, Grado/Aula y DNI del Apoderado son requeridos para la matrícula.',
+      message: 'DNI, Nombre, Nivel, Grado/Aula y al menos un DNI familiar (Madre, Padre o Apoderado) son requeridos para la matrícula.',
     });
   }
 
@@ -61,10 +81,17 @@ router.post('/enroll', async (req, res) => {
       level,
       gradeOrClass,
       phone,
+      email,
+      motherDni,
+      motherName,
+      motherPhone,
+      fatherDni,
+      fatherName,
+      fatherPhone,
       parentDni,
       parentName,
       parentPhone,
-      email
+      parentRelationship
     });
     res.status(201).json({
       success: true,

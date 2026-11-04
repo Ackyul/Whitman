@@ -18,29 +18,34 @@ router.post('/login', (req, res) => {
 
   const cleanId = String(identifier).trim();
 
-  // 1. Caso: PADRE / APODERADO
+  // 1. Caso: PADRE / MADRE / APODERADO (Cada uno puede ingresar individualmente con su DNI)
   if (role === 'PADRE') {
-    const children = db.getStudentsByParentDni(cleanId);
+    const familyData = db.getStudentsByFamilyDni(cleanId);
 
-    if (children.length === 0) {
+    if (!familyData || familyData.students.length === 0) {
       return res.status(404).json({
         success: false,
-        message: `No se encontró ningún estudiante vinculado al DNI de apoderado ${cleanId}.`,
-        suggestion: 'Prueba con el DNI de prueba de papá: 40112233 o 40223344.',
+        message: `No se encontró ningún estudiante vinculado al DNI ${cleanId}.`,
+        suggestion: 'Ingresa el DNI de la Madre, Padre o Apoderado registrado en la matrícula (ej: 40112233).',
       });
     }
 
-    const firstChild = children[0];
+    const { students, relationshipTitle, guardianName, guardianPhone } = familyData;
+    const firstChild = students[0];
+
     const parentUser: User = {
-      id: `parent-${cleanId}`,
+      id: `family-${cleanId}`,
       dni: cleanId,
-      name: firstChild.parentName || `Apoderado de ${firstChild.name}`,
+      name: guardianName || `${relationshipTitle} de ${firstChild.name}`,
       email: `${cleanId}@apoderados.whitman.edu.pe`,
       role: 'PADRE',
+      hierarchyTitle: relationshipTitle,
       level: firstChild.level,
-      gradeOrClass: `Apoderado - ${firstChild.gradeOrClass}`,
-      phone: firstChild.parentPhone,
-      avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150',
+      gradeOrClass: `${relationshipTitle} - ${firstChild.gradeOrClass}`,
+      phone: guardianPhone || firstChild.parentPhone,
+      avatar: relationshipTitle === 'Madre'
+        ? 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?w=150'
+        : 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150',
       active: true,
       createdAt: new Date().toISOString(),
     };
@@ -49,9 +54,9 @@ router.post('/login', (req, res) => {
 
     return res.json({
       success: true,
-      message: `¡Bienvenido(a) ${parentUser.name}!`,
+      message: `¡Bienvenido(a) ${relationshipTitle} ${parentUser.name}!`,
       user: parentUser,
-      linkedStudents: children,
+      linkedStudents: students,
       attendance: childAttendance,
     });
   }

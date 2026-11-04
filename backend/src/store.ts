@@ -470,6 +470,13 @@ class Store {
           gradeOrClass: u.grade_or_class,
           parentDni: u.parent_dni || undefined,
           parentName: u.parent_name || undefined,
+          parentRelationship: u.parent_relationship || undefined,
+          motherDni: u.mother_dni || undefined,
+          motherName: u.mother_name || undefined,
+          motherPhone: u.mother_phone || undefined,
+          fatherDni: u.father_dni || undefined,
+          fatherName: u.father_name || undefined,
+          fatherPhone: u.father_phone || undefined,
           avatar: u.avatar,
           phone: u.phone,
           parentPhone: u.parent_phone,
@@ -583,8 +590,52 @@ class Store {
     return this.data.users.find(u => u.studentCode?.toLowerCase().trim() === code.toLowerCase().trim());
   }
 
+  getStudentsByFamilyDni(familyDni: string): { students: User[]; relationshipTitle: string; guardianName: string; guardianPhone?: string } | null {
+    const clean = familyDni.trim();
+    if (!clean) return null;
+
+    const matchedStudents: User[] = [];
+    let detectedTitle = 'Apoderado(a)';
+    let detectedName = '';
+    let detectedPhone = '';
+
+    for (const u of this.data.users) {
+      let isMatch = false;
+      if (u.motherDni?.trim() === clean) {
+        isMatch = true;
+        detectedTitle = 'Madre';
+        if (u.motherName) detectedName = u.motherName;
+        if (u.motherPhone) detectedPhone = u.motherPhone;
+      } else if (u.fatherDni?.trim() === clean) {
+        isMatch = true;
+        detectedTitle = 'Padre';
+        if (u.fatherName) detectedName = u.fatherName;
+        if (u.fatherPhone) detectedPhone = u.fatherPhone;
+      } else if (u.parentDni?.trim() === clean) {
+        isMatch = true;
+        detectedTitle = u.parentRelationship || 'Apoderado(a)';
+        if (u.parentName) detectedName = u.parentName;
+        if (u.parentPhone) detectedPhone = u.parentPhone;
+      }
+
+      if (isMatch && !matchedStudents.some(s => s.id === u.id)) {
+        matchedStudents.push(u);
+      }
+    }
+
+    if (matchedStudents.length === 0) return null;
+
+    return {
+      students: matchedStudents,
+      relationshipTitle: detectedTitle,
+      guardianName: detectedName || `${detectedTitle} de ${matchedStudents[0].name}`,
+      guardianPhone: detectedPhone,
+    };
+  }
+
   getStudentsByParentDni(parentDni: string): User[] {
-    return this.data.users.filter(u => u.parentDni?.trim() === parentDni.trim());
+    const family = this.getStudentsByFamilyDni(parentDni);
+    return family ? family.students : [];
   }
 
   addUser(user: User): User {
@@ -598,29 +649,60 @@ class Store {
     this.persist(this.data);
 
     if (isNeonConfigured && sql) {
-      (sql as any).query(
-        `INSERT INTO users (id, dni, student_code, name, email, role, hierarchy, hierarchy_title, level, grade_or_class, parent_dni, parent_name, avatar, phone, parent_phone, active)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16)
-         ON CONFLICT (dni) DO NOTHING;`,
-        [
-          user.id,
-          user.dni,
-          user.studentCode || null,
-          user.name,
-          user.email,
-          user.role,
-          user.hierarchy || null,
-          user.hierarchyTitle || null,
-          user.level,
-          user.gradeOrClass,
-          user.parentDni || null,
-          user.parentName || null,
-          user.avatar || null,
-          user.phone || null,
-          user.parentPhone || null,
-          user.active
-        ]
-      ).catch((e: any) => console.error('Error insertando usuario parametrizado en Neon:', e));
+      // Asegurar columnas familiares en Neon de forma segura
+      (sql as any).query(`
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS mother_dni VARCHAR(15);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS mother_name VARCHAR(150);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS mother_phone VARCHAR(30);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS father_dni VARCHAR(15);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS father_name VARCHAR(150);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS father_phone VARCHAR(30);
+        ALTER TABLE users ADD COLUMN IF NOT EXISTS parent_relationship VARCHAR(50);
+      `).then(() => {
+        return (sql as any).query(
+          `INSERT INTO users (
+            id, dni, student_code, name, email, role, hierarchy, hierarchy_title, level, grade_or_class,
+            parent_dni, parent_name, avatar, phone, parent_phone, active,
+            mother_dni, mother_name, mother_phone, father_dni, father_name, father_phone, parent_relationship
+          )
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20, $21, $22, $23)
+          ON CONFLICT (dni) DO UPDATE SET
+            mother_dni = EXCLUDED.mother_dni,
+            mother_name = EXCLUDED.mother_name,
+            mother_phone = EXCLUDED.mother_phone,
+            father_dni = EXCLUDED.father_dni,
+            father_name = EXCLUDED.father_name,
+            father_phone = EXCLUDED.father_phone,
+            parent_dni = EXCLUDED.parent_dni,
+            parent_name = EXCLUDED.parent_name,
+            parent_relationship = EXCLUDED.parent_relationship;`,
+          [
+            user.id,
+            user.dni,
+            user.studentCode || null,
+            user.name,
+            user.email,
+            user.role,
+            user.hierarchy || null,
+            user.hierarchyTitle || null,
+            user.level,
+            user.gradeOrClass,
+            user.parentDni || null,
+            user.parentName || null,
+            user.avatar || null,
+            user.phone || null,
+            user.parentPhone || null,
+            user.active,
+            user.motherDni || null,
+            user.motherName || null,
+            user.motherPhone || null,
+            user.fatherDni || null,
+            user.fatherName || null,
+            user.fatherPhone || null,
+            user.parentRelationship || null
+          ]
+        );
+      }).catch((e: any) => console.error('Error insertando usuario parametrizado en Neon:', e));
     }
 
     return user;
@@ -889,10 +971,18 @@ class Store {
     level: any;
     gradeOrClass: string;
     phone?: string;
-    parentDni: string;
+    email?: string;
+    // Familiares
+    motherDni?: string;
+    motherName?: string;
+    motherPhone?: string;
+    fatherDni?: string;
+    fatherName?: string;
+    fatherPhone?: string;
+    parentDni?: string;
     parentName?: string;
     parentPhone?: string;
-    email?: string;
+    parentRelationship?: string;
   }): Promise<{ user: User; assignment: StudentAssignment }> {
     const cleanDni = data.dni.trim();
     const existing = this.getUserByDni(cleanDni);
@@ -904,6 +994,11 @@ class Store {
     const studentCount = this.data.users.filter(u => u.role === 'ALUMNO').length + 1;
     const studentCode = `WHT-${year}-${String(studentCount).padStart(3, '0')}`;
 
+    // Determinar apoderado principal de respaldo
+    const effectiveParentDni = data.parentDni?.trim() || data.motherDni?.trim() || data.fatherDni?.trim() || undefined;
+    const effectiveParentName = data.parentName?.trim() || data.motherName?.trim() || data.fatherName?.trim() || `Apoderado de ${data.name.trim()}`;
+    const effectiveParentPhone = data.parentPhone?.trim() || data.motherPhone?.trim() || data.fatherPhone?.trim() || data.phone || undefined;
+
     const newUser: User = {
       id: `u-alu-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
       dni: cleanDni,
@@ -914,9 +1009,16 @@ class Store {
       level: data.level,
       gradeOrClass: data.gradeOrClass,
       phone: data.phone || undefined,
-      parentDni: data.parentDni?.trim() || undefined,
-      parentName: data.parentName?.trim() || `Apoderado de ${data.name.trim()}`,
-      parentPhone: data.parentPhone?.trim() || data.phone || undefined,
+      parentDni: effectiveParentDni,
+      parentName: effectiveParentName,
+      parentPhone: effectiveParentPhone,
+      parentRelationship: data.parentRelationship?.trim() || (data.motherDni ? 'Madre' : data.fatherDni ? 'Padre' : 'Apoderado'),
+      motherDni: data.motherDni?.trim() || undefined,
+      motherName: data.motherName?.trim() || undefined,
+      motherPhone: data.motherPhone?.trim() || undefined,
+      fatherDni: data.fatherDni?.trim() || undefined,
+      fatherName: data.fatherName?.trim() || undefined,
+      fatherPhone: data.fatherPhone?.trim() || undefined,
       active: true,
       createdAt: new Date().toISOString()
     };
@@ -933,7 +1035,11 @@ class Store {
     level: any;
     gradeOrClass: string;
     phone?: string;
-    parentDni: string;
+    motherDni?: string;
+    motherName?: string;
+    fatherDni?: string;
+    fatherName?: string;
+    parentDni?: string;
     parentName?: string;
     parentPhone?: string;
   }>): Promise<{ enrolledCount: number; errors: Array<{ dni: string; error: string }> }> {

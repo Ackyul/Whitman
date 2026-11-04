@@ -40,19 +40,30 @@ export async function loginUser(
     const cleanId = identifier.trim();
 
     if (role === 'PADRE') {
-      const children = MOCK_USERS.filter((u) => u.parentDni === cleanId);
+      const children = MOCK_USERS.filter(
+        (u) =>
+          u.motherDni?.trim() === cleanId ||
+          u.fatherDni?.trim() === cleanId ||
+          u.parentDni?.trim() === cleanId
+      );
       if (children.length === 0) {
-        throw new Error(`No se encontró ningún estudiante vinculado al DNI de apoderado "${cleanId}". Prueba con: 40112233`);
+        throw new Error(`No se encontró ningún estudiante vinculado al DNI de familiar "${cleanId}". Prueba con: 40112233`);
       }
       const firstChild = children[0];
+      const isMother = firstChild.motherDni?.trim() === cleanId;
+      const isFather = firstChild.fatherDni?.trim() === cleanId;
+      const relTitle = isMother ? 'Madre' : isFather ? 'Padre' : (firstChild.parentRelationship || 'Apoderado');
+      const relName = isMother ? firstChild.motherName : isFather ? firstChild.fatherName : firstChild.parentName;
+
       const parentUser: User = {
-        id: `parent-${cleanId}`,
+        id: `family-${cleanId}`,
         dni: cleanId,
-        name: firstChild.parentName || `Apoderado de ${firstChild.name}`,
+        name: relName || `${relTitle} de ${firstChild.name}`,
         email: `${cleanId}@apoderados.whitman.edu.pe`,
         role: 'PADRE',
+        hierarchyTitle: relTitle as any,
         level: firstChild.level,
-        gradeOrClass: `Apoderado - ${firstChild.gradeOrClass}`,
+        gradeOrClass: `${relTitle} - ${firstChild.gradeOrClass}`,
         active: true,
         createdAt: new Date().toISOString(),
       };
@@ -60,7 +71,7 @@ export async function loginUser(
         success: true,
         user: parentUser,
         linkedStudents: children,
-        message: `¡Bienvenido(a) ${parentUser.name}!`,
+        message: `¡Bienvenido(a) ${relTitle} ${parentUser.name}!`,
       };
     }
 

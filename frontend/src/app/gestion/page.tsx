@@ -139,16 +139,27 @@ export default function GestionAcademicaPage() {
     notify('success', 'Sesión de seguridad de Google cerrada.');
   };
 
-  // 1. Estado Formulario Alumno
+  // 1. Estado Formulario Alumno con soporte para Madre, Padre y Apoderado
   const [studentForm, setStudentForm] = useState({
     dni: '',
     name: '',
     level: 'PRIMARIA' as EducationLevel,
     gradeOrClass: '6to Primaria - Leones',
     phone: '',
+    // Datos de la Madre
+    motherDni: '',
+    motherName: '',
+    motherPhone: '',
+    // Datos del Padre
+    fatherDni: '',
+    fatherName: '',
+    fatherPhone: '',
+    // Apoderado Legal / Tutor (si aplica)
+    hasSeparateGuardian: false,
     parentDni: '',
     parentName: '',
     parentPhone: '',
+    parentRelationship: 'Tutor Legal',
   });
   const [lastEnrolledStudent, setLastEnrolledStudent] = useState<User | null>(null);
 
@@ -197,11 +208,19 @@ export default function GestionAcademicaPage() {
     setTimeout(() => setNotification(null), 5000);
   };
 
-  // --- MATRÍCULA INDIVIDUAL ---
+  // --- MATRÍCULA INDIVIDUAL (Madre, Padre y/o Apoderado) ---
   const handleEnrollStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!studentForm.dni || !studentForm.name || !studentForm.parentDni) {
-      notify('error', 'El DNI del alumno, nombre y DNI del apoderado son obligatorios.');
+    const hasFamilyDni =
+      studentForm.motherDni?.trim() ||
+      studentForm.fatherDni?.trim() ||
+      studentForm.parentDni?.trim();
+
+    if (!studentForm.dni || !studentForm.name || !hasFamilyDni) {
+      notify(
+        'error',
+        'El DNI del alumno, nombre y al menos un DNI familiar (Madre, Padre o Apoderado) son obligatorios.'
+      );
       return;
     }
 
@@ -213,7 +232,22 @@ export default function GestionAcademicaPage() {
         setLastEnrolledStudent(res.data.user);
       }
       refreshData();
-      setStudentForm((prev) => ({ ...prev, dni: '', name: '', phone: '' }));
+      setStudentForm((prev) => ({
+        ...prev,
+        dni: '',
+        name: '',
+        phone: '',
+        motherDni: '',
+        motherName: '',
+        motherPhone: '',
+        fatherDni: '',
+        fatherName: '',
+        fatherPhone: '',
+        parentDni: '',
+        parentName: '',
+        parentPhone: '',
+        hasSeparateGuardian: false,
+      }));
     } catch (err: any) {
       notify('error', err.message || 'Error al matricular alumno');
     } finally {
@@ -598,53 +632,181 @@ export default function GestionAcademicaPage() {
                     </div>
                   </div>
 
-                  {/* Sección Apoderado */}
+                  {/* Sección Familiar: Madre, Padre y/o Apoderado */}
                   <div className="space-y-4 pt-4 border-t border-slate-100">
-                    <span className="text-[11px] font-black uppercase text-burgundy-900 tracking-wider">
-                      B. Datos del Padre / Madre / Apoderado (Para acceso al portal)
-                    </span>
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                      <span className="text-[11px] font-black uppercase text-burgundy-900 tracking-wider">
+                        B. Datos Familiares (Acceso al Portal para Madre, Padre y Apoderado)
+                      </span>
+                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 w-fit">
+                        ✓ Cada uno podrá ingresar con su propio DNI
+                      </span>
+                    </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                          DNI del Apoderado *
+                    {/* 1. Datos de la Madre */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                      <div className="flex items-center gap-1.5 text-xs font-black text-slate-800 uppercase">
+                        <span>👩 Datos de la Madre</span>
+                        <span className="text-[10px] font-normal text-slate-500 normal-case">(Opcional si ingresa el Padre o Apoderado)</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                            DNI de la Madre
+                          </label>
+                          <input
+                            type="text"
+                            maxLength={8}
+                            placeholder="Ej: 41223344"
+                            value={studentForm.motherDni}
+                            onChange={(e) => setStudentForm({ ...studentForm, motherDni: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                            Nombre de la Madre
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ej: Sra. Elena Morales"
+                            value={studentForm.motherName}
+                            onChange={(e) => setStudentForm({ ...studentForm, motherName: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                            Celular Madre (WhatsApp)
+                          </label>
+                          <input
+                            type="tel"
+                            placeholder="+51 987654321"
+                            value={studentForm.motherPhone}
+                            onChange={(e) => setStudentForm({ ...studentForm, motherPhone: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 font-mono bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 2. Datos del Padre */}
+                    <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
+                      <div className="flex items-center gap-1.5 text-xs font-black text-slate-800 uppercase">
+                        <span>👨 Datos del Padre</span>
+                        <span className="text-[10px] font-normal text-slate-500 normal-case">(Opcional si ingresa la Madre o Apoderado)</span>
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                            DNI del Padre
+                          </label>
+                          <input
+                            type="text"
+                            maxLength={8}
+                            placeholder="Ej: 40998877"
+                            value={studentForm.fatherDni}
+                            onChange={(e) => setStudentForm({ ...studentForm, fatherDni: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                            Nombre del Padre
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ej: Don Pedro Salazar"
+                            value={studentForm.fatherName}
+                            onChange={(e) => setStudentForm({ ...studentForm, fatherName: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                            Celular Padre (WhatsApp)
+                          </label>
+                          <input
+                            type="tel"
+                            placeholder="+51 988112233"
+                            value={studentForm.fatherPhone}
+                            onChange={(e) => setStudentForm({ ...studentForm, fatherPhone: e.target.value })}
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 font-mono bg-white"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 3. Apoderado / Tutor Legal Adicional */}
+                    <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/60 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <label className="flex items-center gap-2 cursor-pointer select-none">
+                          <input
+                            type="checkbox"
+                            checked={studentForm.hasSeparateGuardian}
+                            onChange={(e) => setStudentForm({ ...studentForm, hasSeparateGuardian: e.target.checked })}
+                            className="w-4 h-4 rounded text-burgundy-900 focus:ring-burgundy-700 border-slate-300"
+                          />
+                          <span className="text-xs font-bold text-slate-800">
+                            ¿Tiene un Apoderado o Tutor Legal distinto al Padre o Madre?
+                          </span>
                         </label>
-                        <input
-                          type="text"
-                          required
-                          maxLength={8}
-                          placeholder="Ej: 40998877"
-                          value={studentForm.parentDni}
-                          onChange={(e) => setStudentForm({ ...studentForm, parentDni: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono font-bold text-sm focus:outline-none focus:border-burgundy-700"
-                        />
+                        <span className="text-[10px] text-slate-500 font-semibold">(Abuelo, Tío, Tutor)</span>
                       </div>
 
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                          Nombre del Apoderado
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Ej: Don Pedro Salazar"
-                          value={studentForm.parentName}
-                          onChange={(e) => setStudentForm({ ...studentForm, parentName: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-burgundy-700"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                          Celular (Avisos de Ingreso)
-                        </label>
-                        <input
-                          type="tel"
-                          placeholder="+51 987654321"
-                          value={studentForm.parentPhone}
-                          onChange={(e) => setStudentForm({ ...studentForm, parentPhone: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-burgundy-700 font-mono"
-                        />
-                      </div>
+                      {studentForm.hasSeparateGuardian && (
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-amber-200/50 animate-in fade-in">
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                              DNI Apoderado
+                            </label>
+                            <input
+                              type="text"
+                              maxLength={8}
+                              placeholder="Ej: 42110099"
+                              value={studentForm.parentDni}
+                              onChange={(e) => setStudentForm({ ...studentForm, parentDni: e.target.value })}
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                              Nombre Completo
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Ej: Carlos Vega (Tío)"
+                              value={studentForm.parentName}
+                              onChange={(e) => setStudentForm({ ...studentForm, parentName: e.target.value })}
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                              Parentesco
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Tutor Legal / Abuela / Tío"
+                              value={studentForm.parentRelationship}
+                              onChange={(e) => setStudentForm({ ...studentForm, parentRelationship: e.target.value })}
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
+                              Celular
+                            </label>
+                            <input
+                              type="tel"
+                              placeholder="+51 977889900"
+                              value={studentForm.parentPhone}
+                              onChange={(e) => setStudentForm({ ...studentForm, parentPhone: e.target.value })}
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 font-mono bg-white"
+                            />
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
 
@@ -683,11 +845,19 @@ export default function GestionAcademicaPage() {
                         </p>
                       </div>
 
-                      <div className="text-xs text-slate-600 space-y-1 pt-2 border-t border-slate-200">
-                        <p><strong>DNI Alumno:</strong> <span className="font-mono">{lastEnrolledStudent.dni}</span></p>
+                      <div className="text-xs text-slate-600 space-y-1.5 pt-2 border-t border-slate-200">
+                        <p><strong>DNI Alumno:</strong> <span className="font-mono font-bold text-slate-800">{lastEnrolledStudent.dni}</span></p>
                         <p><strong>Aula / Grado:</strong> {lastEnrolledStudent.gradeOrClass}</p>
                         <p><strong>Nivel:</strong> {lastEnrolledStudent.level}</p>
-                        <p><strong>DNI Apoderado:</strong> <span className="font-mono">{lastEnrolledStudent.parentDni}</span></p>
+                        {lastEnrolledStudent.motherDni && (
+                          <p><strong>👩 DNI Madre:</strong> <span className="font-mono text-slate-800">{lastEnrolledStudent.motherDni} ({lastEnrolledStudent.motherName || 'Madre'})</span></p>
+                        )}
+                        {lastEnrolledStudent.fatherDni && (
+                          <p><strong>👨 DNI Padre:</strong> <span className="font-mono text-slate-800">{lastEnrolledStudent.fatherDni} ({lastEnrolledStudent.fatherName || 'Padre'})</span></p>
+                        )}
+                        {lastEnrolledStudent.parentDni && (
+                          <p><strong>🛡️ DNI Apoderado:</strong> <span className="font-mono text-slate-800">{lastEnrolledStudent.parentDni} ({lastEnrolledStudent.parentName || 'Apoderado'})</span></p>
+                        )}
                       </div>
                     </div>
                   ) : (
@@ -699,7 +869,7 @@ export default function GestionAcademicaPage() {
                 </div>
 
                 <div className="text-xs text-slate-500 bg-slate-50 p-3.5 rounded-xl border border-slate-200">
-                  💡 <strong>Acceso del Apoderado:</strong> El padre o madre ya puede ingresar a <Link href="/login" className="text-burgundy-800 font-bold underline">/login</Link> seleccionando <em>"Soy Papá / Mamá"</em> con su DNI para ver en vivo la asistencia de su hijo.
+                  💡 <strong>Acceso Familiar:</strong> Tanto la <strong>Madre</strong>, el <strong>Padre</strong> como el <strong>Apoderado</strong> registrado pueden ingresar a <Link href="/login" className="text-burgundy-800 font-bold underline">/login</Link> seleccionando <em>"Soy Papá / Mamá"</em> con su respectivo DNI para ver en vivo la asistencia de su hijo.
                 </div>
               </div>
             </div>

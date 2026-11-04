@@ -14,8 +14,16 @@ export interface User {
   level: EducationLevel;
   gradeOrClass: string;
   studentCode?: string;       // Ej: "WHT-2026-001"
-  parentDni?: string;         // DNI del papá / apoderado
-  parentName?: string;        // Nombre del papá
+  // Datos Familiares (Madre, Padre y/o Apoderado con acceso individual al portal)
+  motherDni?: string;         // DNI de la Madre
+  motherName?: string;        // Nombre de la Madre
+  motherPhone?: string;       // Celular de la Madre
+  fatherDni?: string;         // DNI del Padre
+  fatherName?: string;        // Nombre del Padre
+  fatherPhone?: string;       // Celular del Padre
+  parentDni?: string;         // DNI del Apoderado principal o tutor
+  parentName?: string;        // Nombre del Apoderado
+  parentRelationship?: string;// "Madre", "Padre", "Tutor Legal", "Abuelo", etc.
   avatar?: string;
   phone?: string;
   parentPhone?: string;
