@@ -25,7 +25,6 @@ import {
   Lock,
   ShieldCheck,
   LogOut,
-  KeyRound,
   ArrowRight,
   Sparkles,
 } from 'lucide-react';
@@ -44,18 +43,13 @@ export default function GestionAcademicaPage() {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // --- SEGURIDAD CON GOOGLE ---
-  const AUTHORIZED_ADMIN_EMAILS = [
-    (process.env.NEXT_PUBLIC_ADMIN_EMAIL || '949237217yoshua@gmail.com').toLowerCase().trim(),
-    '949237217yoshua@gmail.com'
-  ];
+  // --- SEGURIDAD CON GOOGLE (ACCESO EXCLUSIVO PARA EL DIRECTOR) ---
+  const AUTHORIZED_ADMIN_EMAIL = '949237217yoshua@gmail.com';
 
   const [googleAdmin, setGoogleAdmin] = useState<GoogleAdminProfile | null>(null);
-  const [googleClientId, setGoogleClientId] = useState<string>(
+  const [googleClientId] = useState<string>(
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '213494948984-lb44lfqtdpujebr0osd34dgjmdq46c5l.apps.googleusercontent.com'
   );
-  const [customEmailInput, setCustomEmailInput] = useState('');
-  const [showConfigModal, setShowConfigModal] = useState(false);
 
   // Cargar sesión de Google guardada
   useEffect(() => {
@@ -63,15 +57,11 @@ export default function GestionAcademicaPage() {
       const savedGoogle = localStorage.getItem('whitman_google_admin_session');
       if (savedGoogle) {
         const parsed = JSON.parse(savedGoogle);
-        if (parsed?.email && AUTHORIZED_ADMIN_EMAILS.includes(parsed.email.toLowerCase().trim())) {
+        if (parsed?.email && parsed.email.toLowerCase().trim() === AUTHORIZED_ADMIN_EMAIL) {
           setGoogleAdmin(parsed);
         } else {
           localStorage.removeItem('whitman_google_admin_session');
         }
-      }
-      const savedClientId = localStorage.getItem('whitman_custom_google_client_id');
-      if (savedClientId) {
-        setGoogleClientId(savedClientId);
       }
     } catch (e) {
       console.warn('Error al leer sesión de Google:', e);
@@ -119,18 +109,18 @@ export default function GestionAcademicaPage() {
       const payload = JSON.parse(jsonPayload);
       const email = (payload.email || '').toLowerCase().trim();
 
-      // Validación estricta de cuenta autorizada
-      if (!AUTHORIZED_ADMIN_EMAILS.includes(email)) {
+      // Validación estricta: ÚNICAMENTE 949237217yoshua@gmail.com
+      if (email !== AUTHORIZED_ADMIN_EMAIL) {
         notify(
           'error',
-          `⛔ Acceso denegado: La cuenta ${email} no tiene permisos de Dirección. Solo está autorizada la cuenta principal del director (949237217yoshua@gmail.com).`
+          `⛔ Acceso denegado: La cuenta ${email} no está autorizada. Solo el director (${AUTHORIZED_ADMIN_EMAIL}) tiene acceso a la gestión.`
         );
         return;
       }
 
       const profile: GoogleAdminProfile = {
         email: payload.email,
-        name: payload.name || payload.given_name || 'Administrador',
+        name: payload.name || payload.given_name || 'Director General',
         picture: payload.picture,
       };
 
@@ -143,45 +133,10 @@ export default function GestionAcademicaPage() {
     }
   };
 
-  const handleManualGoogleAuth = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanEmail = customEmailInput.trim().toLowerCase();
-    if (!cleanEmail || !cleanEmail.includes('@')) {
-      notify('error', 'Por favor ingresa un correo de Google válido.');
-      return;
-    }
-
-    if (!AUTHORIZED_ADMIN_EMAILS.includes(cleanEmail)) {
-      notify(
-        'error',
-        `⛔ Acceso denegado: El correo "${cleanEmail}" no está autorizado. Solo 949237217yoshua@gmail.com tiene permisos de Dirección.`
-      );
-      return;
-    }
-
-    const profile: GoogleAdminProfile = {
-      email: cleanEmail,
-      name: cleanEmail.split('@')[0],
-      picture: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150',
-    };
-
-    setGoogleAdmin(profile);
-    localStorage.setItem('whitman_google_admin_session', JSON.stringify(profile));
-    notify('success', `¡Acceso concedido a la cuenta de Dirección: ${profile.email}!`);
-  };
-
   const handleLogoutGoogle = () => {
     setGoogleAdmin(null);
     localStorage.removeItem('whitman_google_admin_session');
     notify('success', 'Sesión de seguridad de Google cerrada.');
-  };
-
-  const handleSaveClientId = (newId: string) => {
-    setGoogleClientId(newId.trim());
-    localStorage.setItem('whitman_custom_google_client_id', newId.trim());
-    setShowConfigModal(false);
-    notify('success', 'Client ID de Google guardado.');
-    setTimeout(() => initializeGoogleOneTap(), 300);
   };
 
   // 1. Estado Formulario Alumno
@@ -492,65 +447,31 @@ export default function GestionAcademicaPage() {
 
       {/* BLOQUEO DE SEGURIDAD SI NO ESTÁ AUTENTICADO CON GOOGLE */}
       {!googleAdmin ? (
-        <div className="max-w-xl mx-auto bg-white rounded-3xl p-8 border-2 border-slate-200 shadow-xl text-center space-y-6 animate-in zoom-in-95">
+        <div className="max-w-md mx-auto bg-white rounded-3xl p-8 sm:p-10 border-2 border-slate-200 shadow-xl text-center space-y-6 animate-in zoom-in-95">
           <div className="w-16 h-16 rounded-2xl bg-burgundy-100 text-burgundy-900 flex items-center justify-center mx-auto border-2 border-burgundy-300">
             <Lock className="w-8 h-8 text-burgundy-800" />
           </div>
 
           <div>
             <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
-              PROTECCIÓN DE ALTA SEGURIDAD
+              ACCESO RESTRINGIDO A DIRECCIÓN
             </span>
             <h2 className="text-2xl font-black font-serif text-slate-900 mt-2">
-              Autentícate con tu Cuenta de Google
+              Gestión Académica Whitman
             </h2>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto mt-1">
-              Para crear alumnos, profesores o importar nóminas completas a la base de datos, valida tu identidad institucional con Google.
+            <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1 leading-relaxed">
+              Inicia sesión con tu cuenta oficial de Google para acceder a la matrícula y administración de cuentas.
             </p>
           </div>
 
-          {/* Botón Oficial Google Identity Services */}
-          <div className="flex flex-col items-center justify-center gap-3 pt-2">
+          {/* Único botón: Google Identity Services */}
+          <div className="flex flex-col items-center justify-center pt-2">
             <div id="googleSignInBtnContainer" className="min-h-[44px]" />
-
-            {/* Alternativa con formulario de correo autorizado */}
-            <form onSubmit={handleManualGoogleAuth} className="w-full max-w-sm space-y-3 pt-4 border-t border-slate-100">
-              <div>
-                <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                  O ingresa tu cuenta autorizada de Dirección:
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="email"
-                    required
-                    placeholder="949237217yoshua@gmail.com"
-                    value={customEmailInput}
-                    onChange={(e) => setCustomEmailInput(e.target.value)}
-                    className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-burgundy-700 font-semibold"
-                  />
-                  <button
-                    type="submit"
-                    className="bg-burgundy-900 hover:bg-burgundy-800 text-white font-bold text-xs px-4 py-2 rounded-xl transition shadow"
-                  >
-                    Verificar
-                  </button>
-                </div>
-                <p className="text-[10px] text-slate-400 mt-1.5 text-center">
-                  🛡️ Acceso exclusivo por ahora: <span className="font-bold text-burgundy-900">949237217yoshua@gmail.com</span>
-                </p>
-              </div>
-            </form>
           </div>
 
-          <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-400">
-            <span>🔒 Control de Acceso Cifrado</span>
-            <button
-              onClick={() => setShowConfigModal(true)}
-              className="text-burgundy-900 hover:underline font-bold flex items-center gap-1"
-            >
-              <KeyRound className="w-3.5 h-3.5" />
-              <span>Configurar Google Client ID</span>
-            </button>
+          <div className="pt-4 border-t border-slate-100 flex items-center justify-center gap-1.5 text-[11px] text-slate-500">
+            <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+            <span>Autorizado exclusivamente: <strong className="text-slate-800">949237217yoshua@gmail.com</strong></span>
           </div>
         </div>
       ) : (
@@ -1044,63 +965,6 @@ export default function GestionAcademicaPage() {
             </div>
           )}
 
-        </div>
-      )}
-
-      {/* MODAL PARA INGRESAR GOOGLE CLIENT ID */}
-      {showConfigModal && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
-          <div className="bg-white rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-              <h3 className="font-serif font-black text-lg text-slate-900 flex items-center gap-2">
-                <KeyRound className="w-5 h-5 text-burgundy-900" />
-                <span>Configurar Google OAuth Client ID</span>
-              </h3>
-              <button
-                onClick={() => setShowConfigModal(false)}
-                className="text-slate-400 hover:text-slate-600 text-sm font-bold"
-              >
-                ✕
-              </button>
-            </div>
-
-            <p className="text-xs text-slate-600 leading-relaxed">
-              Ingresa el <strong>Client ID</strong> obtenido de tu <em>Google Cloud Console</em>. También puedes agregarlo en el archivo <code>frontend/.env.local</code> como <code>NEXT_PUBLIC_GOOGLE_CLIENT_ID</code>.
-            </p>
-
-            <div>
-              <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                Google Client ID
-              </label>
-              <input
-                type="text"
-                placeholder="Ej: 1234567890-abcdefgh.apps.googleusercontent.com"
-                defaultValue={googleClientId}
-                id="modalClientIdInput"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-xs focus:outline-none focus:border-burgundy-700"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100">
-              <button
-                type="button"
-                onClick={() => setShowConfigModal(false)}
-                className="px-4 py-2 text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl"
-              >
-                Cancelar
-              </button>
-              <button
-                type="button"
-                onClick={() => {
-                  const el = document.getElementById('modalClientIdInput') as HTMLInputElement;
-                  if (el) handleSaveClientId(el.value);
-                }}
-                className="px-5 py-2 bg-burgundy-900 hover:bg-burgundy-800 text-white text-xs font-black rounded-xl shadow transition"
-              >
-                Guardar Client ID
-              </button>
-            </div>
-          </div>
         </div>
       )}
 
