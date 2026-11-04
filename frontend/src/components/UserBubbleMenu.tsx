@@ -50,6 +50,23 @@ export const UserBubbleMenu: React.FC = () => {
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
+  // Escuchar evento de toggle desde la barra de navegación inferior móvil (estilo Instagram)
+  useEffect(() => {
+    const handleToggleMenu = () => {
+      setMenuOpen((prev) => !prev);
+    };
+    const handleOpenProfileModal = () => {
+      setMenuOpen(false);
+      setModalOpen(true);
+    };
+    window.addEventListener('whitman-toggle-user-menu', handleToggleMenu);
+    window.addEventListener('whitman-open-profile-modal', handleOpenProfileModal);
+    return () => {
+      window.removeEventListener('whitman-toggle-user-menu', handleToggleMenu);
+      window.removeEventListener('whitman-open-profile-modal', handleOpenProfileModal);
+    };
+  }, []);
+
   if (!currentUser) return null;
 
   const handleSaveProfile = (e: React.FormEvent) => {
