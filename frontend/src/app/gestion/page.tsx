@@ -47,7 +47,7 @@ export default function GestionAcademicaPage() {
   // --- SEGURIDAD CON GOOGLE ---
   const [googleAdmin, setGoogleAdmin] = useState<GoogleAdminProfile | null>(null);
   const [googleClientId, setGoogleClientId] = useState<string>(
-    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || ''
+    process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || '213494948984-lb44lfqtdpujebr0osd34dgjmdq46c5l.apps.googleusercontent.com'
   );
   const [customEmailInput, setCustomEmailInput] = useState('');
   const [showConfigModal, setShowConfigModal] = useState(false);
@@ -67,6 +67,13 @@ export default function GestionAcademicaPage() {
       console.warn('Error al leer sesión de Google:', e);
     }
   }, []);
+
+  useEffect(() => {
+    if (googleClientId && !googleAdmin) {
+      const timer = setTimeout(() => initializeGoogleOneTap(), 400);
+      return () => clearTimeout(timer);
+    }
+  }, [googleClientId, googleAdmin]);
 
   // Inicializar Google Identity Services cuando el script cargue
   const initializeGoogleOneTap = () => {
