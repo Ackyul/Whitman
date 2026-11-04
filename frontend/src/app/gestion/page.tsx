@@ -2,13 +2,16 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import Script from 'next/script';
 import { useWhitman } from '../../context/WhitmanContext';
 import {
   fetchAcademicClasses,
   enrollStudentApi,
   bulkEnrollStudentsApi,
   createStaffApi,
+  createAcademicClassApi,
+  deleteAcademicClassApi,
+  moveStudentClassApi,
+  autoBalanceStudentsApi,
 } from '../../lib/api';
 import { AcademicClass, EducationLevel, HierarchyLevel, User } from '../../types';
 import {
@@ -24,9 +27,16 @@ import {
   Check,
   Lock,
   ShieldCheck,
-  LogOut,
-  ArrowRight,
+  Layers,
   Sparkles,
+  Shuffle,
+  Plus,
+  Trash2,
+  ArrowRightLeft,
+  School,
+  Clock,
+  ArrowRight,
+  LogOut,
 } from 'lucide-react';
 
 interface GoogleAdminProfile {
@@ -35,9 +45,32 @@ interface GoogleAdminProfile {
   picture?: string;
 }
 
+const BASE_GRADES_BY_LEVEL: Record<'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA', string[]> = {
+  PRIMARIA: [
+    '1ro Primaria',
+    '2do Primaria',
+    '3ro Primaria',
+    '4to Primaria',
+    '5to Primaria',
+    '6to Primaria',
+  ],
+  SECUNDARIA: [
+    '1ro Secundaria',
+    '2do Secundaria',
+    '3ro Secundaria',
+    '4to Secundaria',
+    '5to Secundaria',
+  ],
+  ACADEMIA: [
+    'Preuniversitario UNI',
+    'Preuniversitario San Marcos',
+    'Repaso Intensivo',
+  ],
+};
+
 export default function GestionAcademicaPage() {
-  const { users, refreshData, currentUser } = useWhitman();
-  const [activeTab, setActiveTab] = useState<'individual' | 'staff' | 'bulk'>('individual');
+  const { users, refreshData } = useWhitman();
+  const [activeTab, setActiveTab] = useState<'individual' | 'classes' | 'staff' | 'bulk'>('individual');
 
   const [classes, setClasses] = useState<AcademicClass[]>([]);
   const [loading, setLoading] = useState(false);
@@ -75,7 +108,6 @@ export default function GestionAcademicaPage() {
     }
   }, [googleClientId, googleAdmin]);
 
-  // Inicializar Google Identity Services cuando el script cargue
   const initializeGoogleOneTap = () => {
     if (typeof window === 'undefined') return;
     const google = (window as any).google;
@@ -97,7 +129,6 @@ export default function GestionAcademicaPage() {
 
   const handleGoogleCredentialResponse = (response: any) => {
     try {
-      // Decodificar el token JWT de Google
       const base64Url = response.credential.split('.')[1];
       const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
       const jsonPayload = decodeURIComponent(
@@ -109,7 +140,6 @@ export default function GestionAcademicaPage() {
       const payload = JSON.parse(jsonPayload);
       const email = (payload.email || '').toLowerCase().trim();
 
-      // Validación estricta: ÚNICAMENTE 949237217yoshua@gmail.com
       if (email !== AUTHORIZED_ADMIN_EMAIL) {
         notify(
           'error',
@@ -139,12 +169,13 @@ export default function GestionAcademicaPage() {
     notify('success', 'Sesión de seguridad de Google cerrada.');
   };
 
-  // 1. Estado Formulario Alumno con soporte para Madre, Padre y Apoderado
+  // 1. Estado Formulario Alumno (Grado obligatorio, Aula opcional)
   const [studentForm, setStudentForm] = useState({
     dni: '',
     name: '',
     level: 'PRIMARIA' as EducationLevel,
-    gradeOrClass: '6to Primaria - Leones',
+    grade: '3ro Primaria',
+    classOption: 'unassigned', // 'unassigned' o nombre de aula
     phone: '',
     // Datos de la Madre
     motherDni: '',
@@ -154,7 +185,7 @@ export default function GestionAcademicaPage() {
     fatherDni: '',
     fatherName: '',
     fatherPhone: '',
-    // Apoderado Legal / Tutor (si aplica)
+    // Apoderado Legal / Tutor
     hasSeparateGuardian: false,
     parentDni: '',
     parentName: '',
@@ -163,7 +194,19 @@ export default function GestionAcademicaPage() {
   });
   const [lastEnrolledStudent, setLastEnrolledStudent] = useState<User | null>(null);
 
-  // 2. Estado Formulario Docente
+  // 2. Estado para pestaña de Grados y Aulas
+  const [selectedLevelFilter, setSelectedLevelFilter] = useState<'TODOS' | 'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA'>('TODOS');
+  const [selectedGrade, setSelectedGrade] = useState<string>('3ro Primaria');
+  const [isCreatingClass, setIsCreatingClass] = useState(false);
+  const [redistributeAll, setRedistributeAll] = useState(false);
+  const [newClassForm, setNewClassForm] = useState({
+    section: '',
+    shift: 'MAÑANA' as 'MAÑANA' | 'TARDE',
+    capacity: 35,
+    classroomNumber: '',
+  });
+
+  // 3. Estado Formulario Docente
   const [staffForm, setStaffForm] = useState({
     dni: '',
     name: '',
@@ -175,37 +218,38 @@ export default function GestionAcademicaPage() {
     phone: '',
   });
 
-  // 3. Estado Carga Masiva
+  // 4. Estado Carga Masiva
   const [rawCsvText, setRawCsvText] = useState('');
   const [parsedStudents, setParsedStudents] = useState<Array<any>>([]);
   const [bulkStatus, setBulkStatus] = useState<string | null>(null);
 
   // Cargar Aulas desde la DB
-  useEffect(() => {
-    async function loadAcademicClasses() {
+  const loadAcademicClasses = async () => {
+    try {
       const cls = await fetchAcademicClasses();
       if (cls && cls.length > 0) {
         setClasses(cls);
-      } else {
-        setClasses([
-          { id: 'c1', code: 'PRIM-3-BETA', name: '3ro Primaria - Beta', level: 'PRIMARIA', grade: '3ro Primaria', section: 'Beta', shift: 'MAÑANA', active: true },
-          { id: 'c2', code: 'PRIM-5-ALFA', name: '5to Primaria - Alfa', level: 'PRIMARIA', grade: '5to Primaria', section: 'Alfa', shift: 'MAÑANA', active: true },
-          { id: 'c3', code: 'PRIM-6-LEONES', name: '6to Primaria - Leones', level: 'PRIMARIA', grade: '6to Primaria', section: 'Leones', shift: 'MAÑANA', active: true },
-          { id: 'c4', code: 'SEC-1-ALFA', name: '1ro Secundaria - Alfa', level: 'SECUNDARIA', grade: '1ro Secundaria', section: 'Alfa', shift: 'MAÑANA', active: true },
-          { id: 'c5', code: 'SEC-3-BETA', name: '3ro Secundaria - Beta', level: 'SECUNDARIA', grade: '3ro Secundaria', section: 'Beta', shift: 'MAÑANA', active: true },
-          { id: 'c6', code: 'SEC-5-ALFA', name: '5to Secundaria - Alfa', level: 'SECUNDARIA', grade: '5to Secundaria', section: 'Alfa', shift: 'MAÑANA', active: true },
-          { id: 'c7', code: 'ACAD-UNI', name: 'Ciclo Semianual UNI', level: 'ACADEMIA', grade: 'Preuniversitario UNI', section: 'UNI', shift: 'MAÑANA', active: true },
-          { id: 'c8', code: 'ACAD-SM-MED', name: 'Ciclo San Marcos - Medicina', level: 'ACADEMIA', grade: 'Preuniversitario San Marcos', section: 'Medicina', shift: 'MAÑANA', active: true },
-          { id: 'c9', code: 'ACAD-REP-INT', name: 'Ciclo Repaso Intensivo', level: 'ACADEMIA', grade: 'Repaso Intensivo', section: 'Intensivo', shift: 'TARDE', active: true },
-        ]);
       }
+    } catch (e) {
+      console.warn('Error cargando aulas:', e);
     }
+  };
+
+  useEffect(() => {
     loadAcademicClasses();
   }, []);
 
   const notify = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
-    setTimeout(() => setNotification(null), 5000);
+    setTimeout(() => setNotification(null), 5500);
+  };
+
+  // Helper para deducir el nivel de un grado
+  const getLevelForGrade = (gradeName: string): EducationLevel => {
+    const lower = gradeName.toLowerCase();
+    if (lower.includes('prim')) return 'PRIMARIA';
+    if (lower.includes('sec')) return 'SECUNDARIA';
+    return 'ACADEMIA';
   };
 
   // --- MATRÍCULA INDIVIDUAL (Madre, Padre y/o Apoderado) ---
@@ -224,9 +268,19 @@ export default function GestionAcademicaPage() {
       return;
     }
 
+    // Si no asignó aula específica, se guarda en el grado como "Sin Asignar"
+    const finalGradeOrClass =
+      studentForm.classOption === 'unassigned' || !studentForm.classOption
+        ? `${studentForm.grade} - Sin Asignar`
+        : studentForm.classOption;
+
     setLoading(true);
     try {
-      const res = await enrollStudentApi(studentForm);
+      const payload = {
+        ...studentForm,
+        gradeOrClass: finalGradeOrClass,
+      };
+      const res = await enrollStudentApi(payload);
       notify('success', `¡Matrícula exitosa! ${res.message || 'Alumno registrado en la base de datos'}`);
       if (res.data?.user) {
         setLastEnrolledStudent(res.data.user);
@@ -250,6 +304,96 @@ export default function GestionAcademicaPage() {
       }));
     } catch (err: any) {
       notify('error', err.message || 'Error al matricular alumno');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- CREAR NUEVA AULA / SECCIÓN EN NEON ---
+  const handleCreateNewClass = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newClassForm.section.trim()) {
+      notify('error', 'El nombre de la sección o aula es obligatorio (ej: Sección A, Alfa, Beta).');
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const lvl = getLevelForGrade(selectedGrade);
+      const res = await createAcademicClassApi({
+        grade: selectedGrade,
+        section: newClassForm.section.trim(),
+        name: `${selectedGrade} - ${newClassForm.section.trim()}`,
+        level: lvl,
+        shift: newClassForm.shift,
+        capacity: Number(newClassForm.capacity) || 35,
+        classroomNumber: newClassForm.classroomNumber.trim() || undefined,
+      });
+
+      notify('success', res.message || `¡Aula creada para ${selectedGrade}!`);
+      setIsCreatingClass(false);
+      setNewClassForm({
+        section: '',
+        shift: 'MAÑANA',
+        capacity: 35,
+        classroomNumber: '',
+      });
+      await loadAcademicClasses();
+    } catch (err: any) {
+      notify('error', err.message || 'Error al crear aula');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- ELIMINAR AULA ---
+  const handleDeleteClass = async (classId: string, className: string) => {
+    if (!confirm(`¿Estás seguro de eliminar el aula "${className}"?`)) return;
+    setLoading(true);
+    try {
+      await deleteAcademicClassApi(classId);
+      notify('success', `Aula "${className}" eliminada.`);
+      await loadAcademicClasses();
+    } catch (err: any) {
+      notify('error', err.message || 'Error al eliminar aula');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- MOVER ALUMNO A OTRA CLASE O SIN ASIGNAR ---
+  const handleMoveStudent = async (studentId: string, studentName: string, newGradeOrClass: string) => {
+    try {
+      await moveStudentClassApi(studentId, newGradeOrClass);
+      notify('success', `✓ ${studentName} asignado a: ${newGradeOrClass}`);
+      refreshData();
+    } catch (err: any) {
+      notify('error', err.message || 'Error al mover alumno');
+    }
+  };
+
+  // --- MEZCLA / BALANCEO AUTOMÁTICO DE ALUMNOS ---
+  const handleAutoBalance = async () => {
+    const lvl = getLevelForGrade(selectedGrade);
+    const classesForThisGrade = classes.filter(
+      (c) => c.grade.toLowerCase() === selectedGrade.toLowerCase() && c.active !== false
+    );
+
+    if (classesForThisGrade.length === 0) {
+      notify(
+        'error',
+        `No hay aulas creadas para ${selectedGrade}. Primero crea al menos 2 aulas (ej: Sección A y Sección B) con el botón "+ Crear Aula".`
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      const res = await autoBalanceStudentsApi(selectedGrade, lvl, redistributeAll);
+      notify('success', res.message || '¡Mezcla y balanceo completado con éxito!');
+      refreshData();
+    } catch (err: any) {
+      notify('error', err.message || 'Error al balancear aulas');
     } finally {
       setLoading(false);
     }
@@ -285,7 +429,7 @@ export default function GestionAcademicaPage() {
     }
   };
 
-  // --- PARSEAR CSV / EXCEL PEGASTE O ARCHIVO ---
+  // --- PARSEAR CSV / EXCEL ---
   const handleParseCsv = (text: string) => {
     setRawCsvText(text);
     if (!text.trim()) {
@@ -302,7 +446,7 @@ export default function GestionAcademicaPage() {
       const delimiter = line.includes('\t') ? '\t' : line.includes(';') ? ';' : ',';
       const parts = line.split(delimiter).map((p) => p.trim().replace(/^["']|["']$/g, ''));
 
-      if (parts.length >= 4) {
+      if (parts.length >= 3) {
         const dni = parts[0];
         const name = parts[1];
         let levelRaw = (parts[2] || 'SECUNDARIA').toUpperCase();
@@ -310,7 +454,12 @@ export default function GestionAcademicaPage() {
         if (levelRaw.includes('PRIM')) level = 'PRIMARIA';
         else if (levelRaw.includes('ACAD') || levelRaw.includes('PRE')) level = 'ACADEMIA';
 
-        const gradeOrClass = parts[3] || (level === 'PRIMARIA' ? '6to Primaria - Leones' : '5to Secundaria - Alfa');
+        // Si no se especificó aula, o dice "Sin Asignar", se matricula como Sin Asignar
+        let gradeOrClass = parts[3] || `${level === 'PRIMARIA' ? '1ro Primaria' : '1ro Secundaria'} - Sin Asignar`;
+        if (gradeOrClass && !gradeOrClass.includes(' - ')) {
+          gradeOrClass = `${gradeOrClass} - Sin Asignar`;
+        }
+
         const parentDni = parts[4] || '40000000';
         const parentName = parts[5] || `Apoderado de ${name}`;
         const phone = parts[6] || '';
@@ -370,82 +519,106 @@ export default function GestionAcademicaPage() {
 
   const downloadSampleCsv = () => {
     const csvContent =
-      'DNI,Nombre Completo,Nivel,Aula / Grado,DNI Apoderado,Nombre Apoderado,Celular\n' +
-      '78123001,Alonso Ramos Flores,PRIMARIA,6to Primaria - Leones,40119901,Don Pedro Ramos,991001122\n' +
-      '78123002,Mariana Salas Cuadros,PRIMARIA,5to Primaria - Alfa,40119902,Sra. Elena Cuadros,991001133\n' +
+      'DNI,Nombre Completo,Nivel,Grado o Aula (Opcional),DNI Apoderado,Nombre Apoderado,Celular\n' +
+      '78123001,Alonso Ramos Flores,PRIMARIA,3ro Primaria,40119901,Don Pedro Ramos,991001122\n' +
+      '78123002,Mariana Salas Cuadros,PRIMARIA,3ro Primaria,40119902,Sra. Elena Cuadros,991001133\n' +
       '75123001,Bryan Mendoza Ortiz,SECUNDARIA,5to Secundaria - Alfa,40119903,Don Julio Mendoza,991001144\n' +
-      '75123002,Andrea Carpio Luna,SECUNDARIA,3ro Secundaria - Beta,40119904,Sra. Sonia Luna,991001155\n' +
-      '72123001,Renzo Chávez Vega,ACADEMIA,Ciclo Semianual UNI,40119905,Don Juan Chávez,991001166\n' +
-      '72123002,Estefanía Huamán Díaz,ACADEMIA,Ciclo San Marcos - Medicina,40119906,Sra. Rosa Díaz,991001177\n';
+      '75123002,Andrea Carpio Luna,SECUNDARIA,3ro Secundaria,40119904,Sra. Sonia Luna,991001155\n' +
+      '72123001,Renzo Chávez Vega,ACADEMIA,Preuniversitario UNI,40119905,Don Juan Chávez,991001166\n';
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', url);
-    link.setAttribute('download', 'plantilla_matricula_whitman_2026.csv');
+    link.href = url;
+    link.setAttribute('download', 'Plantilla_Matricula_Whitman_2026.csv');
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
   };
 
+  // CÁLCULOS DINÁMICOS PARA LA PESTAÑA DE GRADOS Y AULAS
+  const allAvailableGrades: string[] = [
+    ...BASE_GRADES_BY_LEVEL.PRIMARIA,
+    ...BASE_GRADES_BY_LEVEL.SECUNDARIA,
+    ...BASE_GRADES_BY_LEVEL.ACADEMIA,
+    ...Array.from(new Set(classes.map((c) => c.grade))).filter(
+      (g) =>
+        !BASE_GRADES_BY_LEVEL.PRIMARIA.includes(g) &&
+        !BASE_GRADES_BY_LEVEL.SECUNDARIA.includes(g) &&
+        !BASE_GRADES_BY_LEVEL.ACADEMIA.includes(g)
+    ),
+  ];
+
+  const filteredGrades = allAvailableGrades.filter((g) => {
+    if (selectedLevelFilter === 'TODOS') return true;
+    return getLevelForGrade(g) === selectedLevelFilter;
+  });
+
+  // Alumnos del grado seleccionado
+  const studentsInSelectedGrade = users.filter((u) => {
+    if (u.role !== 'ALUMNO') return false;
+    const gOrC = (u.gradeOrClass || '').toLowerCase();
+    const targetG = selectedGrade.toLowerCase();
+    return gOrC.includes(targetG) || (u.level === getLevelForGrade(selectedGrade) && gOrC.includes('sin asignar'));
+  });
+
+  // Alumnos que están 'Sin Asignar'
+  const unassignedStudents = studentsInSelectedGrade.filter((u) => {
+    const gOrC = (u.gradeOrClass || '').toLowerCase();
+    return gOrC.includes('sin asignar') || gOrC === selectedGrade.toLowerCase() || !gOrC.includes(' - ');
+  });
+
+  // Aulas activas de este grado
+  const classesForSelectedGrade = classes.filter(
+    (c) => c.grade.toLowerCase() === selectedGrade.toLowerCase() && c.active !== false
+  );
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 max-w-7xl mx-auto">
       
-      {/* Script oficial de Google Identity Services */}
-      <Script
-        src="https://accounts.google.com/gsi/client"
-        strategy="afterInteractive"
-        onLoad={initializeGoogleOneTap}
-      />
-
-      {/* 1. CABECERA INSTITUCIONAL COMPACTA (RESPONSIVE CELULAR & DESKTOP) */}
-      <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-2xl px-4 sm:px-5 py-2.5 sm:py-3 shadow-md border border-lionGold-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 sm:gap-4">
-        <div className="flex items-center gap-2.5">
-          <h1 className="text-base sm:text-lg font-black font-serif tracking-tight text-white">
-            Gestión & Matrícula Whitman
+      {/* 1. ENCABEZADO INSTITUCIONAL */}
+      <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-3xl p-5 sm:p-7 shadow-xl border-2 border-lionGold-500/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <div className="inline-flex items-center gap-2 bg-lionGold-500/20 text-lionGold-300 text-[10px] sm:text-xs font-black px-3 py-0.5 rounded-full border border-lionGold-400/30 mb-1">
+            <span>SISTEMA DE GESTIÓN ACADÉMICA 2026</span>
+            <span>•</span>
+            <span className="text-emerald-400">● Base de Datos Neon PostgreSQL</span>
+          </div>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-black font-serif tracking-tight">
+            Gestión, Matrícula & Cuentas Whitman
           </h1>
-          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-emerald-300 bg-emerald-950/60 px-2 py-0.5 rounded-full border border-emerald-500/30">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
-            <span>Neon DB</span>
-          </span>
+          <p className="text-xs text-burgundy-200 mt-0.5 max-w-xl">
+            Crea alumnos, organiza grados, configura secciones y realiza mezclas automáticas equitativas para las aulas.
+          </p>
         </div>
 
-        {/* Badge Compacto de Verificación con Google */}
-        <div className="w-full sm:w-auto shrink-0 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-1.5 rounded-xl flex items-center justify-between sm:justify-start gap-2.5">
-          {googleAdmin ? (
-            <>
-              <div className="flex items-center gap-2 min-w-0">
-                <div className="w-7 h-7 rounded-full overflow-hidden bg-emerald-500 flex items-center justify-center text-white shrink-0">
-                  {googleAdmin.picture ? (
-                    <img src={googleAdmin.picture} alt={googleAdmin.name} className="w-full h-full object-cover" />
-                  ) : (
-                    <ShieldCheck className="w-4 h-4 text-white" />
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-[9px] font-bold text-emerald-300 uppercase leading-none">
-                    Director Verificado
-                  </p>
-                  <p className="text-xs font-bold text-white truncate max-w-[190px] leading-tight mt-0.5">
-                    {googleAdmin.email}
-                  </p>
-                </div>
+        {googleAdmin ? (
+          <div className="flex items-center gap-3 bg-burgundy-950/70 p-2.5 rounded-2xl border border-lionGold-500/40">
+            {googleAdmin.picture ? (
+              <img src={googleAdmin.picture} alt="Google Avatar" className="w-9 h-9 rounded-full border border-lionGold-400" />
+            ) : (
+              <div className="w-9 h-9 rounded-full bg-lionGold-500 text-burgundy-950 font-black flex items-center justify-center text-xs">
+                👤
               </div>
-              <button
-                onClick={handleLogoutGoogle}
-                title="Cerrar sesión de Google"
-                className="p-1 text-white/70 hover:text-rose-300 hover:bg-white/10 rounded-lg transition ml-1"
-              >
-                <LogOut className="w-3.5 h-3.5" />
-              </button>
-            </>
-          ) : (
-            <div className="flex items-center gap-2">
-              <Lock className="w-4 h-4 text-amber-400" />
-              <span className="text-xs font-semibold text-white">Seguridad Requerida</span>
+            )}
+            <div className="text-left pr-2">
+              <span className="text-[10px] font-mono text-emerald-400 font-bold block">✓ VERIFICADO CON GOOGLE</span>
+              <p className="text-xs font-bold text-white max-w-[180px] truncate">{googleAdmin.email}</p>
             </div>
-          )}
-        </div>
+            <button
+              onClick={handleLogoutGoogle}
+              title="Cerrar sesión de Google"
+              className="p-1.5 text-burgundy-200 hover:text-white hover:bg-burgundy-800 rounded-lg transition"
+            >
+              <LogOut className="w-4 h-4" />
+            </button>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2 bg-burgundy-950/50 p-2.5 rounded-2xl border border-lionGold-500/20 text-xs text-lionGold-300">
+            <Lock className="w-4 h-4 text-lionGold-400" />
+            <span>Seguridad: Requiere cuenta autorizada</span>
+          </div>
+        )}
       </div>
 
       {/* NOTIFICACIÓN FLOTANTE */}
@@ -485,7 +658,6 @@ export default function GestionAcademicaPage() {
             </p>
           </div>
 
-          {/* Único botón: Google Identity Services */}
           <div className="flex flex-col items-center justify-center pt-2">
             <div id="googleSignInBtnContainer" className="min-h-[44px]" />
           </div>
@@ -499,56 +671,68 @@ export default function GestionAcademicaPage() {
         /* ACCESO PERMITIDO - MÓDULO ADMINISTRATIVO COMPLETO */
         <div className="space-y-6">
 
-          {/* 2. PESTAÑAS DE NAVEGACIÓN (3 PESTAÑAS LIMPIAS, SIN FOTOCHECKS) */}
-          <div className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm grid grid-cols-1 md:grid-cols-3 gap-1.5 text-xs font-bold">
+          {/* 2. PESTAÑAS DE NAVEGACIÓN (4 PESTAÑAS: MATRÍCULA, GRADOS Y AULAS, PERSONAL, CARGA MASIVA) */}
+          <div className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-1.5 text-xs font-bold">
             <button
               onClick={() => setActiveTab('individual')}
-              className={`py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition ${
+              className={`py-3 px-3 rounded-xl flex items-center justify-center gap-2 transition ${
                 activeTab === 'individual'
                   ? 'bg-burgundy-900 text-white shadow font-black'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               <UserPlus className="w-4 h-4 text-lionGold-400" />
-              <span>1. Matricular Alumno (Individual)</span>
+              <span>1. Matricular Alumno</span>
+            </button>
+
+            <button
+              onClick={() => setActiveTab('classes')}
+              className={`py-3 px-3 rounded-xl flex items-center justify-center gap-2 transition ${
+                activeTab === 'classes'
+                  ? 'bg-burgundy-900 text-white shadow font-black'
+                  : 'text-slate-600 hover:bg-slate-100'
+              }`}
+            >
+              <Layers className="w-4 h-4 text-lionGold-400" />
+              <span>2. Grados, Aulas & Mezcla</span>
             </button>
 
             <button
               onClick={() => setActiveTab('staff')}
-              className={`py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition ${
+              className={`py-3 px-3 rounded-xl flex items-center justify-center gap-2 transition ${
                 activeTab === 'staff'
                   ? 'bg-burgundy-900 text-white shadow font-black'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               <Building className="w-4 h-4 text-lionGold-400" />
-              <span>2. Crear Docente / Directivo</span>
+              <span>3. Docente / Directivo</span>
             </button>
 
             <button
               onClick={() => setActiveTab('bulk')}
-              className={`py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition ${
+              className={`py-3 px-3 rounded-xl flex items-center justify-center gap-2 transition ${
                 activeTab === 'bulk'
                   ? 'bg-burgundy-900 text-white shadow font-black'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
               <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-              <span>3. Carga Masiva (Excel / CSV)</span>
+              <span>4. Carga Masiva (Excel)</span>
             </button>
           </div>
 
-          {/* TAB 1: MATRÍCULA INDIVIDUAL DE ALUMNO */}
+          {/* TAB 1: MATRÍCULA INDIVIDUAL DE ALUMNO (AULA OPCIONAL) */}
           {activeTab === 'individual' && (
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
                 <div className="border-b border-slate-100 pb-4">
                   <h3 className="font-serif font-black text-xl text-slate-900 flex items-center gap-2">
                     <GraduationCap className="w-5 h-5 text-burgundy-900" />
-                    <span>Ficha de Matrícula y Asignación de Aula</span>
+                    <span>Ficha de Matrícula (Asignación de Aula Opcional)</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Crea la cuenta del alumno y vincula automáticamente la cuenta de su apoderado.
+                    Puedes matricular al alumno solo en su grado escolar y asignarle aula después con la mezcla automática.
                   </p>
                 </div>
 
@@ -591,7 +775,7 @@ export default function GestionAcademicaPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                           Nivel Educativo *
@@ -600,10 +784,13 @@ export default function GestionAcademicaPage() {
                           value={studentForm.level}
                           onChange={(e) => {
                             const lvl = e.target.value as EducationLevel;
-                            let defaultClass = '1ro Secundaria - Alfa';
-                            if (lvl === 'PRIMARIA') defaultClass = '6to Primaria - Leones';
-                            if (lvl === 'ACADEMIA') defaultClass = 'Ciclo Semianual UNI';
-                            setStudentForm({ ...studentForm, level: lvl, gradeOrClass: defaultClass });
+                            const firstGrade = BASE_GRADES_BY_LEVEL[lvl as keyof typeof BASE_GRADES_BY_LEVEL]?.[0] || '1ro Primaria';
+                            setStudentForm({
+                              ...studentForm,
+                              level: lvl,
+                              grade: firstGrade,
+                              classOption: 'unassigned',
+                            });
                           }}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white text-slate-800 focus:outline-none focus:border-burgundy-700"
                         >
@@ -615,26 +802,51 @@ export default function GestionAcademicaPage() {
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                          Aula / Grado Asignado *
+                          Grado Escolar *
                         </label>
                         <select
-                          value={studentForm.gradeOrClass}
-                          onChange={(e) => setStudentForm({ ...studentForm, gradeOrClass: e.target.value })}
+                          value={studentForm.grade}
+                          onChange={(e) =>
+                            setStudentForm({ ...studentForm, grade: e.target.value, classOption: 'unassigned' })
+                          }
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white text-slate-800 focus:outline-none focus:border-burgundy-700"
                         >
+                          {(BASE_GRADES_BY_LEVEL[studentForm.level as keyof typeof BASE_GRADES_BY_LEVEL] || []).map(
+                            (g) => (
+                              <option key={g} value={g}>
+                                {g}
+                              </option>
+                            )
+                          )}
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                          Aula Asignada (Opcional)
+                        </label>
+                        <select
+                          value={studentForm.classOption}
+                          onChange={(e) => setStudentForm({ ...studentForm, classOption: e.target.value })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white text-slate-800 focus:outline-none focus:border-burgundy-700"
+                        >
+                          <option value="unassigned">⭐ Sin Asignar (Pendiente de mezcla)</option>
                           {classes
-                            .filter((c) => c.level === studentForm.level)
+                            .filter((c) => c.grade.toLowerCase() === studentForm.grade.toLowerCase())
                             .map((c) => (
-                              <option key={c.code} value={c.name}>
+                              <option key={c.id || c.code} value={c.name}>
                                 {c.name} ({c.shift || 'Mañana'})
                               </option>
                             ))}
                         </select>
                       </div>
                     </div>
+                    <p className="text-[11px] text-slate-400">
+                      💡 Para alumnos nuevos que recién llegan, déjalo en <strong>"Sin Asignar"</strong>. Luego podrás hacer una mezcla automática equitativa en la pestaña <em>"Grados, Aulas & Mezcla"</em>.
+                    </p>
                   </div>
 
-                  {/* Sección Familiar: Madre, Padre y/o Apoderado */}
+                  {/* Sección Familiar */}
                   <div className="space-y-4 pt-4 border-t border-slate-100">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                       <span className="text-[11px] font-black uppercase text-burgundy-900 tracking-wider">
@@ -649,44 +861,38 @@ export default function GestionAcademicaPage() {
                     <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                       <div className="flex items-center gap-1.5 text-xs font-black text-slate-800 uppercase">
                         <span>👩 Datos de la Madre</span>
-                        <span className="text-[10px] font-normal text-slate-500 normal-case">(Opcional si ingresa el Padre o Apoderado)</span>
+                        <span className="text-[10px] text-slate-400 font-normal">(Recomendado para portal de notas)</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                            DNI de la Madre
-                          </label>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">DNI de la Madre</label>
                           <input
                             type="text"
                             maxLength={8}
-                            placeholder="Ej: 41223344"
+                            placeholder="Ej: 41011197"
                             value={studentForm.motherDni}
                             onChange={(e) => setStudentForm({ ...studentForm, motherDni: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-bold bg-white focus:outline-none focus:border-burgundy-700"
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                            Nombre de la Madre
-                          </label>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">Nombres de la Madre</label>
                           <input
                             type="text"
-                            placeholder="Ej: Sra. Elena Morales"
+                            placeholder="Ej: Lizbeth Huaccoto"
                             value={studentForm.motherName}
                             onChange={(e) => setStudentForm({ ...studentForm, motherName: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:outline-none focus:border-burgundy-700"
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                            Celular Madre (WhatsApp)
-                          </label>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">Celular de la Madre</label>
                           <input
                             type="tel"
-                            placeholder="+51 987654321"
+                            placeholder="+51 945572343"
                             value={studentForm.motherPhone}
                             onChange={(e) => setStudentForm({ ...studentForm, motherPhone: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 font-mono bg-white"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono bg-white focus:outline-none focus:border-burgundy-700"
                           />
                         </div>
                       </div>
@@ -696,115 +902,96 @@ export default function GestionAcademicaPage() {
                     <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                       <div className="flex items-center gap-1.5 text-xs font-black text-slate-800 uppercase">
                         <span>👨 Datos del Padre</span>
-                        <span className="text-[10px] font-normal text-slate-500 normal-case">(Opcional si ingresa la Madre o Apoderado)</span>
+                        <span className="text-[10px] text-slate-400 font-normal">(Recomendado para avisos de garita)</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                            DNI del Padre
-                          </label>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">DNI del Padre</label>
                           <input
                             type="text"
                             maxLength={8}
                             placeholder="Ej: 40998877"
                             value={studentForm.fatherDni}
                             onChange={(e) => setStudentForm({ ...studentForm, fatherDni: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-bold bg-white focus:outline-none focus:border-burgundy-700"
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                            Nombre del Padre
-                          </label>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">Nombres del Padre</label>
                           <input
                             type="text"
                             placeholder="Ej: Don Pedro Salazar"
                             value={studentForm.fatherName}
                             onChange={(e) => setStudentForm({ ...studentForm, fatherName: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:outline-none focus:border-burgundy-700"
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                            Celular Padre (WhatsApp)
-                          </label>
+                          <label className="block text-[11px] font-bold text-slate-600 mb-1">Celular del Padre</label>
                           <input
                             type="tel"
-                            placeholder="+51 988112233"
+                            placeholder="+51 987654321"
                             value={studentForm.fatherPhone}
                             onChange={(e) => setStudentForm({ ...studentForm, fatherPhone: e.target.value })}
-                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 font-mono bg-white"
+                            className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono bg-white focus:outline-none focus:border-burgundy-700"
                           />
                         </div>
                       </div>
                     </div>
 
-                    {/* 3. Apoderado / Tutor Legal Adicional */}
-                    <div className="p-3.5 rounded-2xl bg-amber-50/50 border border-amber-200/60 space-y-3">
-                      <div className="flex items-center justify-between">
-                        <label className="flex items-center gap-2 cursor-pointer select-none">
-                          <input
-                            type="checkbox"
-                            checked={studentForm.hasSeparateGuardian}
-                            onChange={(e) => setStudentForm({ ...studentForm, hasSeparateGuardian: e.target.checked })}
-                            className="w-4 h-4 rounded text-burgundy-900 focus:ring-burgundy-700 border-slate-300"
-                          />
-                          <span className="text-xs font-bold text-slate-800">
-                            ¿Tiene un Apoderado o Tutor Legal distinto al Padre o Madre?
-                          </span>
-                        </label>
-                        <span className="text-[10px] text-slate-500 font-semibold">(Abuelo, Tío, Tutor)</span>
-                      </div>
+                    {/* 3. Apoderado Separado / Tutor Legal Opcional */}
+                    <div className="p-3.5 rounded-2xl border border-dashed border-slate-200 space-y-2">
+                      <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-slate-700">
+                        <input
+                          type="checkbox"
+                          checked={studentForm.hasSeparateGuardian}
+                          onChange={(e) => setStudentForm({ ...studentForm, hasSeparateGuardian: e.target.checked })}
+                          className="w-4 h-4 rounded text-burgundy-900 focus:ring-burgundy-500"
+                        />
+                        <span>¿El apoderado legal es otra persona? (Tutor, Abuelo/a o Tío/a)</span>
+                      </label>
 
                       {studentForm.hasSeparateGuardian && (
-                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 border-t border-amber-200/50 animate-in fade-in">
+                        <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                              DNI Apoderado
-                            </label>
+                            <label className="block text-[11px] font-bold text-slate-600 mb-1">Parentesco</label>
+                            <input
+                              type="text"
+                              placeholder="Ej: Tía Legal"
+                              value={studentForm.parentRelationship}
+                              onChange={(e) => setStudentForm({ ...studentForm, parentRelationship: e.target.value })}
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white"
+                            />
+                          </div>
+                          <div>
+                            <label className="block text-[11px] font-bold text-slate-600 mb-1">DNI Apoderado</label>
                             <input
                               type="text"
                               maxLength={8}
-                              placeholder="Ej: 42110099"
+                              placeholder="Ej: 42001122"
                               value={studentForm.parentDni}
                               onChange={(e) => setStudentForm({ ...studentForm, parentDni: e.target.value })}
-                              className="w-full px-3 py-2 rounded-xl border border-slate-300 font-mono font-bold text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono font-bold bg-white"
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                              Nombre Completo
-                            </label>
+                            <label className="block text-[11px] font-bold text-slate-600 mb-1">Nombre Completo</label>
                             <input
                               type="text"
-                              placeholder="Ej: Carlos Vega (Tío)"
+                              placeholder="Ej: Rosa Huaccoto"
                               value={studentForm.parentName}
                               onChange={(e) => setStudentForm({ ...studentForm, parentName: e.target.value })}
-                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 bg-white"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white"
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                              Parentesco
-                            </label>
-                            <input
-                              type="text"
-                              placeholder="Tutor Legal / Abuela / Tío"
-                              value={studentForm.parentRelationship}
-                              onChange={(e) => setStudentForm({ ...studentForm, parentRelationship: e.target.value })}
-                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 bg-white"
-                            />
-                          </div>
-                          <div>
-                            <label className="block text-[11px] font-bold text-slate-600 uppercase mb-1">
-                              Celular
-                            </label>
+                            <label className="block text-[11px] font-bold text-slate-600 mb-1">Celular</label>
                             <input
                               type="tel"
                               placeholder="+51 977889900"
                               value={studentForm.parentPhone}
                               onChange={(e) => setStudentForm({ ...studentForm, parentPhone: e.target.value })}
-                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs focus:outline-none focus:border-burgundy-700 font-mono bg-white"
+                              className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-mono bg-white"
                             />
                           </div>
                         </div>
@@ -819,13 +1006,13 @@ export default function GestionAcademicaPage() {
                       className="w-full bg-burgundy-800 hover:bg-burgundy-900 active:scale-95 text-white font-black py-3.5 px-6 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 text-sm disabled:opacity-50"
                     >
                       <UserPlus className="w-5 h-5 text-lionGold-400" />
-                      <span>{loading ? 'Registrando en Neon DB...' : 'Completar Matrícula y Asignar Aula'}</span>
+                      <span>{loading ? 'Registrando en Neon DB...' : 'Completar Matrícula de Alumno'}</span>
                     </button>
                   </div>
                 </form>
               </div>
 
-              {/* Tarjeta Lateral de Confirmación Limpia (Sin impresión de fotocheck) */}
+              {/* Tarjeta Lateral de Confirmación Limpia */}
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm flex flex-col justify-between space-y-4">
                 <div>
                   <h4 className="font-serif font-black text-base text-slate-900 border-b border-slate-100 pb-3 flex items-center gap-2">
@@ -877,7 +1064,420 @@ export default function GestionAcademicaPage() {
             </div>
           )}
 
-          {/* TAB 2: CREAR DOCENTE / DIRECTIVO */}
+          {/* TAB 2: GRADOS, AULAS & MEZCLA AUTOMÁTICA (LO QUE PIDIÓ EL USUARIO) */}
+          {activeTab === 'classes' && (
+            <div className="space-y-6">
+
+              {/* Selector de Nivel y Grado */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="font-serif font-black text-xl text-slate-900 flex items-center gap-2">
+                      <Layers className="w-5 h-5 text-burgundy-900" />
+                      <span>Control de Grados, Aulas & Mezcla Automática</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Crea aulas para cada grado, distribuye a los alumnos recién matriculados y balancea secciones.
+                    </p>
+                  </div>
+
+                  {/* Filtro de Nivel */}
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+                    {(['TODOS', 'PRIMARIA', 'SECUNDARIA', 'ACADEMIA'] as const).map((lvl) => (
+                      <button
+                        key={lvl}
+                        onClick={() => setSelectedLevelFilter(lvl)}
+                        className={`px-3 py-1.5 rounded-xl transition ${
+                          selectedLevelFilter === lvl
+                            ? 'bg-burgundy-900 text-white shadow-sm font-black'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {lvl === 'TODOS' ? 'Todos' : lvl.charAt(0) + lvl.slice(1).toLowerCase()}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Chips de Grados */}
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {filteredGrades.map((g) => {
+                    const countInGrade = users.filter((u) => {
+                      if (u.role !== 'ALUMNO') return false;
+                      const gOrC = (u.gradeOrClass || '').toLowerCase();
+                      return gOrC.includes(g.toLowerCase()) || (u.level === getLevelForGrade(g) && gOrC.includes('sin asignar'));
+                    }).length;
+
+                    const isSelected = selectedGrade === g;
+
+                    return (
+                      <button
+                        key={g}
+                        onClick={() => {
+                          setSelectedGrade(g);
+                          setIsCreatingClass(false);
+                        }}
+                        className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-2 border ${
+                          isSelected
+                            ? 'bg-burgundy-900 text-white border-burgundy-950 shadow-md font-black'
+                            : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                        }`}
+                      >
+                        <span>{g}</span>
+                        <span
+                          className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                            isSelected ? 'bg-lionGold-500 text-burgundy-950 font-black' : 'bg-slate-200 text-slate-600'
+                          }`}
+                        >
+                          {countInGrade}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Panel del Grado Seleccionado */}
+              <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
+                
+                {/* Cabecera del Grado + Estadísticas + Botones de Acción */}
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-slate-100 pb-6">
+                  <div>
+                    <span className="text-xs font-black uppercase text-burgundy-900 tracking-wider">
+                      GRADO SELECCIONADO
+                    </span>
+                    <h2 className="text-2xl sm:text-3xl font-black font-serif text-slate-900 mt-1">
+                      {selectedGrade}
+                    </h2>
+                    <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-xs">
+                      <span className="bg-slate-100 text-slate-800 font-bold px-3 py-1 rounded-full border border-slate-200">
+                        👥 Total: <strong>{studentsInSelectedGrade.length} alumnos</strong>
+                      </span>
+                      <span
+                        className={`font-bold px-3 py-1 rounded-full border ${
+                          unassignedStudents.length > 0
+                            ? 'bg-amber-100 text-amber-900 border-amber-300 animate-pulse'
+                            : 'bg-emerald-100 text-emerald-900 border-emerald-300'
+                        }`}
+                      >
+                        ⏳ Pendientes sin aula: <strong>{unassignedStudents.length} alumnos</strong>
+                      </span>
+                      <span className="bg-blue-50 text-blue-900 font-bold px-3 py-1 rounded-full border border-blue-200">
+                        🏫 Aulas disponibles: <strong>{classesForSelectedGrade.length}</strong>
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Botones de Mezcla Automática y Crear Aula */}
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+                    <button
+                      onClick={() => setIsCreatingClass(!isCreatingClass)}
+                      className="bg-slate-100 hover:bg-slate-200 text-slate-800 font-black text-xs px-4 py-3 rounded-2xl transition flex items-center justify-center gap-2 border border-slate-300"
+                    >
+                      <Plus className="w-4 h-4 text-burgundy-900" />
+                      <span>{isCreatingClass ? 'Cerrar Formulario' : '+ Crear Nueva Aula'}</span>
+                    </button>
+
+                    <div className="flex flex-col gap-1">
+                      <button
+                        onClick={handleAutoBalance}
+                        disabled={loading || classesForSelectedGrade.length === 0}
+                        className="bg-gradient-to-r from-burgundy-900 to-burgundy-800 hover:from-burgundy-950 hover:to-burgundy-900 active:scale-95 text-white font-black text-xs px-5 py-3 rounded-2xl shadow-lg transition flex items-center justify-center gap-2 disabled:opacity-50"
+                        title="Distribuye parejo a los alumnos entre las aulas disponibles"
+                      >
+                        <Shuffle className="w-4 h-4 text-lionGold-400" />
+                        <span>⚡ Mezcla Automática Equitativa</span>
+                      </button>
+                      <label className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer self-center">
+                        <input
+                          type="checkbox"
+                          checked={redistributeAll}
+                          onChange={(e) => setRedistributeAll(e.target.checked)}
+                          className="rounded text-burgundy-900 w-3 h-3"
+                        />
+                        <span>Redistribuir a todos (no solo los pendientes)</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Formulario de Crear Nueva Aula (si está abierto) */}
+                {isCreatingClass && (
+                  <form
+                    onSubmit={handleCreateNewClass}
+                    className="p-5 rounded-2xl bg-burgundy-50/60 border-2 border-burgundy-200 space-y-4 animate-in slide-in-from-top-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-sm text-burgundy-950 flex items-center gap-2">
+                        <School className="w-4 h-4 text-burgundy-800" />
+                        <span>Crear Nueva Aula / Sección para {selectedGrade}</span>
+                      </h4>
+                      <span className="text-[11px] font-mono text-burgundy-700">Se guardará en Neon DB</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                          Sección / Nombre *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ej: Alfa, Beta, Sección C"
+                          value={newClassForm.section}
+                          onChange={(e) => setNewClassForm({ ...newClassForm, section: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-burgundy-700"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                          Turno *
+                        </label>
+                        <select
+                          value={newClassForm.shift}
+                          onChange={(e) => setNewClassForm({ ...newClassForm, shift: e.target.value as any })}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-burgundy-700"
+                        >
+                          <option value="MAÑANA">Mañana</option>
+                          <option value="TARDE">Tarde</option>
+                        </select>
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                          Capacidad Máx.
+                        </label>
+                        <input
+                          type="number"
+                          value={newClassForm.capacity}
+                          onChange={(e) => setNewClassForm({ ...newClassForm, capacity: Number(e.target.value) })}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-burgundy-700"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                          Número de Aula Física
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej: Aula 102"
+                          value={newClassForm.classroomNumber}
+                          onChange={(e) => setNewClassForm({ ...newClassForm, classroomNumber: e.target.value })}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs bg-white focus:outline-none focus:border-burgundy-700"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatingClass(false)}
+                        className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="bg-burgundy-900 hover:bg-burgundy-950 text-white font-black text-xs px-5 py-2 rounded-xl shadow transition disabled:opacity-50"
+                      >
+                        {loading ? 'Guardando...' : 'Crear Aula en Neon'}
+                      </button>
+                    </div>
+                  </form>
+                )}
+
+                {/* COLUMNAS: 1) SIN ASIGNAR + 2) AULAS CREADAS */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 items-start">
+                  
+                  {/* COLUMNA: ALUMNOS SIN ASIGNAR (PENDIENTES) */}
+                  <div className="bg-amber-50/70 border-2 border-amber-300 rounded-3xl p-4 sm:p-5 space-y-3 shadow-sm">
+                    <div className="flex items-center justify-between border-b border-amber-200/80 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-amber-700" />
+                        <h4 className="font-black text-xs uppercase tracking-wider text-amber-950">
+                          Sin Aula (Pendientes)
+                        </h4>
+                      </div>
+                      <span className="bg-amber-200 text-amber-900 font-mono font-bold text-xs px-2.5 py-0.5 rounded-full">
+                        {unassignedStudents.length}
+                      </span>
+                    </div>
+
+                    <p className="text-[11px] text-amber-800">
+                      Alumnos recién matriculados en {selectedGrade}. Puedes usar la <strong>Mezcla Automática</strong> o moverlos manualmente:
+                    </p>
+
+                    <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                      {unassignedStudents.length === 0 ? (
+                        <div className="p-6 text-center text-amber-700 text-xs font-bold bg-white/70 rounded-2xl border border-amber-200/60">
+                          ✓ Todos los alumnos de este grado ya tienen aula asignada.
+                        </div>
+                      ) : (
+                        unassignedStudents.map((stu) => (
+                          <div
+                            key={stu.id}
+                            className="bg-white p-3 rounded-2xl border border-amber-200 shadow-xs space-y-2 hover:border-amber-400 transition"
+                          >
+                            <div>
+                              <p className="font-black text-xs text-slate-900 leading-tight truncate">{stu.name}</p>
+                              <p className="text-[10px] font-mono text-slate-500 mt-0.5">DNI: {stu.dni}</p>
+                            </div>
+
+                            {/* Dropdown de Asignación Rápida */}
+                            <div className="flex items-center gap-1.5 pt-1 border-t border-slate-100">
+                              <span className="text-[10px] font-bold text-slate-500 shrink-0">Asignar a:</span>
+                              <select
+                                defaultValue=""
+                                onChange={(e) => {
+                                  if (e.target.value) {
+                                    handleMoveStudent(stu.id, stu.name, e.target.value);
+                                  }
+                                }}
+                                className="w-full text-[11px] font-bold bg-slate-50 border border-slate-300 rounded-lg p-1 text-slate-800 focus:outline-none focus:border-burgundy-700"
+                              >
+                                <option value="" disabled>
+                                  Elegir Aula...
+                                </option>
+                                {classesForSelectedGrade.map((c) => (
+                                  <option key={c.id || c.code} value={c.name}>
+                                    {c.name}
+                                  </option>
+                                ))}
+                              </select>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+
+                  {/* COLUMNAS PARA CADA AULA CREADA */}
+                  {classesForSelectedGrade.map((cls) => {
+                    const studentsInThisClass = studentsInSelectedGrade.filter(
+                      (u) => (u.gradeOrClass || '').toLowerCase().trim() === cls.name.toLowerCase().trim()
+                    );
+                    const occupancy = studentsInThisClass.length;
+                    const maxCap = cls.capacity || 35;
+                    const percent = Math.min(Math.round((occupancy / maxCap) * 100), 100);
+
+                    return (
+                      <div
+                        key={cls.id || cls.code}
+                        className="bg-white border-2 border-slate-200 rounded-3xl p-4 sm:p-5 space-y-3 shadow-sm hover:border-burgundy-400 transition"
+                      >
+                        {/* Cabecera del Aula */}
+                        <div className="border-b border-slate-100 pb-2.5">
+                          <div className="flex items-center justify-between">
+                            <h4 className="font-serif font-black text-sm text-slate-900 truncate">
+                              {cls.name}
+                            </h4>
+                            {studentsInThisClass.length === 0 && (
+                              <button
+                                onClick={() => handleDeleteClass(cls.id, cls.name)}
+                                title="Eliminar aula vacía"
+                                className="p-1 text-slate-400 hover:text-rose-600 transition"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+                            <span>Turno: {cls.shift}</span>
+                            <span className="font-bold text-slate-800">
+                              {occupancy} / {maxCap} alumnos
+                            </span>
+                          </div>
+
+                          {/* Mini barra de aforo del aula */}
+                          <div className="w-full h-1.5 bg-slate-100 rounded-full mt-1.5 overflow-hidden">
+                            <div
+                              className="h-full bg-burgundy-800 rounded-full transition-all"
+                              style={{ width: `${percent}%` }}
+                            />
+                          </div>
+                        </div>
+
+                        {/* Lista de Alumnos en esta Aula */}
+                        <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
+                          {studentsInThisClass.length === 0 ? (
+                            <div className="p-6 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
+                              Aula vacía. Usa la mezcla automática o mueve alumnos aquí.
+                            </div>
+                          ) : (
+                            studentsInThisClass.map((stu) => (
+                              <div
+                                key={stu.id}
+                                className="bg-slate-50 p-2.5 rounded-2xl border border-slate-200/80 space-y-1.5 hover:bg-white hover:border-slate-300 transition"
+                              >
+                                <div className="flex items-start justify-between gap-1">
+                                  <p className="font-bold text-xs text-slate-900 leading-tight truncate">{stu.name}</p>
+                                  <span className="text-[9px] font-mono text-slate-400 shrink-0">{stu.dni}</span>
+                                </div>
+
+                                {/* Selector para mover alumno */}
+                                <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200/60">
+                                  <span className="text-[10px] text-slate-400 shrink-0">Mover a:</span>
+                                  <select
+                                    defaultValue=""
+                                    onChange={(e) => {
+                                      if (e.target.value) {
+                                        handleMoveStudent(stu.id, stu.name, e.target.value);
+                                      }
+                                    }}
+                                    className="w-full text-[10px] font-bold bg-white border border-slate-200 rounded p-1 text-slate-700 focus:outline-none focus:border-burgundy-700"
+                                  >
+                                    <option value="" disabled>
+                                      Cambiar aula...
+                                    </option>
+                                    <option value={`${selectedGrade} - Sin Asignar`}>
+                                      ⏳ Regresar a Sin Asignar
+                                    </option>
+                                    {classesForSelectedGrade
+                                      .filter((c) => c.name !== cls.name)
+                                      .map((other) => (
+                                        <option key={other.id || other.code} value={other.name}>
+                                          Mover a {other.name}
+                                        </option>
+                                      ))}
+                                  </select>
+                                </div>
+                              </div>
+                            ))
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })}
+
+                  {/* Tarjeta para agregar más aulas si no hay */}
+                  {classesForSelectedGrade.length === 0 && (
+                    <div className="p-8 rounded-3xl border-2 border-dashed border-slate-200 text-center space-y-3 bg-white col-span-2">
+                      <School className="w-10 h-10 text-slate-300 mx-auto" />
+                      <h4 className="font-bold text-slate-800 text-sm">No hay aulas creadas para {selectedGrade}</h4>
+                      <p className="text-xs text-slate-500 max-w-sm mx-auto">
+                        Crea las secciones (ej: Sección A, Sección B) para que puedas realizar la mezcla automática de alumnos.
+                      </p>
+                      <button
+                        onClick={() => setIsCreatingClass(true)}
+                        className="bg-burgundy-900 text-white font-bold text-xs px-4 py-2.5 rounded-xl shadow transition"
+                      >
+                        + Crear Primera Aula
+                      </button>
+                    </div>
+                  )}
+
+                </div>
+
+              </div>
+
+            </div>
+          )}
+
+          {/* TAB 3: CREAR DOCENTE / DIRECTIVO */}
           {activeTab === 'staff' && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm max-w-3xl mx-auto space-y-6">
               <div className="border-b border-slate-100 pb-4">
@@ -1001,7 +1601,7 @@ export default function GestionAcademicaPage() {
             </div>
           )}
 
-          {/* TAB 3: CARGA MASIVA DESDE EXCEL / CSV */}
+          {/* TAB 4: CARGA MASIVA DESDE EXCEL / CSV */}
           {activeTab === 'bulk' && (
             <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
@@ -1011,7 +1611,7 @@ export default function GestionAcademicaPage() {
                     <span>Importación Masiva de Alumnos (Excel / CSV)</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Sube salones enteros o promociones en segundos. El sistema genera los códigos y vincula a los apoderados automáticamente.
+                    Sube salones enteros o promociones. Si solo pones el Grado sin aula, quedarán como "Sin Asignar" para mezclarlos luego.
                   </p>
                 </div>
 
@@ -1029,7 +1629,7 @@ export default function GestionAcademicaPage() {
                   <Upload className="w-10 h-10 text-slate-400 mx-auto" />
                   <h4 className="font-bold text-slate-800 text-sm">Arrastra tu archivo CSV o haz clic aquí</h4>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                    Formato admitido: Archivo separado por comas o punto y coma exportado desde Microsoft Excel.
+                    Formato admitido: Archivo separado por comas o tabulaciones exportado desde Excel.
                   </p>
                   <label className="inline-block bg-burgundy-900 hover:bg-burgundy-800 text-white font-bold text-xs px-4 py-2 rounded-xl cursor-pointer shadow transition">
                     <span>Seleccionar Archivo</span>
@@ -1045,11 +1645,11 @@ export default function GestionAcademicaPage() {
                     rows={6}
                     value={rawCsvText}
                     onChange={(e) => handleParseCsv(e.target.value)}
-                    placeholder="78123001	Alonso Ramos	PRIMARIA	6to Primaria - Leones	40119901&#10;75123001	Bryan Mendoza	SECUNDARIA	5to Secundaria - Alfa	40119903"
+                    placeholder="78123001	Alonso Ramos	PRIMARIA	3ro Primaria	40119901&#10;75123001	Bryan Mendoza	SECUNDARIA	5to Secundaria - Alfa	40119903"
                     className="w-full p-3 rounded-2xl border border-slate-300 font-mono text-xs text-slate-800 focus:outline-none focus:border-burgundy-700"
                   />
                   <span className="text-[11px] text-slate-400">
-                    Columnas: DNI | Nombre | Nivel | Aula | DNI Apoderado | Nombre Apoderado | Celular
+                    Columnas: DNI | Nombre | Nivel | Grado o Aula | DNI Apoderado | Nombre Apoderado | Celular
                   </span>
                 </div>
               </div>
@@ -1078,7 +1678,7 @@ export default function GestionAcademicaPage() {
                           <th className="p-3">DNI Alumno</th>
                           <th className="p-3">Nombres y Apellidos</th>
                           <th className="p-3">Nivel</th>
-                          <th className="p-3">Aula Asignada</th>
+                          <th className="p-3">Aula / Grado</th>
                           <th className="p-3">DNI Apoderado</th>
                           <th className="p-3">Estado</th>
                         </tr>

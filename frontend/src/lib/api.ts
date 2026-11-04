@@ -441,3 +441,50 @@ export async function createStaffApi(data: any): Promise<any> {
     };
   }
 }
+
+export async function createAcademicClassApi(data: Partial<AcademicClass>): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/classes`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al crear aula');
+  return json;
+}
+
+export async function deleteAcademicClassApi(id: string): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/classes?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al eliminar aula');
+  return json;
+}
+
+export async function moveStudentClassApi(studentId: string, gradeOrClass: string): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/assign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'move', studentId, gradeOrClass }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al mover alumno');
+  return json;
+}
+
+export async function autoBalanceStudentsApi(
+  grade: string,
+  level?: string,
+  redistributeAll: boolean = false
+): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/assign`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action: 'auto_balance', grade, level, redistributeAll }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al balancear aulas');
+  return json;
+}
+
