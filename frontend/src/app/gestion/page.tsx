@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { useWhitman } from '../../context/WhitmanContext';
 import {
   fetchAcademicClasses,
+  fetchAcademicGradesApi,
+  createAcademicGradeApi,
+  deleteAcademicGradeApi,
   enrollStudentApi,
   bulkEnrollStudentsApi,
   createStaffApi,
@@ -164,13 +167,12 @@ export default function GestionAcademicaPage() {
     notify('success', 'Sesión de seguridad de Google cerrada.');
   };
 
-  // 1. Estado Formulario Alumno (Grado obligatorio, Aula opcional)
+  // 1. Estado Formulario Alumno (Matrícula en Grado)
   const [studentForm, setStudentForm] = useState({
     dni: '',
     name: '',
     level: 'PRIMARIA' as EducationLevel,
-    grade: '3ro Primaria',
-    classOption: 'unassigned', // 'unassigned' o nombre de aula
+    grade: '1ro Primaria',
     phone: '',
     // Datos de la Madre
     motherDni: '',
@@ -190,6 +192,24 @@ export default function GestionAcademicaPage() {
   const [lastEnrolledStudent, setLastEnrolledStudent] = useState<User | null>(null);
 
   // 2. Estado para pestaña de Grados y Aulas (Solo Colegio: Primaria y Secundaria)
+  const [gradesList, setGradesList] = useState<Array<{ id: string; name: string; level: string }>>([
+    { id: '1', name: '1ro Primaria', level: 'PRIMARIA' },
+    { id: '2', name: '2do Primaria', level: 'PRIMARIA' },
+    { id: '3', name: '3ro Primaria', level: 'PRIMARIA' },
+    { id: '4', name: '4to Primaria', level: 'PRIMARIA' },
+    { id: '5', name: '5to Primaria', level: 'PRIMARIA' },
+    { id: '6', name: '6to Primaria', level: 'PRIMARIA' },
+    { id: '7', name: '1ro Secundaria', level: 'SECUNDARIA' },
+    { id: '8', name: '2do Secundaria', level: 'SECUNDARIA' },
+    { id: '9', name: '3ro Secundaria', level: 'SECUNDARIA' },
+    { id: '10', name: '4to Secundaria', level: 'SECUNDARIA' },
+    { id: '11', name: '5to Secundaria', level: 'SECUNDARIA' },
+  ]);
+
+  const [isCreatingGrade, setIsCreatingGrade] = useState(false);
+  const [newGradeName, setNewGradeName] = useState('');
+  const [newGradeLevel, setNewGradeLevel] = useState<'PRIMARIA' | 'SECUNDARIA'>('PRIMARIA');
+
   const [selectedLevelFilter, setSelectedLevelFilter] = useState<'TODOS' | 'PRIMARIA' | 'SECUNDARIA'>('TODOS');
   const [selectedGrade, setSelectedGrade] = useState<string>('1ro Primaria');
   const [isCreatingClass, setIsCreatingClass] = useState(false);
@@ -218,6 +238,18 @@ export default function GestionAcademicaPage() {
   const [parsedStudents, setParsedStudents] = useState<Array<any>>([]);
   const [bulkStatus, setBulkStatus] = useState<string | null>(null);
 
+  // Cargar Grados dinámicos desde Neon DB
+  const loadGrades = async () => {
+    try {
+      const g = await fetchAcademicGradesApi();
+      if (g && g.length > 0) {
+        setGradesList(g.filter((item) => item.level !== 'ACADEMIA'));
+      }
+    } catch (e) {
+      console.warn('Error cargando grados:', e);
+    }
+  };
+
   // Cargar Aulas desde la DB (Solo Colegio: Primaria y Secundaria)
   const loadAcademicClasses = async () => {
     try {
@@ -239,8 +271,54 @@ export default function GestionAcademicaPage() {
   };
 
   useEffect(() => {
+    loadGrades();
     loadAcademicClasses();
   }, []);
+
+  // --- CREAR GRADO EN NEON DB ---
+  const handleCreateGrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const cleanName = newGradeName.trim();
+    if (!cleanName) {
+      notify('error', 'El nombre del grado es obligatorio (ej: Inicial 5 años, 1ro Primaria).');
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await createAcademicGradeApi(cleanName, newGradeLevel);
+      notify('success', res.message || `¡Grado "${cleanName}" creado correctamente!`);
+      setIsCreatingGrade(false);
+      setNewGradeName('');
+      await loadGrades();
+      setSelectedGrade(cleanName);
+    } catch (err: any) {
+      notify('error', err.message || 'Error al crear grado');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // --- ELIMINAR GRADO EN NEON DB ---
+  const handleDeleteGrade = async (gradeNameToDelete: string) => {
+    if (!confirm(`¿Estás seguro de eliminar el grado "${gradeNameToDelete}"? Esta acción borrará también sus aulas vacías.`)) {
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await deleteAcademicGradeApi(undefined, gradeNameToDelete);
+      notify('success', res.message || `Grado "${gradeNameToDelete}" eliminado.`);
+      await loadGrades();
+      await loadAcademicClasses();
+      const remaining = gradesList.filter((g) => g.name !== gradeNameToDelete);
+      if (remaining.length > 0) {
+        setSelectedGrade(remaining[0].name);
+      }
+    } catch (err: any) {
+      notify('error', err.message || 'Error al eliminar grado.');
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const notify = (type: 'success' | 'error', message: string) => {
     setNotification({ type, message });
@@ -270,17 +348,11 @@ export default function GestionAcademicaPage() {
       return;
     }
 
-    // Si no asignó aula específica, se guarda en el grado como "Sin Asignar"
-    const finalGradeOrClass =
-      studentForm.classOption === 'unassigned' || !studentForm.classOption
-        ? `${studentForm.grade} - Sin Asignar`
-        : studentForm.classOption;
-
     setLoading(true);
     try {
       const payload = {
         ...studentForm,
-        gradeOrClass: finalGradeOrClass,
+        gradeOrClass: `${studentForm.grade} - Sin Asignar`,
       };
       const res = await enrollStudentApi(payload);
       notify('success', `¡Matrícula exitosa! ${res.message || 'Alumno registrado en la base de datos'}`);
@@ -535,24 +607,13 @@ export default function GestionAcademicaPage() {
     document.body.removeChild(link);
   };
 
-  // CÁLCULOS DINÁMICOS PARA LA PESTAÑA DE GRADOS Y AULAS (SOLO COLEGIO: PRIMARIA Y SECUNDARIA)
-  const allAvailableGrades: string[] = [
-    ...BASE_GRADES_BY_LEVEL.PRIMARIA,
-    ...BASE_GRADES_BY_LEVEL.SECUNDARIA,
-    ...Array.from(new Set(classes.map((c) => c.grade))).filter(
-      (g) =>
-        !BASE_GRADES_BY_LEVEL.PRIMARIA.includes(g) &&
-        !BASE_GRADES_BY_LEVEL.SECUNDARIA.includes(g) &&
-        !g.toLowerCase().includes('pre') &&
-        !g.toLowerCase().includes('acad') &&
-        !g.toLowerCase().includes('repaso')
-    ),
-  ];
-
-  const filteredGrades = allAvailableGrades.filter((g) => {
-    if (selectedLevelFilter === 'TODOS') return true;
-    return getLevelForGrade(g) === selectedLevelFilter;
-  });
+  // CÁLCULOS DINÁMICOS PARA LA PESTAÑA DE GRADOS Y AULAS (DESDE NEON DB)
+  const filteredGrades = gradesList
+    .filter((g) => {
+      if (selectedLevelFilter === 'TODOS') return true;
+      return g.level === selectedLevelFilter;
+    })
+    .map((g) => g.name);
 
   // Alumnos del grado seleccionado
   const studentsInSelectedGrade = users.filter((u) => {
@@ -729,10 +790,10 @@ export default function GestionAcademicaPage() {
                 <div className="border-b border-slate-100 pb-4">
                   <h3 className="font-serif font-black text-xl text-slate-900 flex items-center gap-2">
                     <GraduationCap className="w-5 h-5 text-burgundy-900" />
-                    <span>Ficha de Matrícula (Asignación de Aula Opcional)</span>
+                    <span>Ficha de Matrícula de Alumno</span>
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Puedes matricular al alumno solo en su grado escolar y asignarle aula después con la mezcla automática.
+                    Registra los datos del alumno y su grado escolar. La asignación de aulas se realiza desde la pestaña "Grados, Aulas & Mezcla".
                   </p>
                 </div>
 
@@ -775,7 +836,7 @@ export default function GestionAcademicaPage() {
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                           Nivel Educativo *
@@ -784,12 +845,12 @@ export default function GestionAcademicaPage() {
                           value={studentForm.level}
                           onChange={(e) => {
                             const lvl = (e.target.value as 'PRIMARIA' | 'SECUNDARIA');
-                            const firstGrade = BASE_GRADES_BY_LEVEL[lvl]?.[0] || '1ro Primaria';
+                            const gradesOfLvl = gradesList.filter((g) => g.level === lvl);
+                            const firstGrade = gradesOfLvl[0]?.name || (lvl === 'PRIMARIA' ? '1ro Primaria' : '1ro Secundaria');
                             setStudentForm({
                               ...studentForm,
                               level: lvl,
                               grade: firstGrade,
-                              classOption: 'unassigned',
                             });
                           }}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white text-slate-800 focus:outline-none focus:border-burgundy-700"
@@ -806,42 +867,22 @@ export default function GestionAcademicaPage() {
                         <select
                           value={studentForm.grade}
                           onChange={(e) =>
-                            setStudentForm({ ...studentForm, grade: e.target.value, classOption: 'unassigned' })
+                            setStudentForm({ ...studentForm, grade: e.target.value })
                           }
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white text-slate-800 focus:outline-none focus:border-burgundy-700"
                         >
-                          {(BASE_GRADES_BY_LEVEL[studentForm.level as keyof typeof BASE_GRADES_BY_LEVEL] || []).map(
-                            (g) => (
-                              <option key={g} value={g}>
-                                {g}
-                              </option>
-                            )
-                          )}
-                        </select>
-                      </div>
-
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                          Aula Asignada (Opcional)
-                        </label>
-                        <select
-                          value={studentForm.classOption}
-                          onChange={(e) => setStudentForm({ ...studentForm, classOption: e.target.value })}
-                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white text-slate-800 focus:outline-none focus:border-burgundy-700"
-                        >
-                          <option value="unassigned">⭐ Sin Asignar (Pendiente de mezcla)</option>
-                          {classes
-                            .filter((c) => c.grade.toLowerCase() === studentForm.grade.toLowerCase())
-                            .map((c) => (
-                              <option key={c.id || c.code} value={c.name}>
-                                {c.name} ({c.shift || 'Mañana'})
+                          {gradesList
+                            .filter((g) => g.level === studentForm.level)
+                            .map((g) => (
+                              <option key={g.id || g.name} value={g.name}>
+                                {g.name}
                               </option>
                             ))}
                         </select>
                       </div>
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      💡 Para alumnos nuevos que recién llegan, déjalo en <strong>"Sin Asignar"</strong>. Luego podrás hacer una mezcla automática equitativa en la pestaña <em>"Grados, Aulas & Mezcla"</em>.
+                      💡 El alumno quedará registrado en su grado escolar. La asignación de aula y balanceo se realiza desde la pestaña <strong>"2. Grados, Aulas & Mezcla"</strong>.
                     </p>
                   </div>
 
@@ -1080,23 +1121,97 @@ export default function GestionAcademicaPage() {
                     </p>
                   </div>
 
-                  {/* Filtro de Nivel (Solo Primaria y Secundaria) */}
-                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
-                    {(['TODOS', 'PRIMARIA', 'SECUNDARIA'] as const).map((lvl) => (
-                      <button
-                        key={lvl}
-                        onClick={() => setSelectedLevelFilter(lvl)}
-                        className={`px-3 py-1.5 rounded-xl transition ${
-                          selectedLevelFilter === lvl
-                            ? 'bg-burgundy-900 text-white shadow-sm font-black'
-                            : 'text-slate-600 hover:text-slate-900'
-                        }`}
-                      >
-                        {lvl === 'TODOS' ? 'Todos los Grados' : lvl === 'PRIMARIA' ? 'Primaria' : 'Secundaria'}
-                      </button>
-                    ))}
+                  <div className="flex flex-wrap items-center gap-2">
+                    {/* Filtro de Nivel (Solo Primaria y Secundaria) */}
+                    <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
+                      {(['TODOS', 'PRIMARIA', 'SECUNDARIA'] as const).map((lvl) => (
+                        <button
+                          key={lvl}
+                          onClick={() => setSelectedLevelFilter(lvl)}
+                          className={`px-3 py-1.5 rounded-xl transition ${
+                            selectedLevelFilter === lvl
+                              ? 'bg-burgundy-900 text-white shadow-sm font-black'
+                              : 'text-slate-600 hover:text-slate-900'
+                          }`}
+                        >
+                          {lvl === 'TODOS' ? 'Todos los Grados' : lvl === 'PRIMARIA' ? 'Primaria' : 'Secundaria'}
+                        </button>
+                      ))}
+                    </div>
+
+                    {/* Botón para crear nuevo grado */}
+                    <button
+                      onClick={() => setIsCreatingGrade(!isCreatingGrade)}
+                      className="bg-burgundy-900 hover:bg-burgundy-950 text-white font-bold text-xs px-3.5 py-2 rounded-2xl shadow transition flex items-center gap-1.5"
+                    >
+                      <Plus className="w-4 h-4 text-lionGold-400" />
+                      <span>{isCreatingGrade ? 'Cerrar' : '+ Crear Grado'}</span>
+                    </button>
                   </div>
                 </div>
+
+                {/* Formulario Inline para Crear Nuevo Grado */}
+                {isCreatingGrade && (
+                  <form
+                    onSubmit={handleCreateGrade}
+                    className="p-4 rounded-2xl bg-burgundy-50/60 border-2 border-burgundy-200 space-y-3 animate-in slide-in-from-top-2"
+                  >
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-bold text-xs uppercase tracking-wider text-burgundy-950 flex items-center gap-2">
+                        <Plus className="w-4 h-4 text-burgundy-800" />
+                        <span>Crear Nuevo Grado o Año Escolar</span>
+                      </h4>
+                      <span className="text-[11px] font-mono text-burgundy-700">Se guardará en Neon DB</span>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="sm:col-span-2">
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                          Nombre del Grado *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          placeholder="Ej: Inicial 5 años, 1ro de Secundaria, etc."
+                          value={newGradeName}
+                          onChange={(e) => setNewGradeName(e.target.value)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-burgundy-700"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                          Nivel Educativo *
+                        </label>
+                        <select
+                          value={newGradeLevel}
+                          onChange={(e) => setNewGradeLevel(e.target.value as any)}
+                          className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-burgundy-700"
+                        >
+                          <option value="PRIMARIA">🎒 Primaria</option>
+                          <option value="SECUNDARIA">🏫 Secundaria</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="flex justify-end gap-2 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatingGrade(false)}
+                        className="px-3.5 py-1.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-200 transition"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="submit"
+                        disabled={loading}
+                        className="bg-burgundy-900 hover:bg-burgundy-950 text-white font-black text-xs px-4 py-1.5 rounded-xl shadow transition disabled:opacity-50"
+                      >
+                        {loading ? 'Guardando...' : 'Guardar Grado'}
+                      </button>
+                    </div>
+                  </form>
+                )}
 
                 {/* Chips de Grados */}
                 <div className="flex flex-wrap gap-2 pt-1">
@@ -1167,7 +1282,7 @@ export default function GestionAcademicaPage() {
                     </div>
                   </div>
 
-                  {/* Botones de Mezcla Automática y Crear Aula */}
+                  {/* Botones de Mezcla Automática, Crear Aula y Eliminar Grado */}
                   <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
                     <button
                       onClick={() => setIsCreatingClass(!isCreatingClass)}
@@ -1175,6 +1290,20 @@ export default function GestionAcademicaPage() {
                     >
                       <Plus className="w-4 h-4 text-burgundy-900" />
                       <span>{isCreatingClass ? 'Cerrar Formulario' : '+ Crear Nueva Aula'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => handleDeleteGrade(selectedGrade)}
+                      disabled={loading || studentsInSelectedGrade.length > 0}
+                      className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs px-3.5 py-3 rounded-2xl transition flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
+                      title={
+                        studentsInSelectedGrade.length > 0
+                          ? `No se puede eliminar porque tiene ${studentsInSelectedGrade.length} alumno(s) matriculado(s). Primero debes mover o reasignar a los alumnos.`
+                          : 'Eliminar este grado escolar'
+                      }
+                    >
+                      <Trash2 className="w-4 h-4 text-rose-600" />
+                      <span>Eliminar Grado</span>
                     </button>
 
                     <div className="flex flex-col gap-1">

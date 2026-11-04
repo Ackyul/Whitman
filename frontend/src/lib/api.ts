@@ -488,3 +488,39 @@ export async function autoBalanceStudentsApi(
   return json;
 }
 
+export async function fetchAcademicGradesApi(): Promise<Array<{ id: string; name: string; level: string }>> {
+  try {
+    const res = await fetchWithTimeout(`${getApiBase()}/api/academic/grades`, { cache: 'no-store' });
+    if (!res.ok) throw new Error('Error al obtener grados');
+    const json = await res.json();
+    return json.data || [];
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function createAcademicGradeApi(name: string, level: string): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/grades`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, level }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al crear grado');
+  return json;
+}
+
+export async function deleteAcademicGradeApi(id?: string, name?: string): Promise<any> {
+  const params = new URLSearchParams();
+  if (id) params.set('id', id);
+  if (name) params.set('name', name);
+
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/grades?${params.toString()}`, {
+    method: 'DELETE',
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al eliminar grado');
+  return json;
+}
+
+
