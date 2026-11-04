@@ -34,9 +34,9 @@ const WhitmanContext = createContext<WhitmanContextType | undefined>(undefined);
 export const WhitmanProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [linkedStudents, setLinkedStudents] = useState<User[]>([]);
-  const [users, setUsers] = useState<User[]>(MOCK_USERS);
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>(MOCK_ATTENDANCE);
-  const [grades, setGrades] = useState<GradeRecord[]>(MOCK_GRADES);
+  const [users, setUsers] = useState<User[]>([]);
+  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const [grades, setGrades] = useState<GradeRecord[]>([]);
   const [stats, setStats] = useState<WhitmanStats>(MOCK_STATS);
   const [loading, setLoading] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
@@ -58,6 +58,7 @@ export const WhitmanProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (e) {
       console.warn('Error leyendo sesión de localStorage:', e);
     }
+    refreshData();
   }, []);
 
   const login = async (identifier: string, role: UserRole) => {

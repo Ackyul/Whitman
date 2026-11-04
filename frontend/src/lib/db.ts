@@ -7,3 +7,4 @@ const connectionString =
   '';
 
 export const sql = connectionString ? neon(connectionString) : null;
+
