@@ -1,29 +1,59 @@
-# Dependencies
+# ========================================================
+# 🛡️ WHITMAN - Git Ignore Seguro
+# ========================================================
+
+# Dependencias
 node_modules/
+*/node_modules/
 .pnp
 .pnp.js
 
-# Next.js build output
+# Salidas de compilación y empaquetado
 .next/
+*/.next/
 out/
-
-# TypeScript output
 dist/
 build/
+*.tsbuildinfo
+frontend/tsconfig.tsbuildinfo
 
-# Debug
+# Archivos de entorno y credenciales (NUNCA subir a Git)
+.env
+.env.*
+!.env.example
+!*/.env.example
+*.env
+*.env.local
+*.env.*.local
+frontend/.env.local
+backend/.env
+
+# Base de datos local y estados en JSON
+data.json
+backend/data.json
+*/data.json
+*.sqlite
+*.sqlite3
+*.db
+
+# Logs y depuración
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+*.log
 
-# Environment files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
+# Certificados y llaves privadas
+*.pem
+*.key
+*.cert
+*.crt
 
-# OS files
+# Plataformas de despliegue
+.vercel/
+.turbo/
+
+# Archivos del sistema operativo
 .DS_Store
 Thumbs.db
-
+desktop.ini
