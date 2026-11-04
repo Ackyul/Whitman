@@ -1,20 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 
-const DEFAULT_CLASSES = [
-  { id: 'c1', code: 'PRIM-1-A', name: '1ro Primaria - Semillas', level: 'PRIMARIA', grade: '1ro Primaria', section: 'A', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c2', code: 'PRIM-2-A', name: '2do Primaria - Exploradores', level: 'PRIMARIA', grade: '2do Primaria', section: 'A', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c3', code: 'PRIM-3-BETA', name: '3ro Primaria - Beta', level: 'PRIMARIA', grade: '3ro Primaria', section: 'Beta', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c4', code: 'PRIM-4-A', name: '4to Primaria - Titanes', level: 'PRIMARIA', grade: '4to Primaria', section: 'A', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c5', code: 'PRIM-5-A', name: '5to Primaria - Jaguares', level: 'PRIMARIA', grade: '5to Primaria', section: 'A', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c6', code: 'PRIM-6-LEO', name: '6to Primaria - Leones', level: 'PRIMARIA', grade: '6to Primaria', section: 'Leones', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c7', code: 'SEC-1-ALF', name: '1ro Secundaria - Alfa', level: 'SECUNDARIA', grade: '1ro Secundaria', section: 'Alfa', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c8', code: 'SEC-2-GAM', name: '2do Secundaria - Gamma', level: 'SECUNDARIA', grade: '2do Secundaria', section: 'Gamma', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c9', code: 'SEC-3-DEL', name: '3ro Secundaria - Delta', level: 'SECUNDARIA', grade: '3ro Secundaria', section: 'Delta', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c10', code: 'SEC-4-SIG', name: '4to Secundaria - Sigma', level: 'SECUNDARIA', grade: '4to Secundaria', section: 'Sigma', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c11', code: 'SEC-5-PROM', name: '5to Secundaria - Promoción 2026', level: 'SECUNDARIA', grade: '5to Secundaria', section: 'Alfa', shift: 'MAÑANA', capacity: 35, active: true },
-];
-
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const level = searchParams.get('level');
@@ -22,6 +8,24 @@ export async function GET(request: Request) {
 
   if (sql) {
     try {
+      // Asegurarse de que la tabla academic_classes exista en Neon DB
+      await (sql as any).query(`
+        CREATE TABLE IF NOT EXISTS academic_classes (
+          id VARCHAR(64) PRIMARY KEY,
+          code VARCHAR(50) UNIQUE NOT NULL,
+          name VARCHAR(150) NOT NULL,
+          level VARCHAR(30) NOT NULL CHECK (level IN ('COLEGIO', 'ACADEMIA', 'PRIMARIA', 'SECUNDARIA')),
+          grade VARCHAR(50) NOT NULL,
+          section VARCHAR(50) NOT NULL,
+          shift VARCHAR(20) DEFAULT 'MAÑANA',
+          classroom_number VARCHAR(50),
+          capacity INT DEFAULT 35,
+          tutor_teacher_name VARCHAR(150),
+          active BOOLEAN DEFAULT TRUE,
+          created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
+        );
+      `);
+
       let query = `
         SELECT id, code, name, level, grade, section, shift, 
                COALESCE(classroom_number, '') as "classroomNumber",
@@ -43,23 +47,14 @@ export async function GET(request: Request) {
       query += ` ORDER BY level, grade, name;`;
 
       const rows = await (sql as any).query(query, params);
-      if (rows && rows.length > 0) {
-        return NextResponse.json({ success: true, data: rows });
-      }
+      return NextResponse.json({ success: true, data: rows || [] });
     } catch (e) {
-      console.warn('Error consultando academic_classes en Neon, usando fallback:', e);
+      console.error('Error consultando academic_classes en Neon:', e);
+      return NextResponse.json({ success: false, data: [] }, { status: 500 });
     }
   }
 
-  let result = DEFAULT_CLASSES;
-  if (level) {
-    result = result.filter((c) => c.level === level);
-  }
-  if (grade) {
-    result = result.filter((c) => c.grade === grade);
-  }
-
-  return NextResponse.json({ success: true, data: result });
+  return NextResponse.json({ success: true, data: [] });
 }
 
 export async function POST(request: Request) {
@@ -88,7 +83,6 @@ export async function POST(request: Request) {
     const id = `cls-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
     if (sql) {
-      // Asegurarse de que la tabla academic_classes exista
       await (sql as any).query(`
         CREATE TABLE IF NOT EXISTS academic_classes (
           id VARCHAR(64) PRIMARY KEY,
@@ -146,7 +140,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      message: `¡Aula "${fullName}" creada exitosamente!`,
+      message: `¡Aula "${fullName}" guardada en Neon PostgreSQL!`,
       data: newClass,
     });
   } catch (error: any) {
@@ -171,7 +165,7 @@ export async function DELETE(request: Request) {
       await (sql as any).query(`DELETE FROM academic_classes WHERE id = $1;`, [id]);
     }
 
-    return NextResponse.json({ success: true, message: 'Aula eliminada correctamente' });
+    return NextResponse.json({ success: true, message: 'Aula eliminada correctamente de Neon DB' });
   } catch (error: any) {
     return NextResponse.json({ success: false, message: error.message }, { status: 500 });
   }

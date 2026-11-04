@@ -191,20 +191,8 @@ export default function GestionAcademicaPage() {
   });
   const [lastEnrolledStudent, setLastEnrolledStudent] = useState<User | null>(null);
 
-  // 2. Estado para pestaña de Grados y Aulas (Solo Colegio: Primaria y Secundaria)
-  const [gradesList, setGradesList] = useState<Array<{ id: string; name: string; level: string }>>([
-    { id: '1', name: '1ro Primaria', level: 'PRIMARIA' },
-    { id: '2', name: '2do Primaria', level: 'PRIMARIA' },
-    { id: '3', name: '3ro Primaria', level: 'PRIMARIA' },
-    { id: '4', name: '4to Primaria', level: 'PRIMARIA' },
-    { id: '5', name: '5to Primaria', level: 'PRIMARIA' },
-    { id: '6', name: '6to Primaria', level: 'PRIMARIA' },
-    { id: '7', name: '1ro Secundaria', level: 'SECUNDARIA' },
-    { id: '8', name: '2do Secundaria', level: 'SECUNDARIA' },
-    { id: '9', name: '3ro Secundaria', level: 'SECUNDARIA' },
-    { id: '10', name: '4to Secundaria', level: 'SECUNDARIA' },
-    { id: '11', name: '5to Secundaria', level: 'SECUNDARIA' },
-  ]);
+  // 2. Estado para pestaña de Grados y Aulas (Directo de Neon DB)
+  const [gradesList, setGradesList] = useState<Array<{ id: string; name: string; level: string }>>([]);
 
   const [isCreatingGrade, setIsCreatingGrade] = useState(false);
   const [newGradeName, setNewGradeName] = useState('');
@@ -238,24 +226,34 @@ export default function GestionAcademicaPage() {
   const [parsedStudents, setParsedStudents] = useState<Array<any>>([]);
   const [bulkStatus, setBulkStatus] = useState<string | null>(null);
 
-  // Cargar Grados dinámicos desde Neon DB
+  // Cargar Grados dinámicos directamente desde Neon DB
   const loadGrades = async () => {
     try {
       const g = await fetchAcademicGradesApi();
-      if (g && g.length > 0) {
-        setGradesList(g.filter((item) => item.level !== 'ACADEMIA'));
+      if (g) {
+        const cleaned = g.filter((item) => item.level !== 'ACADEMIA');
+        setGradesList(cleaned);
+        if (cleaned.length > 0) {
+          setSelectedGrade((prev) => {
+            const exists = cleaned.some((x) => x.name === prev);
+            return exists ? prev : cleaned[0].name;
+          });
+          setStudentForm((prev) => ({
+            ...prev,
+            grade: prev.grade || cleaned[0].name,
+          }));
+        }
       }
     } catch (e) {
-      console.warn('Error cargando grados:', e);
+      console.warn('Error cargando grados desde Neon:', e);
     }
   };
 
-  // Cargar Aulas desde la DB (Solo Colegio: Primaria y Secundaria)
+  // Cargar Aulas directamente desde Neon DB (Solo Colegio: Primaria y Secundaria)
   const loadAcademicClasses = async () => {
     try {
       const cls = await fetchAcademicClasses();
-      if (cls && cls.length > 0) {
-        // Filtrar exclusivamente aulas de Primaria y Secundaria
+      if (cls) {
         const schoolClasses = cls.filter(
           (c) =>
             c.level !== 'ACADEMIA' &&
@@ -266,7 +264,7 @@ export default function GestionAcademicaPage() {
         setClasses(schoolClasses);
       }
     } catch (e) {
-      console.warn('Error cargando aulas:', e);
+      console.warn('Error cargando aulas desde Neon:', e);
     }
   };
 

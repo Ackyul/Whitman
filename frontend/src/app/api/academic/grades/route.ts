@@ -49,7 +49,7 @@ export async function GET() {
     }
   }
 
-  return NextResponse.json({ success: true, data: DEFAULT_GRADES });
+  return NextResponse.json({ success: true, data: [] });
 }
 
 export async function POST(request: Request) {
@@ -134,3 +134,4 @@ export async function DELETE(request: Request) {
     return NextResponse.json({ success: false, message: err.message }, { status: 500 });
   }
 }
+
