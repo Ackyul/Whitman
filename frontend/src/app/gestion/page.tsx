@@ -45,7 +45,7 @@ interface GoogleAdminProfile {
   picture?: string;
 }
 
-const BASE_GRADES_BY_LEVEL: Record<'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA', string[]> = {
+const BASE_GRADES_BY_LEVEL: Record<'PRIMARIA' | 'SECUNDARIA', string[]> = {
   PRIMARIA: [
     '1ro Primaria',
     '2do Primaria',
@@ -60,11 +60,6 @@ const BASE_GRADES_BY_LEVEL: Record<'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA', strin
     '3ro Secundaria',
     '4to Secundaria',
     '5to Secundaria',
-  ],
-  ACADEMIA: [
-    'Preuniversitario UNI',
-    'Preuniversitario San Marcos',
-    'Repaso Intensivo',
   ],
 };
 
@@ -194,9 +189,9 @@ export default function GestionAcademicaPage() {
   });
   const [lastEnrolledStudent, setLastEnrolledStudent] = useState<User | null>(null);
 
-  // 2. Estado para pestaña de Grados y Aulas
-  const [selectedLevelFilter, setSelectedLevelFilter] = useState<'TODOS' | 'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA'>('TODOS');
-  const [selectedGrade, setSelectedGrade] = useState<string>('3ro Primaria');
+  // 2. Estado para pestaña de Grados y Aulas (Solo Colegio: Primaria y Secundaria)
+  const [selectedLevelFilter, setSelectedLevelFilter] = useState<'TODOS' | 'PRIMARIA' | 'SECUNDARIA'>('TODOS');
+  const [selectedGrade, setSelectedGrade] = useState<string>('1ro Primaria');
   const [isCreatingClass, setIsCreatingClass] = useState(false);
   const [redistributeAll, setRedistributeAll] = useState(false);
   const [newClassForm, setNewClassForm] = useState({
@@ -223,12 +218,20 @@ export default function GestionAcademicaPage() {
   const [parsedStudents, setParsedStudents] = useState<Array<any>>([]);
   const [bulkStatus, setBulkStatus] = useState<string | null>(null);
 
-  // Cargar Aulas desde la DB
+  // Cargar Aulas desde la DB (Solo Colegio: Primaria y Secundaria)
   const loadAcademicClasses = async () => {
     try {
       const cls = await fetchAcademicClasses();
       if (cls && cls.length > 0) {
-        setClasses(cls);
+        // Filtrar exclusivamente aulas de Primaria y Secundaria
+        const schoolClasses = cls.filter(
+          (c) =>
+            c.level !== 'ACADEMIA' &&
+            !c.grade.toLowerCase().includes('pre') &&
+            !c.grade.toLowerCase().includes('acad') &&
+            !c.grade.toLowerCase().includes('repaso')
+        );
+        setClasses(schoolClasses);
       }
     } catch (e) {
       console.warn('Error cargando aulas:', e);
@@ -244,12 +247,11 @@ export default function GestionAcademicaPage() {
     setTimeout(() => setNotification(null), 5500);
   };
 
-  // Helper para deducir el nivel de un grado
+  // Helper para deducir el nivel de un grado (Colegio: Primaria o Secundaria)
   const getLevelForGrade = (gradeName: string): EducationLevel => {
     const lower = gradeName.toLowerCase();
     if (lower.includes('prim')) return 'PRIMARIA';
-    if (lower.includes('sec')) return 'SECUNDARIA';
-    return 'ACADEMIA';
+    return 'SECUNDARIA';
   };
 
   // --- MATRÍCULA INDIVIDUAL (Madre, Padre y/o Apoderado) ---
@@ -450,9 +452,7 @@ export default function GestionAcademicaPage() {
         const dni = parts[0];
         const name = parts[1];
         let levelRaw = (parts[2] || 'SECUNDARIA').toUpperCase();
-        let level: EducationLevel = 'SECUNDARIA';
-        if (levelRaw.includes('PRIM')) level = 'PRIMARIA';
-        else if (levelRaw.includes('ACAD') || levelRaw.includes('PRE')) level = 'ACADEMIA';
+        let level: EducationLevel = levelRaw.includes('PRIM') ? 'PRIMARIA' : 'SECUNDARIA';
 
         // Si no se especificó aula, o dice "Sin Asignar", se matricula como Sin Asignar
         let gradeOrClass = parts[3] || `${level === 'PRIMARIA' ? '1ro Primaria' : '1ro Secundaria'} - Sin Asignar`;
@@ -523,8 +523,7 @@ export default function GestionAcademicaPage() {
       '78123001,Alonso Ramos Flores,PRIMARIA,3ro Primaria,40119901,Don Pedro Ramos,991001122\n' +
       '78123002,Mariana Salas Cuadros,PRIMARIA,3ro Primaria,40119902,Sra. Elena Cuadros,991001133\n' +
       '75123001,Bryan Mendoza Ortiz,SECUNDARIA,5to Secundaria - Alfa,40119903,Don Julio Mendoza,991001144\n' +
-      '75123002,Andrea Carpio Luna,SECUNDARIA,3ro Secundaria,40119904,Sra. Sonia Luna,991001155\n' +
-      '72123001,Renzo Chávez Vega,ACADEMIA,Preuniversitario UNI,40119905,Don Juan Chávez,991001166\n';
+      '75123002,Andrea Carpio Luna,SECUNDARIA,3ro Secundaria,40119904,Sra. Sonia Luna,991001155\n';
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -536,16 +535,17 @@ export default function GestionAcademicaPage() {
     document.body.removeChild(link);
   };
 
-  // CÁLCULOS DINÁMICOS PARA LA PESTAÑA DE GRADOS Y AULAS
+  // CÁLCULOS DINÁMICOS PARA LA PESTAÑA DE GRADOS Y AULAS (SOLO COLEGIO: PRIMARIA Y SECUNDARIA)
   const allAvailableGrades: string[] = [
     ...BASE_GRADES_BY_LEVEL.PRIMARIA,
     ...BASE_GRADES_BY_LEVEL.SECUNDARIA,
-    ...BASE_GRADES_BY_LEVEL.ACADEMIA,
     ...Array.from(new Set(classes.map((c) => c.grade))).filter(
       (g) =>
         !BASE_GRADES_BY_LEVEL.PRIMARIA.includes(g) &&
         !BASE_GRADES_BY_LEVEL.SECUNDARIA.includes(g) &&
-        !BASE_GRADES_BY_LEVEL.ACADEMIA.includes(g)
+        !g.toLowerCase().includes('pre') &&
+        !g.toLowerCase().includes('acad') &&
+        !g.toLowerCase().includes('repaso')
     ),
   ];
 
@@ -783,8 +783,8 @@ export default function GestionAcademicaPage() {
                         <select
                           value={studentForm.level}
                           onChange={(e) => {
-                            const lvl = e.target.value as EducationLevel;
-                            const firstGrade = BASE_GRADES_BY_LEVEL[lvl as keyof typeof BASE_GRADES_BY_LEVEL]?.[0] || '1ro Primaria';
+                            const lvl = (e.target.value as 'PRIMARIA' | 'SECUNDARIA');
+                            const firstGrade = BASE_GRADES_BY_LEVEL[lvl]?.[0] || '1ro Primaria';
                             setStudentForm({
                               ...studentForm,
                               level: lvl,
@@ -796,7 +796,6 @@ export default function GestionAcademicaPage() {
                         >
                           <option value="PRIMARIA">🎒 Primaria</option>
                           <option value="SECUNDARIA">🏫 Secundaria</option>
-                          <option value="ACADEMIA">🦁 Academia Preuniversitaria</option>
                         </select>
                       </div>
 
@@ -1081,9 +1080,9 @@ export default function GestionAcademicaPage() {
                     </p>
                   </div>
 
-                  {/* Filtro de Nivel */}
+                  {/* Filtro de Nivel (Solo Primaria y Secundaria) */}
                   <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
-                    {(['TODOS', 'PRIMARIA', 'SECUNDARIA', 'ACADEMIA'] as const).map((lvl) => (
+                    {(['TODOS', 'PRIMARIA', 'SECUNDARIA'] as const).map((lvl) => (
                       <button
                         key={lvl}
                         onClick={() => setSelectedLevelFilter(lvl)}
@@ -1093,7 +1092,7 @@ export default function GestionAcademicaPage() {
                             : 'text-slate-600 hover:text-slate-900'
                         }`}
                       >
-                        {lvl === 'TODOS' ? 'Todos' : lvl.charAt(0) + lvl.slice(1).toLowerCase()}
+                        {lvl === 'TODOS' ? 'Todos los Grados' : lvl === 'PRIMARIA' ? 'Primaria' : 'Secundaria'}
                       </button>
                     ))}
                   </div>

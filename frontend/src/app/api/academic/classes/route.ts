@@ -13,8 +13,6 @@ const DEFAULT_CLASSES = [
   { id: 'c9', code: 'SEC-3-DEL', name: '3ro Secundaria - Delta', level: 'SECUNDARIA', grade: '3ro Secundaria', section: 'Delta', shift: 'MAÑANA', capacity: 35, active: true },
   { id: 'c10', code: 'SEC-4-SIG', name: '4to Secundaria - Sigma', level: 'SECUNDARIA', grade: '4to Secundaria', section: 'Sigma', shift: 'MAÑANA', capacity: 35, active: true },
   { id: 'c11', code: 'SEC-5-PROM', name: '5to Secundaria - Promoción 2026', level: 'SECUNDARIA', grade: '5to Secundaria', section: 'Alfa', shift: 'MAÑANA', capacity: 35, active: true },
-  { id: 'c12', code: 'ACAD-UNI', name: 'Ciclo Semianual UNI', level: 'ACADEMIA', grade: 'Preuniversitario UNI', section: 'UNI-1', shift: 'MAÑANA', capacity: 50, active: true },
-  { id: 'c13', code: 'ACAD-SM', name: 'Ciclo Semestral San Marcos', level: 'ACADEMIA', grade: 'Preuniversitario San Marcos', section: 'SM-1', shift: 'TARDE', capacity: 50, active: true },
 ];
 
 export async function GET(request: Request) {
@@ -31,7 +29,7 @@ export async function GET(request: Request) {
                COALESCE(tutor_teacher_name, '') as "tutorTeacherName",
                active
         FROM academic_classes
-        WHERE active = TRUE
+        WHERE active = TRUE AND level != 'ACADEMIA'
       `;
       const params: any[] = [];
       if (level) {
