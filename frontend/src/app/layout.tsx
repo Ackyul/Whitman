@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Script from 'next/script';
 import './globals.css';
 import { ClientLayout } from '../components/ClientLayout';
 
@@ -20,6 +21,9 @@ export default function RootLayout({
 }) {
   return (
     <html lang="es">
+      <head>
+        <Script src="https://accounts.google.com/gsi/client" strategy="beforeInteractive" />
+      </head>
       <body className="bg-[#fbf9fa] text-slate-900 antialiased selection:bg-[#800020] selection:text-white">
         <ClientLayout>{children}</ClientLayout>
       </body>
