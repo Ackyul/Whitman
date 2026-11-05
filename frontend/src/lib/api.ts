@@ -1,4 +1,4 @@
-import { User, AttendanceRecord, GradeRecord, WhitmanStats, UserRole, AcademicClass, StudentAssignment } from '../types';
+import { User, AttendanceRecord, GradeRecord, WhitmanStats, UserRole, AcademicClass, StudentAssignment, Course } from '../types';
 import { MOCK_USERS, MOCK_ATTENDANCE, MOCK_GRADES, MOCK_STATS } from './mockData';
 
 export function getApiBase(): string {
@@ -325,11 +325,11 @@ export async function fetchStats(): Promise<WhitmanStats> {
 
 export async function fetchAcademicClasses(level?: string): Promise<AcademicClass[]> {
   try {
-    const url = level ? `${API_BASE}/api/academic/classes?level=${level}` : `${API_BASE}/api/academic/classes`;
+    const url = level ? `${getApiBase()}/api/academic/classes?level=${level}` : `${getApiBase()}/api/academic/classes`;
     const res = await fetchWithTimeout(url, { cache: 'no-store' });
     if (!res.ok) throw new Error('Error al obtener clases');
     const json = await res.json();
-    return json.data;
+    return json.data || [];
   } catch (err) {
     return [];
   }
@@ -337,7 +337,7 @@ export async function fetchAcademicClasses(level?: string): Promise<AcademicClas
 
 export async function fetchStudentAssignments(studentId?: string): Promise<StudentAssignment[]> {
   try {
-    const url = studentId ? `${API_BASE}/api/academic/assignments?studentId=${studentId}` : `${API_BASE}/api/academic/assignments`;
+    const url = studentId ? `${getApiBase()}/api/academic/assignments?studentId=${studentId}` : `${getApiBase()}/api/academic/assignments`;
     const res = await fetchWithTimeout(url, { cache: 'no-store' });
     if (!res.ok) throw new Error('Error al obtener asignaciones');
     const json = await res.json();
@@ -531,5 +531,48 @@ export async function deleteAcademicGradeApi(id?: string, name?: string): Promis
   if (!res.ok) throw new Error(json.message || 'Error al eliminar grado');
   return json;
 }
+
+export async function fetchCoursesApi(grade?: string, level?: string): Promise<Course[]> {
+  try {
+    const params = new URLSearchParams();
+    if (grade && grade !== 'TODOS') params.set('grade', grade);
+    if (level && level !== 'TODOS') params.set('level', level);
+
+    const res = await fetchWithTimeout(`${getApiBase()}/api/academic/courses?${params.toString()}`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Error al obtener cursos');
+    const json = await res.json();
+    return json.data || [];
+  } catch (err) {
+    return [];
+  }
+}
+
+export async function createCourseApi(payload: {
+  gradeName: string;
+  courseName: string;
+  level: string;
+  teacherName?: string;
+}): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/courses`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al crear curso');
+  return json;
+}
+
+export async function deleteCourseApi(id: string): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/courses?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al eliminar curso');
+  return json;
+}
+
 
 

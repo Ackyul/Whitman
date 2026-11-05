@@ -114,3 +114,12 @@ export interface StudentAssignment {
   assignedAt: string;
   notes?: string;
 }
+
+export interface Course {
+  id: string;
+  gradeName: string;
+  courseName: string;
+  level: EducationLevel;
+  teacherName?: string;
+  createdAt?: string;
+}

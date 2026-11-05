@@ -15,8 +15,11 @@ import {
   deleteAcademicClassApi,
   moveStudentClassApi,
   autoBalanceStudentsApi,
+  fetchCoursesApi,
+  createCourseApi,
+  deleteCourseApi,
 } from '../../lib/api';
-import { AcademicClass, EducationLevel, HierarchyLevel, User } from '../../types';
+import { AcademicClass, EducationLevel, HierarchyLevel, User, Course } from '../../types';
 import {
   GraduationCap,
   Users,
@@ -40,6 +43,7 @@ import {
   Clock,
   ArrowRight,
   LogOut,
+  BookOpen,
 } from 'lucide-react';
 
 interface GoogleAdminProfile {
@@ -329,6 +333,77 @@ export default function GestionAcademicaPage() {
   const [rawCsvText, setRawCsvText] = useState('');
   const [parsedStudents, setParsedStudents] = useState<Array<any>>([]);
   const [bulkStatus, setBulkStatus] = useState<string | null>(null);
+
+  // 5. Estado Cursos del Grado
+  const [coursesOfGrade, setCoursesOfGrade] = useState<Course[]>([]);
+  const [isAddingCourse, setIsAddingCourse] = useState(false);
+  const [newGradeCourseName, setNewGradeCourseName] = useState('');
+
+  const loadCoursesForSelectedGrade = async (gradeName: string) => {
+    if (!gradeName) return;
+    try {
+      const crs = await fetchCoursesApi(gradeName);
+      setCoursesOfGrade(crs);
+    } catch (e) {
+      console.warn('Error cargando cursos del grado:', e);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedGrade) {
+      loadCoursesForSelectedGrade(selectedGrade);
+    }
+  }, [selectedGrade]);
+
+  const handleAddCourseToGrade = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newGradeCourseName.trim() || !selectedGrade) return;
+    const lvl = getLevelForGrade(selectedGrade);
+    try {
+      await createCourseApi({
+        gradeName: selectedGrade,
+        courseName: newGradeCourseName.trim(),
+        level: lvl,
+      });
+      notify('success', `¡Curso "${newGradeCourseName.trim()}" añadido a ${selectedGrade}!`);
+      setNewGradeCourseName('');
+      setIsAddingCourse(false);
+      loadCoursesForSelectedGrade(selectedGrade);
+    } catch (err: any) {
+      notify('error', err.message || 'Error al añadir curso');
+    }
+  };
+
+  const handleDeleteCourseFromGrade = async (id: string, name: string) => {
+    if (!confirm(`¿Eliminar el curso "${name}" de ${selectedGrade}?`)) return;
+    try {
+      await deleteCourseApi(id);
+      notify('success', `Curso eliminado de ${selectedGrade}`);
+      loadCoursesForSelectedGrade(selectedGrade);
+    } catch (err: any) {
+      notify('error', err.message || 'Error al eliminar curso');
+    }
+  };
+
+  const handleSeedCoursesForGrade = async () => {
+    if (!selectedGrade) return;
+    const lvl = getLevelForGrade(selectedGrade);
+    const defaults =
+      lvl === 'PRIMARIA'
+        ? ['Matemática', 'Comunicación', 'Ciencia y Tecnología', 'Personal Social', 'Inglés', 'Arte y Cultura', 'Educación Física', 'Religión']
+        : ['Álgebra y Aritmética', 'Geometría y Trigonometría', 'Lenguaje y Literatura', 'Física y Química', 'Biología y Anatomía', 'Historia y Geografía', 'Inglés', 'Razonamiento Matemático', 'Razonamiento Verbal'];
+
+    if (!confirm(`¿Agregar ${defaults.length} cursos oficiales sugeridos para ${selectedGrade}?`)) return;
+    try {
+      for (const c of defaults) {
+        await createCourseApi({ gradeName: selectedGrade, courseName: c, level: lvl });
+      }
+      notify('success', `¡Cursos asignados exitosamente a ${selectedGrade}!`);
+      loadCoursesForSelectedGrade(selectedGrade);
+    } catch (err: any) {
+      notify('error', err.message || 'Error al agregar cursos');
+    }
+  };
 
   // Cargar Grados dinámicos directamente desde Neon DB
   const loadGrades = async () => {
@@ -1718,6 +1793,90 @@ export default function GestionAcademicaPage() {
                     </div>
                   )}
 
+                </div>
+
+                {/* Sección: Cursos Asignados a este Grado Escolar */}
+                <div className="bg-slate-50/80 rounded-3xl p-6 border border-slate-200 space-y-4">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200/80 pb-3">
+                    <div>
+                      <h4 className="font-serif font-black text-base text-slate-900 flex items-center gap-2">
+                        <BookOpen className="w-5 h-5 text-burgundy-900" />
+                        <span>Cursos Oficiales de {selectedGrade} ({coursesOfGrade.length})</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Los alumnos matriculados en cualquier sección de {selectedGrade} verán estos cursos en su boletín de notas.
+                      </p>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsAddingCourse(!isAddingCourse)}
+                        className="bg-white hover:bg-slate-100 text-burgundy-900 border border-slate-300 font-bold px-3.5 py-1.5 rounded-xl text-xs transition shadow-sm"
+                      >
+                        {isAddingCourse ? 'Cerrar' : '+ Añadir Curso'}
+                      </button>
+
+                      {coursesOfGrade.length === 0 && (
+                        <button
+                          type="button"
+                          onClick={handleSeedCoursesForGrade}
+                          className="bg-lionGold-500 hover:bg-lionGold-400 text-burgundy-950 font-black px-3.5 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
+                        >
+                          <Sparkles className="w-3.5 h-3.5" />
+                          <span>Cargar Cursos Sugeridos</span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {isAddingCourse && (
+                    <form
+                      onSubmit={handleAddCourseToGrade}
+                      className="p-4 bg-white rounded-2xl border-2 border-burgundy-200 flex flex-col sm:flex-row items-center gap-3 animate-in fade-in"
+                    >
+                      <input
+                        type="text"
+                        required
+                        placeholder="Nombre del nuevo curso (ej: Matemática, Arte y Cultura, Inglés)"
+                        value={newGradeCourseName}
+                        onChange={(e) => setNewGradeCourseName(e.target.value)}
+                        className="w-full sm:flex-1 px-3.5 py-2 text-xs border border-slate-300 rounded-xl focus:outline-none focus:border-burgundy-700 font-semibold"
+                      />
+                      <button
+                        type="submit"
+                        className="w-full sm:w-auto bg-burgundy-900 hover:bg-burgundy-950 text-white font-black text-xs px-5 py-2 rounded-xl shrink-0 transition"
+                      >
+                        Guardar Curso en Neon DB
+                      </button>
+                    </form>
+                  )}
+
+                  {coursesOfGrade.length === 0 ? (
+                    <div className="text-center py-6 text-xs text-slate-400 italic">
+                      Aún no hay cursos creados para {selectedGrade}. Haz clic en <strong>"+ Añadir Curso"</strong> o <strong>"Cargar Cursos Sugeridos"</strong> para crearlos.
+                    </div>
+                  ) : (
+                    <div className="flex flex-wrap gap-2">
+                      {coursesOfGrade.map((c) => (
+                        <div
+                          key={c.id}
+                          className="bg-white border border-slate-200 px-3.5 py-2 rounded-2xl text-xs font-bold text-slate-800 flex items-center gap-2 shadow-sm hover:border-burgundy-300 transition"
+                        >
+                          <BookOpen className="w-3.5 h-3.5 text-burgundy-800" />
+                          <span>{c.courseName}</span>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteCourseFromGrade(c.id, c.courseName)}
+                            title="Eliminar curso de este grado"
+                            className="text-slate-300 hover:text-rose-600 transition ml-1"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
 
               </div>

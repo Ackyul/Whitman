@@ -7,13 +7,13 @@ import { GradesManager } from '../../components/GradesManager';
 import { ArrowLeft } from 'lucide-react';
 
 export default function NotasRoute() {
-  const { grades, students, currentRole, refreshData, loading } = useWhitman();
+  const { grades, students, currentRole, currentUser, linkedStudents, refreshData, loading } = useWhitman();
 
   if (loading) {
     return (
       <div className="bg-white p-16 rounded-3xl text-center border border-slate-200 shadow-sm">
         <div className="animate-spin w-10 h-10 border-4 border-burgundy-800 border-t-transparent rounded-full mx-auto mb-4" />
-        <p className="font-bold text-slate-700">Cargando calificaciones y simulacros...</p>
+        <p className="font-bold text-slate-700">Cargando cursos y calificaciones...</p>
       </div>
     );
   }
@@ -33,10 +33,10 @@ export default function NotasRoute() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2 border-b border-slate-200 pb-4">
         <div>
           <h1 className="text-2xl font-black text-slate-900 font-serif">
-            Notas, Evaluaciones y Simulacros de Admisión
+            Boletín de Notas y Cursos por Grado
           </h1>
           <p className="text-xs text-slate-500">
-            Seguimiento de puntajes tipo UNI, UNMSM, prácticas calificadas y exámenes de colegio.
+            Registro oficial de cursos asignados por grado escolar, secciones y evaluaciones continuas.
           </p>
         </div>
       </div>
@@ -45,6 +45,8 @@ export default function NotasRoute() {
         grades={grades}
         students={students}
         currentRole={currentRole}
+        currentUser={currentUser}
+        linkedStudents={linkedStudents}
         onRefresh={refreshData}
       />
     </div>
