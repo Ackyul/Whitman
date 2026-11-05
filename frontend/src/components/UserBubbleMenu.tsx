@@ -3,6 +3,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useWhitman } from '../context/WhitmanContext';
+import { updateUserPasswordApi } from '../lib/api';
 import {
   Settings,
   LogOut,
@@ -27,6 +28,7 @@ export const UserBubbleMenu: React.FC = () => {
   const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [parentPhone, setParentPhone] = useState('');
+  const [newPassword, setNewPassword] = useState('');
 
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -69,13 +71,24 @@ export const UserBubbleMenu: React.FC = () => {
 
   if (!currentUser) return null;
 
-  const handleSaveProfile = (e: React.FormEvent) => {
+  const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault();
     updateUserProfile({
       phone: phone.trim(),
       email: email.trim(),
       parentPhone: parentPhone.trim(),
     });
+
+    if (newPassword.trim()) {
+      try {
+        await updateUserPasswordApi(currentUser.dni, newPassword.trim());
+        setNewPassword('');
+      } catch (err: any) {
+        alert(err.message || 'Error al cambiar contraseña');
+        return;
+      }
+    }
+
     setSavedSuccess(true);
     setTimeout(() => {
       setSavedSuccess(false);
@@ -277,6 +290,26 @@ export const UserBubbleMenu: React.FC = () => {
                     placeholder="Ej: 981122334"
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-burgundy-800 focus:ring-2 focus:ring-burgundy-100 text-xs font-semibold text-slate-900 outline-none transition"
                   />
+                </div>
+              )}
+
+              {/* Cambiar Contraseña (Solo Alumnos y Docentes) */}
+              {currentUser.role !== 'PADRE' && (
+                <div className="pt-2 border-t border-slate-100">
+                  <label className="block text-[11px] font-black text-slate-700 uppercase mb-1 flex items-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-burgundy-800" />
+                    <span>Actualizar Contraseña de Acceso</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    placeholder="Escribe una nueva contraseña (mínimo 4 caracteres)"
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 focus:border-burgundy-800 focus:ring-2 focus:ring-burgundy-100 text-xs font-mono text-slate-900 outline-none transition"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Déjalo en blanco si deseas mantener tu contraseña actual.
+                  </p>
                 </div>
               )}
 

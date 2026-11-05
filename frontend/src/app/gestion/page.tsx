@@ -276,6 +276,7 @@ export default function GestionAcademicaPage() {
     level: 'PRIMARIA' as EducationLevel,
     grade: '1ro Primaria',
     phone: '',
+    password: '',
     // Datos de la Madre
     motherDni: '',
     motherName: '',
@@ -321,6 +322,7 @@ export default function GestionAcademicaPage() {
     level: 'SECUNDARIA' as EducationLevel,
     gradeOrClass: 'Matemática y Ciencias',
     phone: '',
+    password: '',
   });
 
   // 4. Estado Carga Masiva
@@ -465,6 +467,7 @@ export default function GestionAcademicaPage() {
         dni: '',
         name: '',
         phone: '',
+        password: '',
         motherDni: '',
         motherName: '',
         motherPhone: '',
@@ -595,6 +598,7 @@ export default function GestionAcademicaPage() {
         level: 'SECUNDARIA',
         gradeOrClass: 'Matemática y Ciencias',
         phone: '',
+        password: '',
       });
     } catch (err: any) {
       notify('error', err.message || 'Error al registrar personal');
@@ -1017,6 +1021,38 @@ export default function GestionAcademicaPage() {
                         </select>
                       </div>
                     </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                          Contraseña de Acceso al Portal (Opcional)
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Por defecto será su DNI"
+                          value={studentForm.password}
+                          onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-sm focus:outline-none focus:border-burgundy-700"
+                        />
+                        <p className="text-[10px] text-slate-400 mt-1">
+                          Si se deja en blanco, su contraseña inicial será su DNI.
+                        </p>
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                          Teléfono / Celular del Alumno (Opcional)
+                        </label>
+                        <input
+                          type="tel"
+                          placeholder="+51 987654321"
+                          value={studentForm.phone}
+                          onChange={(e) => setStudentForm({ ...studentForm, phone: e.target.value })}
+                          className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono focus:outline-none focus:border-burgundy-700"
+                        />
+                      </div>
+                    </div>
+
                     <p className="text-[11px] text-slate-400">
                       💡 El alumno quedará registrado en su grado escolar. La asignación de aula y balanceo se realiza desde la pestaña <strong>"2. Grados, Aulas & Mezcla"</strong>.
                     </p>
@@ -1800,6 +1836,22 @@ export default function GestionAcademicaPage() {
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono focus:outline-none focus:border-burgundy-700"
                     />
                   </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                    Contraseña de Acceso al Portal (Opcional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Por defecto será su DNI"
+                    value={staffForm.password}
+                    onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-sm focus:outline-none focus:border-burgundy-700"
+                  />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Clave con la que ingresará al aula virtual (si se deja vacío, será su propio DNI).
+                  </p>
                 </div>
 
                 <button

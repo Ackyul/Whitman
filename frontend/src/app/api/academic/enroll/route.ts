@@ -11,6 +11,7 @@ export async function POST(request: Request) {
       gradeOrClass = '6to Primaria - Leones',
       phone,
       email,
+      password,
       motherDni,
       motherName,
       motherPhone,
@@ -25,6 +26,7 @@ export async function POST(request: Request) {
 
     const cleanDni = String(dni || '').trim();
     const cleanName = String(name || '').trim();
+    const studentPassword = String(password || cleanDni).trim();
     const hasFamily = (motherDni && String(motherDni).trim()) || (fatherDni && String(fatherDni).trim()) || (parentDni && String(parentDni).trim());
 
     if (!cleanDni || !cleanName || !hasFamily) {
@@ -79,8 +81,8 @@ export async function POST(request: Request) {
             mother_dni, mother_name, mother_phone,
             father_dni, father_name, father_phone,
             parent_dni, parent_name, parent_phone, parent_relationship,
-            active
-          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19)
+            active, password
+          ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
           ON CONFLICT (dni) DO UPDATE SET
             name = EXCLUDED.name,
             level = EXCLUDED.level,
@@ -94,7 +96,8 @@ export async function POST(request: Request) {
             parent_dni = EXCLUDED.parent_dni,
             parent_name = EXCLUDED.parent_name,
             parent_phone = EXCLUDED.parent_phone,
-            parent_relationship = EXCLUDED.parent_relationship;
+            parent_relationship = EXCLUDED.parent_relationship,
+            password = COALESCE(EXCLUDED.password, users.password);
         `, [
           newUser.id,
           newUser.dni,
@@ -115,6 +118,7 @@ export async function POST(request: Request) {
           newUser.parentPhone,
           newUser.parentRelationship,
           newUser.active,
+          studentPassword,
         ]);
       } catch (dbErr) {
         console.error('Error insertando en Neon DB desde Next.js:', dbErr);

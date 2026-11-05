@@ -3,7 +3,7 @@ import { sql } from '@/lib/db';
 
 export async function POST(request: Request) {
   try {
-    const { identifier, role = 'ALUMNO' } = await request.json();
+    const { identifier, password, role = 'ALUMNO' } = await request.json();
     const cleanId = String(identifier || '').trim();
 
     if (!cleanId) {
@@ -75,9 +75,17 @@ export async function POST(request: Request) {
 
     // 2. Caso: ALUMNO
     if (role === 'ALUMNO') {
+      const cleanPass = String(password || '').trim();
+      if (!cleanPass) {
+        return NextResponse.json(
+          { success: false, message: 'Por favor ingresa tu contraseña de estudiante.' },
+          { status: 400 }
+        );
+      }
+
       const rows = await (sql as any).query(`
         SELECT id, dni, student_code as "studentCode", name, email, role, level, grade_or_class as "gradeOrClass",
-               active, created_at as "createdAt"
+               password, active, created_at as "createdAt"
         FROM users
         WHERE (TRIM(dni) = $1 OR LOWER(TRIM(student_code)) = LOWER($1))
           AND role = 'ALUMNO'
@@ -95,6 +103,18 @@ export async function POST(request: Request) {
       }
 
       const student = rows[0];
+      const expectedPass = String(student.password || student.dni || '').trim();
+      if (cleanPass !== expectedPass) {
+        return NextResponse.json(
+          {
+            success: false,
+            message: 'Contraseña incorrecta. (Si es tu primera vez, tu contraseña inicial es tu número de DNI).',
+          },
+          { status: 401 }
+        );
+      }
+
+      delete student.password;
       return NextResponse.json({
         success: true,
         message: `¡Bienvenido León ${student.name}!`,
@@ -103,8 +123,16 @@ export async function POST(request: Request) {
     }
 
     // 3. Caso: DOCENTE
+    const cleanStaffPass = String(password || '').trim();
+    if (!cleanStaffPass) {
+      return NextResponse.json(
+        { success: false, message: 'Por favor ingresa tu contraseña de docente.' },
+        { status: 400 }
+      );
+    }
+
     const staffRows = await (sql as any).query(`
-      SELECT id, dni, name, email, role, hierarchy, hierarchy_title as "hierarchyTitle", level, grade_or_class as "gradeOrClass", active
+      SELECT id, dni, name, email, role, hierarchy, hierarchy_title as "hierarchyTitle", level, grade_or_class as "gradeOrClass", password, active
       FROM users
       WHERE TRIM(dni) = $1 AND (role = 'DOCENTE' OR role = 'ADMIN')
       LIMIT 1;
@@ -121,6 +149,18 @@ export async function POST(request: Request) {
     }
 
     const staff = staffRows[0];
+    const expectedStaffPass = String(staff.password || staff.dni || '').trim();
+    if (cleanStaffPass !== expectedStaffPass) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Contraseña incorrecta. (Si es tu primera vez, tu contraseña inicial es tu DNI).',
+        },
+        { status: 401 }
+      );
+    }
+
+    delete staff.password;
     return NextResponse.json({
       success: true,
       message: `¡Bienvenido ${staff.name}!`,

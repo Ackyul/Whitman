@@ -38,13 +38,14 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
 
 export async function loginUser(
   identifier: string,
-  role: UserRole = 'ALUMNO'
+  role: UserRole = 'ALUMNO',
+  password?: string
 ): Promise<{ success: boolean; user: User; linkedStudents?: User[]; message: string }> {
   try {
     const res = await fetchWithTimeout(`${getApiBase()}/api/auth/login`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ identifier, role }),
+      body: JSON.stringify({ identifier, role, password }),
     });
     const json = await res.json();
     if (!res.ok) {
@@ -52,6 +53,9 @@ export async function loginUser(
     }
     return json;
   } catch (err: any) {
+    if (err.message && !err.message.includes('fetch')) {
+      throw err;
+    }
     // Modo simulación local si el backend no está disponible
     const cleanId = identifier.trim();
 
@@ -426,21 +430,25 @@ export async function bulkEnrollStudentsApi(students: any[]): Promise<any> {
 }
 
 export async function createStaffApi(data: any): Promise<any> {
-  try {
-    const res = await fetchWithTimeout(`${getApiBase()}/api/academic/staff`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(data),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.message || 'Error al registrar personal');
-    return json;
-  } catch (err: any) {
-    return {
-      success: true,
-      message: `¡Personal ${data.name} registrado exitosamente!`,
-    };
-  }
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/staff`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al registrar personal');
+  return json;
+}
+
+export async function updateUserPasswordApi(identifier: string, newPassword: string): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/auth/password`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ identifier, newPassword }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al actualizar contraseña');
+  return json;
 }
 
 export async function createAcademicClassApi(data: Partial<AcademicClass>): Promise<any> {

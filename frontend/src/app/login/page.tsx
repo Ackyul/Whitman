@@ -15,6 +15,9 @@ import {
   ArrowLeft,
   CheckCircle2,
   Lock,
+  Eye,
+  EyeOff,
+  KeyRound,
 } from 'lucide-react';
 
 export default function LoginPage() {
@@ -22,6 +25,8 @@ export default function LoginPage() {
   const { login } = useWhitman();
   const [selectedRole, setSelectedRole] = useState<UserRole>('ALUMNO');
   const [identifier, setIdentifier] = useState('');
+  const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [successMsg, setSuccessMsg] = useState<string | null>(null);
@@ -33,11 +38,20 @@ export default function LoginPage() {
       return;
     }
 
+    if (selectedRole !== 'PADRE' && !password.trim()) {
+      setErrorMsg(
+        selectedRole === 'ALUMNO'
+          ? 'Por favor ingresa tu contraseña (tu contraseña inicial es tu número de DNI).'
+          : 'Por favor ingresa tu contraseña de docente.'
+      );
+      return;
+    }
+
     setLoading(true);
     setErrorMsg(null);
     setSuccessMsg(null);
 
-    const res = await login(finalId, selectedRole);
+    const res = await login(finalId, selectedRole, password);
 
     if (res.success) {
       setSuccessMsg(res.message);
@@ -87,6 +101,7 @@ export default function LoginPage() {
           <button
             onClick={() => {
               setSelectedRole('ALUMNO');
+              setPassword('');
               setErrorMsg(null);
             }}
             className={`py-2.5 px-1 rounded-2xl flex flex-col items-center gap-1 transition-all ${
@@ -102,6 +117,7 @@ export default function LoginPage() {
           <button
             onClick={() => {
               setSelectedRole('PADRE');
+              setPassword('');
               setErrorMsg(null);
             }}
             className={`py-2.5 px-1 rounded-2xl flex flex-col items-center gap-1 transition-all ${
@@ -117,6 +133,7 @@ export default function LoginPage() {
           <button
             onClick={() => {
               setSelectedRole('DOCENTE');
+              setPassword('');
               setErrorMsg(null);
             }}
             className={`py-2.5 px-1 rounded-2xl flex flex-col items-center gap-1 transition-all ${
@@ -168,11 +185,53 @@ export default function LoginPage() {
               className="w-full px-4 py-3 rounded-xl border-2 border-slate-200 focus:border-burgundy-700 focus:ring-2 focus:ring-burgundy-200 text-slate-900 font-mono font-bold text-base outline-none transition"
             />
             <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
-              {selectedRole === 'ALUMNO' && 'Visualiza tu registro de asistencia diario y comunicados escolares.'}
-              {selectedRole === 'PADRE' && 'Madre, Padre o Apoderado pueden ingresar con su propio DNI registrado.'}
-              {selectedRole === 'DOCENTE' && 'Acceso al registro de control de aula y asistencias.'}
+              {selectedRole === 'ALUMNO' && 'Visualiza tu registro de asistencia diario, notas y evaluaciones.'}
+              {selectedRole === 'PADRE' && 'Acceso familiar sin contraseña: Madre, Padre o Apoderado ingresan directamente con su DNI.'}
+              {selectedRole === 'DOCENTE' && 'Acceso al registro de control de aula, notas y asistencias.'}
             </p>
           </div>
+
+          {/* Campo de Contraseña: Solo para Alumnos y Docentes (Para Padres NO es necesario) */}
+          {selectedRole !== 'PADRE' && (
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-black text-slate-700 uppercase tracking-wider">
+                  Contraseña *
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  {selectedRole === 'ALUMNO' ? 'Por defecto es tu DNI' : 'Clave de seguridad'}
+                </span>
+              </div>
+              <div className="relative">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  placeholder={
+                    selectedRole === 'ALUMNO'
+                      ? 'Ingresa tu contraseña (o tu DNI inicial)'
+                      : 'Ingresa tu contraseña docente'
+                  }
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
+                  className="w-full pl-4 pr-11 py-3 rounded-xl border-2 border-slate-200 focus:border-burgundy-700 focus:ring-2 focus:ring-burgundy-200 text-slate-900 font-mono font-bold text-base outline-none transition"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-3.5 text-slate-400 hover:text-slate-700 transition"
+                  title={showPassword ? 'Ocultar contraseña' : 'Ver contraseña'}
+                  tabIndex={-1}
+                >
+                  {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-1.5 leading-relaxed">
+                {selectedRole === 'ALUMNO'
+                  ? '🔒 Si ingresas por primera vez, tu contraseña inicial es tu propio número de DNI.'
+                  : '🔒 Clave de seguridad oficial para el personal de Whitman.'}
+              </p>
+            </div>
+          )}
 
           <button
             onClick={() => handleLogin()}

@@ -19,7 +19,7 @@ interface WhitmanContextType {
   isConnected: boolean;
   currentRole: UserRole;
   setCurrentRole: (role: UserRole) => void;
-  login: (identifier: string, role: UserRole) => Promise<{ success: boolean; message: string }>;
+  login: (identifier: string, role: UserRole, password?: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   registerNewStudent: (data: any) => Promise<{ success: boolean; message: string; user?: User }>;
   updateUserProfile: (updatedData: Partial<User>) => void;
@@ -61,9 +61,9 @@ export const WhitmanProvider: React.FC<{ children: React.ReactNode }> = ({ child
     refreshData();
   }, []);
 
-  const login = async (identifier: string, role: UserRole) => {
+  const login = async (identifier: string, role: UserRole, password?: string) => {
     try {
-      const res = await loginUser(identifier, role);
+      const res = await loginUser(identifier, role, password);
       setCurrentUser(res.user);
       setCurrentRole(res.user.role);
       if (res.linkedStudents) {
