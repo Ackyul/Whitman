@@ -358,21 +358,6 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ activeTab, onTabChange }) 
             />
           </Link>
         )}
-
-        {/* Pestaña: PERFIL (Estilo Instagram con el avatar del usuario) */}
-        <button
-          onClick={handleOpenMobileProfile}
-          className="flex flex-col items-center justify-center flex-1 py-1 transition-transform active:scale-90 group"
-          title="Mi Perfil y Opciones"
-        >
-          <div className="w-5 h-5 rounded-full bg-lionGold-500 text-burgundy-950 font-black flex items-center justify-center text-[10px] shadow-sm border border-lionGold-300">
-            {currentUser.role === 'PADRE' ? '👨‍👩‍👦' : avatarInitial}
-          </div>
-          <span className="text-[10px] font-medium text-slate-500 mt-0.5 group-hover:text-slate-700">
-            Perfil
-          </span>
-          <span className="w-1 h-1 rounded-full mt-0.5 bg-transparent" />
-        </button>
       </nav>
     </>
   );
