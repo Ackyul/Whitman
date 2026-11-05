@@ -11,8 +11,6 @@ import {
   Clock,
   AlertCircle,
   Maximize2,
-  Volume2,
-  VolumeX,
   Lock,
   ArrowLeft,
   ShieldCheck,
@@ -26,7 +24,7 @@ export default function GaritaTotemRoute() {
   const [loading, setLoading] = useState(false);
   const [lastScanResult, setLastScanResult] = useState<any | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [soundEnabled, setSoundEnabled] = useState(true);
+  const soundEnabled = true;
 
   // Modo de escaneo: INGRESO (Entrada) o SALIDA (Despacho)
   const [scanMode, setScanMode] = useState<'INGRESO' | 'SALIDA'>('INGRESO');
@@ -223,30 +221,15 @@ export default function GaritaTotemRoute() {
           <span>Volver al Dashboard</span>
         </Link>
 
-        {/* Controles de Garita */}
-        <div className="flex items-center gap-2">
-          <button
-            onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`p-2 sm:px-3 sm:py-2 rounded-xl border transition flex items-center gap-2 text-xs font-bold ${
-              soundEnabled
-                ? 'bg-lionGold-500 text-burgundy-950 border-lionGold-400 shadow-sm'
-                : 'bg-white text-slate-500 border-slate-200'
-            }`}
-            title="Activar/Desactivar beeps de torniquete"
-          >
-            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
-            <span className="hidden sm:inline">{soundEnabled ? 'Sonido ON' : 'Silencio'}</span>
-          </button>
-
-          <button
-            onClick={toggleFullScreen}
-            className="p-2 sm:px-3 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 text-xs font-bold transition flex items-center gap-2 shadow-sm"
-            title="Modo pantalla completa para tablet o monitor de portería"
-          >
-            <Maximize2 className="w-4 h-4 text-burgundy-800" />
-            <span className="hidden sm:inline">Pantalla Completa</span>
-          </button>
-        </div>
+        {/* Solo botón de Pantalla Completa */}
+        <button
+          onClick={toggleFullScreen}
+          className="p-2 sm:px-3.5 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 text-xs font-bold transition flex items-center gap-2 shadow-sm"
+          title="Modo pantalla completa para tablet o monitor de portería"
+        >
+          <Maximize2 className="w-4 h-4 text-burgundy-800" />
+          <span className="hidden sm:inline">Pantalla Completa</span>
+        </button>
       </div>
 
       {/* Flujo de Hoy: Ingresos y Salidas (Sin Aforo) */}
