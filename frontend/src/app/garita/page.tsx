@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useWhitman } from '../../context/WhitmanContext';
-import { markAttendance } from '../../lib/api';
+import { markAttendance, fetchAttendanceScheduleApi } from '../../lib/api';
 import { soundFX } from '../../lib/soundFX';
 import {
   ScanLine,
@@ -40,14 +40,24 @@ export default function GaritaTotemRoute() {
   const barcodeBufferRef = useRef<string>('');
   const lastKeyTimeRef = useRef<number>(0);
 
-  // Ajustar modo inicial según hora del día (antes de mediodía = INGRESO, después = SALIDA)
+  // Ajustar modo inicial según horarios configurados en la base de datos
   useEffect(() => {
-    const hour = new Date().getHours();
-    if (hour >= 12) {
-      setScanMode('SALIDA');
-    } else {
-      setScanMode('INGRESO');
-    }
+    fetchAttendanceScheduleApi()
+      .then((sched) => {
+        const now = new Date();
+        const hh = String(now.getHours()).padStart(2, '0');
+        const mm = String(now.getMinutes()).padStart(2, '0');
+        const current = `${hh}:${mm}`;
+        if (current >= sched.exitStart) {
+          setScanMode('SALIDA');
+        } else {
+          setScanMode('INGRESO');
+        }
+      })
+      .catch(() => {
+        const hour = new Date().getHours();
+        setScanMode(hour >= 12 ? 'SALIDA' : 'INGRESO');
+      });
   }, []);
 
   // 1. LISTENER GLOBAL PARA PISTOLA LECTORA DE CÓDIGO DE BARRAS FÍSICA (USB/Bluetooth) Y TECLA F2

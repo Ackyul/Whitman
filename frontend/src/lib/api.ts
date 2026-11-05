@@ -206,7 +206,7 @@ export async function markAttendance(payload: {
   method?: string;
   customStatus?: string;
   notes?: string;
-  scanType?: 'INGRESO' | 'SALIDA';
+  scanType?: 'INGRESO' | 'SALIDA' | 'AUTO';
 }): Promise<{
   success: boolean;
   message: string;
@@ -244,7 +244,7 @@ export async function markAttendance(payload: {
       date: now.toISOString().split('T')[0],
       time: isExit ? '07:45:00' : timeStr,
       exitTime: isExit ? timeStr : undefined,
-      scanType: payload.scanType || 'INGRESO',
+      scanType: isExit ? 'SALIDA' : 'INGRESO',
       status: (payload.customStatus as any) || (isLate && !isExit ? 'TARDANZA' : 'PRESENTE'),
       method: (payload.method as any) || 'QR',
       notes: payload.notes || (isExit ? 'Salida registrada en garita' : 'Marcado en terminal local'),
@@ -573,6 +573,51 @@ export async function deleteCourseApi(id: string): Promise<any> {
   if (!res.ok) throw new Error(json.message || 'Error al eliminar curso');
   return json;
 }
+
+export interface AttendanceSchedule {
+  entryStart: string;
+  entryEnd: string;
+  entryTolerance: string;
+  exitStart: string;
+  exitEnd: string;
+}
+
+export async function fetchAttendanceScheduleApi(): Promise<AttendanceSchedule> {
+  try {
+    const res = await fetchWithTimeout(`${getApiBase()}/api/attendance/schedule`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) throw new Error('Error al obtener horarios');
+    const json = await res.json();
+    return json.data || {
+      entryStart: '07:00',
+      entryEnd: '08:00',
+      entryTolerance: '08:30',
+      exitStart: '13:00',
+      exitEnd: '15:00',
+    };
+  } catch (err) {
+    return {
+      entryStart: '07:00',
+      entryEnd: '08:00',
+      entryTolerance: '08:30',
+      exitStart: '13:00',
+      exitEnd: '15:00',
+    };
+  }
+}
+
+export async function saveAttendanceScheduleApi(schedule: AttendanceSchedule): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/attendance/schedule`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(schedule),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al guardar horarios');
+  return json;
+}
+
 
 
 

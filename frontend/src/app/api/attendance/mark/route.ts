@@ -91,7 +91,33 @@ export async function POST(request: Request) {
     const dd = dateParts.find((p) => p.type === 'day')?.value;
     const dateStr = `${yyyy}-${mm}-${dd}`;
 
-    const isExit = scanType === 'SALIDA';
+    // 2.1 Obtener configuración de horario de asistencia de Neon DB
+    let schedule = {
+      entryStart: '07:00',
+      entryEnd: '08:00',
+      entryTolerance: '08:30',
+      exitStart: '13:00',
+      exitEnd: '15:00',
+    };
+
+    try {
+      const schedRows = await (sql as any).query(
+        `SELECT entry_start as "entryStart", entry_end as "entryEnd", 
+                entry_tolerance as "entryTolerance", exit_start as "exitStart", 
+                exit_end as "exitEnd"
+         FROM attendance_schedule_settings
+         WHERE id = 'default'
+         LIMIT 1;`
+      );
+      if (schedRows && schedRows.length > 0) {
+        schedule = schedRows[0];
+      }
+    } catch {
+      // Ignorar si la tabla aún se está creando
+    }
+
+    const timeHHMM = timeStr.slice(0, 5); // ej. "07:45"
+    let isExit = scanType === 'SALIDA';
 
     // 3. Buscar si ya existe un registro de asistencia para este alumno el día de hoy
     const existingRows = await (sql as any).query(
@@ -106,6 +132,25 @@ export async function POST(request: Request) {
     );
 
     const existingRecord = existingRows && existingRows.length > 0 ? existingRows[0] : null;
+
+    // "Solo para que marquen": Determinación inteligente de Entrada vs Salida
+    if (scanType === 'AUTO' || !scanType) {
+      if (existingRecord && !existingRecord.exitTime) {
+        // Ya marcó entrada hoy: si la hora es >= inicio de salida o pasó la tolerancia de entrada, es SALIDA
+        if (timeHHMM >= schedule.exitStart || timeHHMM > schedule.entryTolerance) {
+          isExit = true;
+        } else {
+          isExit = false;
+        }
+      } else if (!existingRecord) {
+        // No tiene entrada hoy: si es hora de salida, marca salida directo, si no entrada
+        if (timeHHMM >= schedule.exitStart) {
+          isExit = true;
+        } else {
+          isExit = false;
+        }
+      }
+    }
 
     // CASO A: REGISTRO DE SALIDA
     if (isExit) {
@@ -197,14 +242,13 @@ export async function POST(request: Request) {
       });
     }
 
-    // Determinar tardanza (Límite: 08:05:00)
+    // Determinar tardanza según horario configurado (entryEnd)
     let status = customStatus || 'PRESENTE';
     if (!customStatus) {
-      const [h, m] = timeStr.split(':').map(Number);
-      if (h > 8 || (h === 8 && m > 5)) {
-        status = 'TARDANZA';
-      } else {
+      if (timeHHMM <= schedule.entryEnd) {
         status = 'PRESENTE';
+      } else {
+        status = 'TARDANZA';
       }
     }
 
