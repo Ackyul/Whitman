@@ -3,7 +3,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useWhitman } from '../../context/WhitmanContext';
-import { WhitmanLionMascot } from '../../components/WhitmanLionMascot';
 import { markAttendance } from '../../lib/api';
 import { soundFX } from '../../lib/soundFX';
 import {
@@ -215,7 +214,7 @@ export default function GaritaTotemRoute() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between">
+      <div className="flex items-center justify-between gap-3">
         <Link
           href="/dashboard"
           className="inline-flex items-center gap-2 text-xs font-bold text-burgundy-900 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm hover:bg-burgundy-50 transition"
@@ -223,50 +222,28 @@ export default function GaritaTotemRoute() {
           <ArrowLeft className="w-4 h-4 text-burgundy-800" />
           <span>Volver al Dashboard</span>
         </Link>
-      </div>
-
-      {/* Cabecera del Tótem de Entrada y Salida */}
-      <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-3xl p-6 sm:p-8 shadow-2xl border-2 border-lionGold-500/50 flex flex-col md:flex-row items-center justify-between gap-6">
-        <div className="flex items-center gap-4">
-          <div className="p-2.5 bg-burgundy-900 rounded-2xl border border-lionGold-400/40 shadow-inner shrink-0">
-            <WhitmanLionMascot size="lg" />
-          </div>
-          <div>
-            <div className="inline-flex items-center gap-2 bg-lionGold-500/20 text-lionGold-300 text-xs font-black px-3 py-0.5 rounded-full border border-lionGold-400/30 mb-1">
-              <span>TORNIQUETE & PUERTA PRINCIPAL</span>
-              <span>•</span>
-              <span>PISTOLA LECTORA USB ACTIVA</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-black font-serif tracking-tight">
-              Garita de Control Físico: Ingreso y Salida
-            </h1>
-            <p className="text-xs text-burgundy-200 mt-0.5">
-              Escanea con la pistola lectora láser el DNI o carnet físico del alumno para registrar su entrada o su salida en Neon DB.
-            </p>
-          </div>
-        </div>
 
         {/* Controles de Garita */}
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-2">
           <button
             onClick={() => setSoundEnabled(!soundEnabled)}
-            className={`p-3 rounded-2xl border transition flex items-center gap-2 text-xs font-bold ${
+            className={`p-2 sm:px-3 sm:py-2 rounded-xl border transition flex items-center gap-2 text-xs font-bold ${
               soundEnabled
-                ? 'bg-lionGold-500 text-burgundy-950 border-lionGold-400 shadow-md'
-                : 'bg-burgundy-950/80 text-slate-400 border-slate-700'
+                ? 'bg-lionGold-500 text-burgundy-950 border-lionGold-400 shadow-sm'
+                : 'bg-white text-slate-500 border-slate-200'
             }`}
             title="Activar/Desactivar beeps de torniquete"
           >
-            {soundEnabled ? <Volume2 className="w-5 h-5" /> : <VolumeX className="w-5 h-5" />}
-            <span>{soundEnabled ? 'Sonido ON' : 'Silencio'}</span>
+            {soundEnabled ? <Volume2 className="w-4 h-4" /> : <VolumeX className="w-4 h-4" />}
+            <span className="hidden sm:inline">{soundEnabled ? 'Sonido ON' : 'Silencio'}</span>
           </button>
 
           <button
             onClick={toggleFullScreen}
-            className="p-3 bg-burgundy-950/80 hover:bg-burgundy-900 text-white rounded-2xl border border-lionGold-500/30 text-xs font-bold transition flex items-center gap-2"
+            className="p-2 sm:px-3 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 text-xs font-bold transition flex items-center gap-2 shadow-sm"
             title="Modo pantalla completa para tablet o monitor de portería"
           >
-            <Maximize2 className="w-5 h-5 text-lionGold-400" />
+            <Maximize2 className="w-4 h-4 text-burgundy-800" />
             <span className="hidden sm:inline">Pantalla Completa</span>
           </button>
         </div>
