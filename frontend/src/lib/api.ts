@@ -278,45 +278,34 @@ export async function fetchGrades(userId?: string, level?: string): Promise<Grad
     if (userId) params.append('userId', userId);
     if (level) params.append('level', level);
 
-    const res = await fetchWithTimeout(`${API_BASE}/api/grades?${params.toString()}`, { cache: 'no-store' });
+    const res = await fetchWithTimeout(`${getApiBase()}/api/grades?${params.toString()}`, { cache: 'no-store' });
     if (!res.ok) throw new Error('Error al obtener notas');
     const json = await res.json();
-    return json.data;
+    return json.data || [];
   } catch (err) {
-    return MOCK_GRADES;
+    console.warn('Error al cargar notas de DB:', err);
+    return [];
   }
 }
 
 export async function createGrade(grade: any): Promise<GradeRecord> {
-  try {
-    const res = await fetchWithTimeout(`${API_BASE}/api/grades`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(grade),
-    });
-    const json = await res.json();
-    if (!res.ok) throw new Error(json.message || 'Error al registrar nota');
-    return json.data;
-  } catch (err: any) {
-    const user = MOCK_USERS.find((u) => u.id === grade.userId || u.dni === grade.userId);
-    return {
-      id: `grd-${Date.now()}`,
-      userId: grade.userId,
-      userName: user ? user.name : 'Estudiante Whitman',
-      userDni: user ? user.dni : '70000000',
-      course: grade.course,
-      level: user ? user.level : 'ACADEMIA',
-      gradeOrClass: user ? user.gradeOrClass : 'Preuniversitario',
-      evaluationType: grade.evaluationType || 'SIMULACRO',
-      title: grade.title,
-      score: grade.score,
-      maxScore: grade.maxScore || 20,
-      period: grade.period || 'Ciclo 2026',
-      teacherName: grade.teacherName || 'Docente Whitman',
-      date: new Date().toISOString().split('T')[0],
-      feedback: grade.feedback,
-    };
-  }
+  const res = await fetchWithTimeout(`${getApiBase()}/api/grades`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(grade),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al registrar nota');
+  return json.data;
+}
+
+export async function deleteGradeApi(id: string): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/grades?id=${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al eliminar calificación');
+  return json;
 }
 
 export async function fetchStats(): Promise<WhitmanStats> {

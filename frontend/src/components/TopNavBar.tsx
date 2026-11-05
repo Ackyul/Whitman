@@ -5,11 +5,11 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWhitman } from '../context/WhitmanContext';
 import { UserBubbleMenu } from './UserBubbleMenu';
-import { Home, CalendarCheck, GraduationCap, ScanLine } from 'lucide-react';
+import { Home, CalendarCheck, GraduationCap, ScanLine, Award } from 'lucide-react';
 
 interface TopNavBarProps {
-  activeTab?: 'inicio' | 'asistencias' | 'gestion' | 'garita';
-  onTabChange?: (tab: 'inicio' | 'asistencias' | 'gestion' | 'garita') => void;
+  activeTab?: 'inicio' | 'asistencias' | 'gestion' | 'garita' | 'notas';
+  onTabChange?: (tab: 'inicio' | 'asistencias' | 'gestion' | 'garita' | 'notas') => void;
 }
 
 export const TopNavBar: React.FC<TopNavBarProps> = ({ activeTab, onTabChange }) => {
@@ -24,10 +24,13 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ activeTab, onTabChange }) 
   const isDashboardRoute = pathname === '/dashboard';
   const isGestionRoute = pathname === '/gestion';
   const isGaritaRoute = pathname === '/garita';
+  const isNotasRoute = pathname === '/notas';
 
   // Determinar pestaña activa si se usa por prop o por ruta
   const currentTab = activeTab
     ? activeTab
+    : isNotasRoute
+    ? 'notas'
     : isAsistenciaRoute
     ? 'asistencias'
     : isGestionRoute
@@ -125,6 +128,19 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ activeTab, onTabChange }) 
                   <span>Asistencias</span>
                 </Link>
               )}
+
+              {/* Pestaña: NOTAS / CALIFICACIONES (Para todos los usuarios) */}
+              <Link
+                href="/notas"
+                className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-1.5 ${
+                  currentTab === 'notas'
+                    ? 'bg-burgundy-900 text-white shadow-sm font-black'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/60'
+                }`}
+              >
+                <Award className="w-3.5 h-3.5 text-lionGold-400" />
+                <span>Notas</span>
+              </Link>
 
               {canAccessGestion && (
                 <Link
@@ -266,6 +282,30 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ activeTab, onTabChange }) 
             />
           </Link>
         )}
+
+        {/* Pestaña Móvil: NOTAS */}
+        <Link
+          href="/notas"
+          className="flex flex-col items-center justify-center flex-1 py-1 transition-transform active:scale-90 group"
+        >
+          <Award
+            className={`w-5 h-5 transition-colors ${
+              currentTab === 'notas' ? 'text-burgundy-900 stroke-[2.5]' : 'text-slate-400 group-hover:text-slate-600'
+            }`}
+          />
+          <span
+            className={`text-[10px] mt-0.5 transition-colors ${
+              currentTab === 'notas' ? 'font-black text-burgundy-900' : 'font-medium text-slate-500'
+            }`}
+          >
+            Notas
+          </span>
+          <span
+            className={`w-1 h-1 rounded-full mt-0.5 transition-all ${
+              currentTab === 'notas' ? 'bg-burgundy-900 scale-100' : 'bg-transparent scale-0'
+            }`}
+          />
+        </Link>
 
         {/* Pestaña: GESTIÓN (COORDINADOR, JEFE DE NORMAS O DIRECTOR) */}
         {canAccessGestion && (

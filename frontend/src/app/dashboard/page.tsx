@@ -19,6 +19,7 @@ import {
   Calendar,
   Sparkles,
   Lock,
+  Award,
 } from 'lucide-react';
 
 export default function SecureDashboardPage() {
@@ -81,20 +82,36 @@ export default function SecureDashboardPage() {
           </h1>
         </div>
 
-        {/* Tarjeta(s) del Alumno Asociado: solo el nombre y la asistencia de ese día, sin imagen */}
+        {/* Tarjeta(s) del Alumno Asociado: nombre, asistencia y calificaciones */}
         {studentsToShow.length > 0 ? (
           <div className="space-y-4">
             {studentsToShow.map((student) => {
               const studentAttendance = attendance.filter((a) => a.userId === student.id || a.userDni === student.dni);
               const todayRecord = studentAttendance.find((a) => a.date === today);
+              const childGrades = grades.filter((g) => g.userId === student.id || g.userDni === student.dni);
+              const childAverage =
+                childGrades.length > 0
+                  ? (childGrades.reduce((acc, curr) => acc + curr.score, 0) / childGrades.length).toFixed(1)
+                  : null;
 
               return (
                 <div
                   key={student.id}
-                  className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4"
+                  className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 space-y-4"
                 >
-                  <div>
-                    <h2 className="text-xl sm:text-2xl font-black text-slate-900">{student.name}</h2>
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-3">
+                    <div>
+                      <h2 className="text-xl sm:text-2xl font-black text-slate-900">{student.name}</h2>
+                      <p className="text-xs text-slate-500 font-medium">
+                        DNI: {student.dni} • {student.level} • {student.gradeOrClass}
+                      </p>
+                    </div>
+                    {childAverage && (
+                      <div className="bg-lionGold-50 border border-lionGold-200 px-3.5 py-1.5 rounded-xl text-right">
+                        <span className="text-[10px] font-bold text-lionGold-800 uppercase block">Promedio de Notas</span>
+                        <span className="text-base font-black text-burgundy-950">{childAverage} / 20</span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Asistencia de ese día: Ingreso y Salida */}
@@ -159,6 +176,36 @@ export default function SecureDashboardPage() {
                       )}
                     </div>
                   </div>
+
+                  {/* Resumen de Notas del Alumno */}
+                  <div className="bg-slate-50/60 p-4 rounded-2xl border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-burgundy-100 text-burgundy-900 flex items-center justify-center shrink-0">
+                        <Award className="w-6 h-6 text-burgundy-800" />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-bold text-slate-400 uppercase">Calificaciones & Evaluaciones</p>
+                        <p className="text-sm font-bold text-slate-800">
+                          {childGrades.length > 0
+                            ? `${childGrades.length} evaluación(es) registrada(s)`
+                            : 'Sin evaluaciones registradas aún'}
+                        </p>
+                        <p className="text-[11px] text-slate-500">
+                          {childGrades.length > 0
+                            ? `Última: ${childGrades[0].title} (${childGrades[0].score}/20)`
+                            : 'Se guardan en la base de datos'}
+                        </p>
+                      </div>
+                    </div>
+
+                    <Link
+                      href="/notas"
+                      className="inline-flex items-center gap-1.5 text-xs font-bold text-burgundy-900 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm hover:bg-burgundy-50 transition shrink-0"
+                    >
+                      <span>Ver Boletín Completo</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </Link>
+                  </div>
                 </div>
               );
             })}
@@ -177,6 +224,11 @@ export default function SecureDashboardPage() {
   if (currentUser.role === 'ALUMNO') {
     const studentAttendance = attendance.filter((a) => a.userId === currentUser.id || a.userDni === currentUser.dni);
     const todayRecord = studentAttendance.find((a) => a.date === today);
+    const studentGrades = grades.filter((g) => g.userId === currentUser.id || g.userDni === currentUser.dni);
+    const averageScore =
+      studentGrades.length > 0
+        ? (studentGrades.reduce((acc, curr) => acc + curr.score, 0) / studentGrades.length).toFixed(1)
+        : null;
 
     return (
       <div className="space-y-6">
@@ -267,6 +319,95 @@ export default function SecureDashboardPage() {
               Ir a módulo de asistencias →
             </Link>
           </div>
+        </div>
+
+        {/* Sección: Mis Calificaciones y Evaluaciones */}
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-5">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 pb-4">
+            <div>
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-lionGold-100 text-burgundy-900 flex items-center justify-center font-bold">
+                  <Award className="w-5 h-5 text-lionGold-600" />
+                </div>
+                <h2 className="text-xl font-black text-slate-900 font-serif">
+                  Mis Calificaciones & Evaluaciones
+                </h2>
+              </div>
+              <p className="text-xs text-slate-500 mt-1">
+                Registro académico oficial sincronizado directamente en la base de datos.
+              </p>
+            </div>
+
+            <div className="flex items-center gap-3">
+              {averageScore && (
+                <div className="bg-lionGold-50 border border-lionGold-200 px-3.5 py-1.5 rounded-xl text-right">
+                  <span className="text-[10px] font-bold text-lionGold-800 uppercase block">Promedio General</span>
+                  <span className="text-base font-black text-burgundy-950">{averageScore} / 20</span>
+                </div>
+              )}
+              <Link
+                href="/notas"
+                className="inline-flex items-center gap-1.5 text-xs font-black text-white bg-burgundy-900 hover:bg-burgundy-800 px-4 py-2.5 rounded-xl transition shadow-sm shrink-0"
+              >
+                <span>Ver Todo el Boletín</span>
+                <ArrowRight className="w-3.5 h-3.5" />
+              </Link>
+            </div>
+          </div>
+
+          {studentGrades.length === 0 ? (
+            <div className="text-center py-10 px-4 bg-slate-50/80 rounded-2xl border border-dashed border-slate-200">
+              <Award className="w-12 h-12 text-slate-300 mx-auto mb-2" />
+              <p className="text-sm font-bold text-slate-700">Aún no tienes calificaciones registradas</p>
+              <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
+                Tus profesores registrarán aquí tus prácticas calificadas, exámenes mensuales y simulacros. Todos tus datos se guardan de forma segura en la base de datos.
+              </p>
+              <Link
+                href="/notas"
+                className="mt-4 inline-block text-xs font-bold text-burgundy-900 hover:underline"
+              >
+                Abrir módulo de notas →
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5">
+              {studentGrades.slice(0, 6).map((g) => (
+                <div
+                  key={g.id}
+                  className="bg-slate-50/70 hover:bg-slate-50 rounded-2xl p-4 border border-slate-200/90 hover:border-burgundy-200 transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-start justify-between gap-2 mb-1.5">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-600">
+                        {g.evaluationType}
+                      </span>
+                      <span className={`text-xs font-black px-2 py-0.5 rounded-lg border ${
+                        g.score >= 14
+                          ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+                          : g.score >= 11
+                          ? 'bg-amber-100 text-amber-800 border-amber-300'
+                          : 'bg-rose-100 text-rose-800 border-rose-300'
+                      }`}>
+                        {g.score.toFixed(1)} / 20
+                      </span>
+                    </div>
+                    <h3 className="font-bold text-slate-900 text-sm line-clamp-1">{g.title}</h3>
+                    <p className="text-xs font-medium text-burgundy-800">{g.course}</p>
+                    {g.feedback && (
+                      <p className="text-[11px] text-slate-500 italic mt-2 line-clamp-2 bg-white p-2 rounded-lg border border-slate-100">
+                        "{g.feedback}"
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[10px] text-slate-400">
+                    <span>{g.date}</span>
+                    <span className="font-medium text-slate-600 truncate max-w-[120px]">{g.teacherName}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
 
       </div>

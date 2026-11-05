@@ -12,8 +12,9 @@ import {
   Sparkles,
   TrendingUp,
   Award,
+  Trash2,
 } from 'lucide-react';
-import { createGrade } from '../lib/api';
+import { createGrade, deleteGradeApi } from '../lib/api';
 
 interface GradesManagerProps {
   grades: GradeRecord[];
@@ -36,13 +37,17 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
   const [evaluationType, setEvaluationType] = useState<EvaluationType>('SIMULACRO');
   const [feedback, setFeedback] = useState('');
   const [teacherName, setTeacherName] = useState('Lic. Ricardo Mendoza');
-  const [filterLevel, setFilterLevel] = useState<'TODOS' | 'ACADEMIA' | 'COLEGIO'>('TODOS');
+  const [filterLevel, setFilterLevel] = useState<'TODOS' | 'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA' | 'COLEGIO'>('TODOS');
   const [filterType, setFilterType] = useState<'TODOS' | EvaluationType>('TODOS');
   const [searchQuery, setSearchQuery] = useState('');
   const [saving, setSaving] = useState(false);
 
   // Cursos típicos Whitman
   const coursesList = [
+    'Matemática',
+    'Comunicación',
+    'Ciencia y Tecnología',
+    'Personal Social',
     'Física Preuniversitaria',
     'Álgebra y Aritmética',
     'Geometría y Trigonometría',
@@ -51,6 +56,7 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
     'Química y Biología',
     'Lenguaje y Literatura',
     'Historia del Perú y Universal',
+    'Inglés',
   ];
 
   const handleSubmitGrade = async (e: React.FormEvent) => {
@@ -66,10 +72,16 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
       return;
     }
 
+    const selectedStudent = students.find((s) => s.id === selectedStudentId);
+
     setSaving(true);
     try {
       await createGrade({
         userId: selectedStudentId,
+        userName: selectedStudent?.name,
+        userDni: selectedStudent?.dni,
+        userLevel: selectedStudent?.level,
+        userGrade: selectedStudent?.gradeOrClass,
         course,
         title,
         score: numScore,
@@ -86,9 +98,19 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
       setFeedback('');
       onRefresh();
     } catch (err: any) {
-      alert(err.message || 'Error al guardar calificación');
+      alert(err.message || 'Error al guardar calificación en la base de datos');
     } finally {
       setSaving(false);
+    }
+  };
+
+  const handleDeleteGrade = async (gradeId: string, title: string) => {
+    if (!confirm(`¿Eliminar la calificación "${title}" de la base de datos?`)) return;
+    try {
+      await deleteGradeApi(gradeId);
+      onRefresh();
+    } catch (err: any) {
+      alert(err.message || 'Error al eliminar calificación');
     }
   };
 
@@ -226,8 +248,8 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
             className="text-xs border border-slate-200 rounded-xl px-3 py-1.5 font-medium bg-white text-slate-700 focus:outline-none focus:border-burgundy-600"
           >
             <option value="TODOS">Todos los niveles</option>
-            <option value="ACADEMIA">🦁 Academia Preuniversitaria</option>
-            <option value="COLEGIO">🏫 Colegio Whitman</option>
+            <option value="PRIMARIA">🎒 Primaria</option>
+            <option value="SECUNDARIA">🎓 Secundaria</option>
           </select>
 
           {/* Filtro Tipo Evaluación */}
@@ -298,9 +320,20 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
                   <Calendar className="w-3 h-3" />
                   {g.date}
                 </span>
-                <span className="font-medium text-slate-600 truncate max-w-[140px]">
-                  {g.teacherName}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="font-medium text-slate-600 truncate max-w-[120px]">
+                    {g.teacherName}
+                  </span>
+                  {(currentRole === 'ADMIN' || currentRole === 'DOCENTE') && (
+                    <button
+                      onClick={() => handleDeleteGrade(g.id, g.title)}
+                      title="Eliminar calificación"
+                      className="text-slate-400 hover:text-rose-600 p-1 rounded-lg hover:bg-rose-50 transition"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
           ))
@@ -339,7 +372,7 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
                   <option value="">-- Elige un estudiante --</option>
                   {students.map((stu) => (
                     <option key={stu.id} value={stu.id}>
-                      {stu.name} - {stu.level === 'ACADEMIA' ? '🦁 Academia' : '🏫 Colegio'} ({stu.gradeOrClass})
+                      {stu.name} - {stu.level} ({stu.gradeOrClass || 'Sin aula'})
                     </option>
                   ))}
                 </select>
