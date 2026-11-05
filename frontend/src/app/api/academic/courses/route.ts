@@ -52,14 +52,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { gradeName, courseName, level = 'PRIMARIA', teacherName } = body;
+    const { gradeName, courseName, courses, level = 'PRIMARIA', teacherName } = body;
 
     const cleanGrade = String(gradeName || '').trim();
-    const cleanCourse = String(courseName || '').trim();
 
-    if (!cleanGrade || !cleanCourse) {
+    if (!cleanGrade) {
       return NextResponse.json(
-        { success: false, message: 'Grado y Nombre del curso son obligatorios.' },
+        { success: false, message: 'El grado es obligatorio.' },
         { status: 400 }
       );
     }
@@ -78,6 +77,61 @@ export async function POST(request: Request) {
         created_at TIMESTAMP WITH TIME ZONE DEFAULT CURRENT_TIMESTAMP
       );
     `);
+
+    // CASO A: CREACIÓN EN LOTE (BULK) DE CURSOS
+    if (Array.isArray(courses)) {
+      const createdList: any[] = [];
+      const skippedList: string[] = [];
+
+      for (const item of courses) {
+        const cName = typeof item === 'string' ? item.trim() : String(item.courseName || '').trim();
+        const tName = typeof item === 'object' ? item.teacherName : teacherName;
+        if (!cName) continue;
+
+        // Comprobar si ya existe
+        const existing = await (sql as any).query(`
+          SELECT id FROM courses WHERE LOWER(TRIM(grade_name)) = LOWER($1) AND LOWER(TRIM(course_name)) = LOWER($2);
+        `, [cleanGrade, cName]);
+
+        if (existing && existing.length > 0) {
+          skippedList.push(cName);
+          continue;
+        }
+
+        const courseId = `crs-${Date.now()}-${Math.floor(Math.random() * 100000)}`;
+        await (sql as any).query(`
+          INSERT INTO courses (id, grade_name, course_name, level, teacher_name)
+          VALUES ($1, $2, $3, $4, $5);
+        `, [courseId, cleanGrade, cName, level, tName || null]);
+
+        createdList.push({
+          id: courseId,
+          gradeName: cleanGrade,
+          courseName: cName,
+          level,
+          teacherName: tName || null,
+        });
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: `¡Se añadieron ${createdList.length} curso(s) a ${cleanGrade}!${
+          skippedList.length > 0 ? ` (${skippedList.length} ya existían)` : ''
+        }`,
+        data: createdList,
+        createdCount: createdList.length,
+        skippedCount: skippedList.length,
+      });
+    }
+
+    // CASO B: CREACIÓN INDIVIDUAL DE CURSO
+    const cleanCourse = String(courseName || '').trim();
+    if (!cleanCourse) {
+      return NextResponse.json(
+        { success: false, message: 'Nombre del curso es obligatorio.' },
+        { status: 400 }
+      );
+    }
 
     // Verificar si ya existe este curso para este grado
     const existing = await (sql as any).query(`

@@ -565,6 +565,22 @@ export async function createCourseApi(payload: {
   return json;
 }
 
+export async function createCoursesBulkApi(payload: {
+  gradeName: string;
+  courses: string[];
+  level: string;
+  teacherName?: string;
+}): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/courses`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al crear cursos en lote');
+  return json;
+}
+
 export async function deleteCourseApi(id: string): Promise<any> {
   const res = await fetchWithTimeout(`${getApiBase()}/api/academic/courses?id=${encodeURIComponent(id)}`, {
     method: 'DELETE',

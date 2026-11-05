@@ -17,6 +17,7 @@ import {
   autoBalanceStudentsApi,
   fetchCoursesApi,
   createCourseApi,
+  createCoursesBulkApi,
   deleteCourseApi,
 } from '../../lib/api';
 import { AcademicClass, EducationLevel, HierarchyLevel, User, Course } from '../../types';
@@ -72,7 +73,7 @@ const BASE_GRADES_BY_LEVEL: Record<'PRIMARIA' | 'SECUNDARIA', string[]> = {
 
 export default function GestionAcademicaPage() {
   const { users, currentUser, refreshData } = useWhitman();
-  const [activeTab, setActiveTab] = useState<'individual' | 'classes' | 'staff' | 'bulk'>('individual');
+  const [activeTab, setActiveTab] = useState<'individual' | 'classes' | 'staff' | 'courses' | 'bulk'>('individual');
 
   const [classes, setClasses] = useState<AcademicClass[]>([]);
   const [loading, setLoading] = useState(false);
@@ -333,6 +334,120 @@ export default function GestionAcademicaPage() {
   const [rawCsvText, setRawCsvText] = useState('');
   const [parsedStudents, setParsedStudents] = useState<Array<any>>([]);
   const [bulkStatus, setBulkStatus] = useState<string | null>(null);
+
+  // --- ESTADOS Y HANDLERS PARA TAB 4: CREACIÓN Y GESTIÓN DE CURSOS ---
+  const [courseTabLevel, setCourseTabLevel] = useState<'SECUNDARIA' | 'PRIMARIA'>('SECUNDARIA');
+  const [courseTabGrade, setCourseTabGrade] = useState<string>('3ro Secundaria');
+  const [courseTabList, setCourseTabList] = useState<Course[]>([]);
+  const [courseTabLoading, setCourseTabLoading] = useState(false);
+
+  // Formulario individual
+  const [courseCodePrefix, setCourseCodePrefix] = useState(''); // ej. "Mate 1", "7 CyT"
+  const [courseSubjectName, setCourseSubjectName] = useState(''); // ej. "Aritmética", "Física 1"
+  const [courseTeacherSelected, setCourseTeacherSelected] = useState('');
+
+  // Carga masiva en bloque
+  const [bulkCoursesText, setBulkCoursesText] = useState('');
+  const [bulkCoursesLoading, setBulkCoursesLoading] = useState(false);
+
+  const loadCoursesForCourseTab = async (gradeName: string) => {
+    if (!gradeName) return;
+    setCourseTabLoading(true);
+    try {
+      const crs = await fetchCoursesApi(gradeName);
+      setCourseTabList(crs || []);
+    } catch (e) {
+      console.warn('Error cargando cursos en pestaña cursos:', e);
+    } finally {
+      setCourseTabLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (courseTabGrade) {
+      loadCoursesForCourseTab(courseTabGrade);
+    }
+  }, [courseTabGrade]);
+
+  const handleAddSingleCourse = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const prefix = courseCodePrefix.trim();
+    const subject = courseSubjectName.trim();
+    if (!subject && !prefix) {
+      notify('error', 'Por favor ingresa el nombre de la asignatura.');
+      return;
+    }
+
+    let fullCourseName = '';
+    if (prefix && subject) {
+      fullCourseName = `${prefix} (${subject})`;
+    } else {
+      fullCourseName = prefix || subject;
+    }
+
+    try {
+      await createCourseApi({
+        gradeName: courseTabGrade,
+        courseName: fullCourseName,
+        level: courseTabLevel,
+        teacherName: courseTeacherSelected || undefined,
+      });
+      notify('success', `¡Curso "${fullCourseName}" creado para ${courseTabGrade}!`);
+      setCourseCodePrefix('');
+      setCourseSubjectName('');
+      setCourseTeacherSelected('');
+      loadCoursesForCourseTab(courseTabGrade);
+      loadCoursesForSelectedGrade(courseTabGrade);
+    } catch (err: any) {
+      notify('error', err.message || 'Error al crear curso');
+    }
+  };
+
+  const handleAddBulkCourses = async (customList?: string[]) => {
+    let lines: string[] = [];
+    if (customList && customList.length > 0) {
+      lines = customList;
+    } else {
+      lines = bulkCoursesText
+        .split('\n')
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
+    }
+
+    if (lines.length === 0) {
+      notify('error', 'Escribe al menos un nombre de curso o selecciona una plantilla sugerida.');
+      return;
+    }
+
+    setBulkCoursesLoading(true);
+    try {
+      const res = await createCoursesBulkApi({
+        gradeName: courseTabGrade,
+        courses: lines,
+        level: courseTabLevel,
+      });
+      notify('success', res.message || `¡Cursos añadidos a ${courseTabGrade}!`);
+      setBulkCoursesText('');
+      loadCoursesForCourseTab(courseTabGrade);
+      loadCoursesForSelectedGrade(courseTabGrade);
+    } catch (err: any) {
+      notify('error', err.message || 'Error al crear cursos en lote');
+    } finally {
+      setBulkCoursesLoading(false);
+    }
+  };
+
+  const handleDeleteCourseFromTab = async (id: string, name: string) => {
+    if (!confirm(`¿Eliminar el curso "${name}" de ${courseTabGrade}?`)) return;
+    try {
+      await deleteCourseApi(id);
+      notify('success', `Curso eliminado de ${courseTabGrade}`);
+      loadCoursesForCourseTab(courseTabGrade);
+      loadCoursesForSelectedGrade(courseTabGrade);
+    } catch (err: any) {
+      notify('error', err.message || 'Error al eliminar curso');
+    }
+  };
 
   // 5. Estado Cursos del Grado
   const [coursesOfGrade, setCoursesOfGrade] = useState<Course[]>([]);
@@ -980,15 +1095,15 @@ export default function GestionAcademicaPage() {
             </button>
 
             <button
-              onClick={() => setActiveTab('bulk')}
+              onClick={() => setActiveTab('courses')}
               className={`py-3 px-3 rounded-xl flex items-center justify-center gap-2 transition ${
-                activeTab === 'bulk'
+                activeTab === 'courses' || activeTab === 'bulk'
                   ? 'bg-burgundy-900 text-white shadow font-black'
                   : 'text-slate-600 hover:bg-slate-100'
               }`}
             >
-              <FileSpreadsheet className="w-4 h-4 text-emerald-400" />
-              <span>4. Carga Masiva (Excel)</span>
+              <BookOpen className="w-4 h-4 text-lionGold-400" />
+              <span>4. Cursos (Primaria & Secundaria)</span>
             </button>
           </div>
 
@@ -2025,124 +2140,439 @@ export default function GestionAcademicaPage() {
             </div>
           )}
 
-          {/* TAB 4: CARGA MASIVA DESDE EXCEL / CSV */}
-          {activeTab === 'bulk' && (
-            <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
-                <div>
-                  <h3 className="font-serif font-black text-xl text-slate-900 flex items-center gap-2">
-                    <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-                    <span>Importación Masiva de Alumnos (Excel / CSV)</span>
-                  </h3>
-                  <p className="text-xs text-slate-500 mt-0.5">
-                    Sube salones enteros o promociones. Si solo pones el Grado sin aula, quedarán como "Sin Asignar" para mezclarlos luego.
-                  </p>
-                </div>
+          {/* TAB 4: CREACIÓN Y GESTIÓN DE CURSOS (PRIMARIA & SECUNDARIA) */}
+          {(activeTab === 'courses' || activeTab === 'bulk') && (
+            <div className="space-y-6">
+              
+              {/* Selector de Nivel y Grado */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-4">
+                  <div>
+                    <h3 className="font-serif font-black text-xl text-slate-900 flex items-center gap-2">
+                      <BookOpen className="w-5 h-5 text-burgundy-900" />
+                      <span>Gestión & Creación de Cursos por Grado</span>
+                    </h3>
+                    <p className="text-xs text-slate-500 mt-0.5">
+                      Configura las asignaturas oficiales (ej: Mate 1, Mate 2, 7 CyT Física, 10 CyT Anatomía) para cada grado de Primaria y Secundaria.
+                    </p>
+                  </div>
 
-                <button
-                  onClick={downloadSampleCsv}
-                  className="bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold border border-emerald-300 text-xs px-3.5 py-2 rounded-xl transition flex items-center gap-1.5 shrink-0"
-                >
-                  <Download className="w-4 h-4 text-emerald-700" />
-                  <span>Descargar Plantilla (.CSV)</span>
-                </button>
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="border-2 border-dashed border-slate-300 hover:border-burgundy-600 rounded-3xl p-6 text-center space-y-3 bg-slate-50/50 transition">
-                  <Upload className="w-10 h-10 text-slate-400 mx-auto" />
-                  <h4 className="font-bold text-slate-800 text-sm">Arrastra tu archivo CSV o haz clic aquí</h4>
-                  <p className="text-xs text-slate-400 max-w-xs mx-auto">
-                    Formato admitido: Archivo separado por comas o tabulaciones exportado desde Excel.
-                  </p>
-                  <label className="inline-block bg-burgundy-900 hover:bg-burgundy-800 text-white font-bold text-xs px-4 py-2 rounded-xl cursor-pointer shadow transition">
-                    <span>Seleccionar Archivo</span>
-                    <input type="file" accept=".csv, .txt" onChange={handleFileUpload} className="hidden" />
-                  </label>
-                </div>
-
-                <div className="space-y-2">
-                  <label className="block text-xs font-bold text-slate-700 uppercase">
-                    O pega las celdas copiadas directamente de Excel:
-                  </label>
-                  <textarea
-                    rows={6}
-                    value={rawCsvText}
-                    onChange={(e) => handleParseCsv(e.target.value)}
-                    placeholder="78123001	Alonso Ramos	PRIMARIA	3ro Primaria	40119901&#10;75123001	Bryan Mendoza	SECUNDARIA	5to Secundaria - Alfa	40119903"
-                    className="w-full p-3 rounded-2xl border border-slate-300 font-mono text-xs text-slate-800 focus:outline-none focus:border-burgundy-700"
-                  />
-                  <span className="text-[11px] text-slate-400">
-                    Columnas: DNI | Nombre | Nivel | Grado o Aula | DNI Apoderado | Nombre Apoderado | Celular
-                  </span>
-                </div>
-              </div>
-
-              {parsedStudents.length > 0 && (
-                <div className="space-y-4 pt-4 border-t border-slate-100">
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-black uppercase text-slate-800">
-                      Registros Detectados para Importación ({parsedStudents.length})
-                    </span>
+                  {/* Selector Nivel */}
+                  <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl shrink-0">
                     <button
-                      onClick={handleExecuteBulkEnroll}
-                      disabled={loading}
-                      className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs px-5 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
+                      type="button"
+                      onClick={() => {
+                        setCourseTabLevel('SECUNDARIA');
+                        setCourseTabGrade('3ro Secundaria');
+                      }}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                        courseTabLevel === 'SECUNDARIA'
+                          ? 'bg-burgundy-900 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
                     >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>{loading ? 'Subiendo a Neon DB...' : `Confirmar y Matricular ${parsedStudents.length} Alumnos`}</span>
+                      <Building className="w-3.5 h-3.5" />
+                      <span>🏛️ Secundaria</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCourseTabLevel('PRIMARIA');
+                        setCourseTabGrade('1ro Primaria');
+                      }}
+                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                        courseTabLevel === 'PRIMARIA'
+                          ? 'bg-burgundy-900 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <School className="w-3.5 h-3.5" />
+                      <span>🏫 Primaria</span>
                     </button>
                   </div>
+                </div>
 
-                  <div className="overflow-x-auto rounded-2xl border border-slate-200">
-                    <table className="w-full text-left text-xs text-slate-700">
-                      <thead className="bg-slate-100 font-bold uppercase text-[10px] text-slate-500 border-b border-slate-200">
-                        <tr>
-                          <th className="p-3">#</th>
-                          <th className="p-3">DNI Alumno</th>
-                          <th className="p-3">Nombres y Apellidos</th>
-                          <th className="p-3">Nivel</th>
-                          <th className="p-3">Aula / Grado</th>
-                          <th className="p-3">DNI Apoderado</th>
-                          <th className="p-3">Estado</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-slate-100">
-                        {parsedStudents.map((st, i) => (
-                          <tr key={i} className="hover:bg-slate-50">
-                            <td className="p-3 font-mono text-slate-400">{i + 1}</td>
-                            <td className="p-3 font-mono font-bold text-slate-900">{st.dni}</td>
-                            <td className="p-3 font-bold">{st.name}</td>
-                            <td className="p-3">
-                              <span
-                                className={`px-2 py-0.5 rounded font-black text-[10px] uppercase ${
-                                  st.level === 'PRIMARIA'
-                                    ? 'bg-amber-100 text-amber-800'
-                                    : st.level === 'SECUNDARIA'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-burgundy-100 text-burgundy-900'
-                                }`}
-                              >
-                                {st.level}
-                              </span>
-                            </td>
-                            <td className="p-3 font-medium text-slate-800">{st.gradeOrClass}</td>
-                            <td className="p-3 font-mono">{st.parentDni}</td>
-                            <td className="p-3 text-emerald-600 font-bold">✓ Listo</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                {/* Grados Disponibles en Pestañas Rápidas */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-600 uppercase mb-2">
+                    Selecciona el Grado para configurar sus cursos:
+                  </label>
+                  <div className="flex flex-wrap gap-2">
+                    {(gradesList.length > 0
+                      ? gradesList.filter((g) => g.level === courseTabLevel).map((g) => g.name)
+                      : BASE_GRADES_BY_LEVEL[courseTabLevel]
+                    ).map((gradeName) => {
+                      const isSelected = courseTabGrade === gradeName;
+                      return (
+                        <button
+                          key={gradeName}
+                          type="button"
+                          onClick={() => setCourseTabGrade(gradeName)}
+                          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-lionGold-500 text-burgundy-950 font-black shadow-md border-2 border-lionGold-600'
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+                          }`}
+                        >
+                          <span>{gradeName}</span>
+                          {isSelected && <span className="w-2 h-2 rounded-full bg-burgundy-950" />}
+                        </button>
+                      );
+                    })}
                   </div>
                 </div>
-              )}
+              </div>
 
-              {bulkStatus && (
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-xs font-bold text-emerald-900 flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                  <span>{bulkStatus}</span>
+              {/* Plantillas Sugeridas con 1 Clic según el Grado */}
+              <div className="bg-gradient-to-br from-amber-500/10 via-lionGold-500/5 to-white p-5 rounded-3xl border border-lionGold-400/50 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-burgundy-900" />
+                    <h4 className="text-xs font-black uppercase text-slate-900 tracking-wider">
+                      Combos Rápidos Sugeridos para {courseTabGrade}
+                    </h4>
+                  </div>
+                  <span className="text-[11px] text-slate-500">1-clic para agregar el combo completo</span>
                 </div>
-              )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+                  
+                  {/* Combo Matemática */}
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-amber-900 uppercase flex items-center gap-1.5">
+                        <span>📐</span> Combo Matemática
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleAddBulkCourses([
+                            'Mate 1 (Aritmética)',
+                            'Mate 2 (Álgebra)',
+                            'Mate 4 (Geometría)',
+                            'Trigonometría',
+                            'Razonamiento Matemático',
+                          ])
+                        }
+                        className="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-2.5 py-1 rounded-lg transition"
+                      >
+                        + Cargar Combo
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Mate 1 (Aritmética), Mate 2 (Álgebra), Mate 4 (Geometría), Trigonometría, RM.
+                    </p>
+                  </div>
+
+                  {/* Combo Ciencia y Tecnología (Adaptado por Grado: 3ro, 5to, etc.) */}
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-emerald-900 uppercase flex items-center gap-1.5">
+                        <span>🧪</span> Combo CyT {courseTabGrade.includes('3') ? '(3ro)' : courseTabGrade.includes('5') ? '(5to)' : ''}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (courseTabGrade.includes('3') || courseTabGrade.includes('3ro')) {
+                            handleAddBulkCourses([
+                              '7 CyT (Física)',
+                              '10 CyT (Anatomía)',
+                              'Química',
+                              'Biología',
+                            ]);
+                          } else if (courseTabGrade.includes('5') || courseTabGrade.includes('5to')) {
+                            handleAddBulkCourses([
+                              '7 CyT (Física 1)',
+                              '8 CyT (Física 2)',
+                              'Química',
+                              'Anatomía',
+                            ]);
+                          } else if (courseTabLevel === 'PRIMARIA') {
+                            handleAddBulkCourses([
+                              'Ciencia y Tecnología',
+                              'Medio Ambiente',
+                              'Biología elemental',
+                            ]);
+                          } else {
+                            handleAddBulkCourses([
+                              'Ciencia y Tecnología (Física)',
+                              'Ciencia y Tecnología (Química)',
+                              'Biología',
+                              'Anatomía',
+                            ]);
+                          }
+                        }}
+                        className="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold px-2.5 py-1 rounded-lg transition"
+                      >
+                        + Cargar Combo
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      {courseTabGrade.includes('3')
+                        ? '7 CyT (Física), 10 CyT (Anatomía), Química, Biología.'
+                        : courseTabGrade.includes('5')
+                        ? '7 CyT (Física 1), 8 CyT (Física 2), Química, Anatomía.'
+                        : courseTabLevel === 'PRIMARIA'
+                        ? 'Ciencia y Tecnología, Medio Ambiente, Biología elemental.'
+                        : 'Física, Química, Biología, Anatomía adaptados al grado.'}
+                    </p>
+                  </div>
+
+                  {/* Combo Letras & Humanidades */}
+                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+                    <div className="flex items-center justify-between">
+                      <span className="font-bold text-xs text-indigo-900 uppercase flex items-center gap-1.5">
+                        <span>📚</span> Combo Letras
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          handleAddBulkCourses([
+                            'Lenguaje y Literatura',
+                            'Razonamiento Verbal',
+                            'Historia del Perú',
+                            'Historia Universal',
+                            'Inglés',
+                          ])
+                        }
+                        className="text-[10px] bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold px-2.5 py-1 rounded-lg transition"
+                      >
+                        + Cargar Combo
+                      </button>
+                    </div>
+                    <p className="text-[11px] text-slate-500 leading-tight">
+                      Lenguaje y Literatura, Razonamiento Verbal, Historia del Perú, Historia Universal, Inglés.
+                    </p>
+                  </div>
+
+                </div>
+              </div>
+
+              {/* Sección Dual: Creación Individual con Asistente + Carga Masiva de Cursos */}
+              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+                
+                {/* Izquierda: Creador Individual con Asistente de Prefijos (5 columnas) */}
+                <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+                  <div className="border-b border-slate-100 pb-3">
+                    <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                      <Plus className="w-4 h-4 text-burgundy-900" />
+                      <span>Agregar Curso Individual</span>
+                    </h4>
+                    <p className="text-[11px] text-slate-500">
+                      Crea un curso con código (ej. Mate 1, 7 CyT) o nombre libre.
+                    </p>
+                  </div>
+
+                  {/* Botones de prefijos rápidos */}
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">
+                      Botones de Código Rápido:
+                    </label>
+                    <div className="flex flex-wrap gap-1.5">
+                      {['Mate 1', 'Mate 2', 'Mate 4', '7 CyT', '8 CyT', '10 CyT'].map((pre) => (
+                        <button
+                          key={pre}
+                          type="button"
+                          onClick={() => setCourseCodePrefix(pre)}
+                          className={`text-[10px] font-mono px-2 py-1 rounded-lg border transition ${
+                            courseCodePrefix === pre
+                              ? 'bg-burgundy-900 text-white border-burgundy-950 font-bold'
+                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                          }`}
+                        >
+                          {pre}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  <form onSubmit={handleAddSingleCourse} className="space-y-3.5">
+                    <div className="grid grid-cols-2 gap-2.5">
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                          Prefijo / Código:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej: Mate 1, 7 CyT"
+                          value={courseCodePrefix}
+                          onChange={(e) => setCourseCodePrefix(e.target.value)}
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono focus:outline-none focus:border-burgundy-600"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                          Asignatura:
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Ej: Aritmética, Física 1"
+                          value={courseSubjectName}
+                          onChange={(e) => setCourseSubjectName(e.target.value)}
+                          required
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-burgundy-600"
+                        />
+                      </div>
+                    </div>
+
+                    {/* Previsualización del Nombre del Curso */}
+                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block mb-0.5">
+                        Nombre Resultante en Boleta:
+                      </span>
+                      <span className="font-bold text-burgundy-950">
+                        {courseCodePrefix && courseSubjectName
+                          ? `${courseCodePrefix} (${courseSubjectName})`
+                          : courseCodePrefix || courseSubjectName || '—'}
+                      </span>
+                    </div>
+
+                    {/* Selector de Docente Encargado (Opcional) */}
+                    <div>
+                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        Profesor(a) Encargado(a) (Opcional):
+                      </label>
+                      <select
+                        value={courseTeacherSelected}
+                        onChange={(e) => setCourseTeacherSelected(e.target.value)}
+                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-burgundy-600"
+                      >
+                        <option value="">Sin profesor asignado aún</option>
+                        {users
+                          .filter((u) => u.role === 'DOCENTE')
+                          .map((doc) => (
+                            <option key={doc.id} value={doc.name}>
+                              {doc.name} ({doc.dni})
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    <button
+                      type="submit"
+                      className="w-full bg-burgundy-900 hover:bg-burgundy-950 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center gap-1.5"
+                    >
+                      <Plus className="w-4 h-4 text-lionGold-400" />
+                      <span>Agregar Curso a {courseTabGrade}</span>
+                    </button>
+                  </form>
+                </div>
+
+                {/* Derecha: Carga Masiva de Cursos en Bloque (7 columnas) */}
+                <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+                  <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
+                    <div>
+                      <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
+                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
+                        <span>Carga Masiva de Cursos en Bloque</span>
+                      </h4>
+                      <p className="text-[11px] text-slate-500">
+                        Pega una lista de cursos (uno por renglón) para crearlos todos simultáneamente.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="block text-xs font-bold text-slate-700 uppercase">
+                      Lista de Cursos para {courseTabGrade} (uno por línea):
+                    </label>
+                    <textarea
+                      rows={6}
+                      value={bulkCoursesText}
+                      onChange={(e) => setBulkCoursesText(e.target.value)}
+                      placeholder={`Mate 1 (Aritmética)\nMate 2 (Álgebra)\nMate 4 (Geometría)\n7 CyT (Física)\n10 CyT (Anatomía)\nLenguaje y Literatura\nInglés`}
+                      className="w-full p-3 rounded-2xl border border-slate-300 font-mono text-xs text-slate-800 focus:outline-none focus:border-burgundy-700"
+                    />
+                    <span className="text-[11px] text-slate-400">
+                      💡 Tip: Puedes copiar directamente una columna de Excel o Word y pegarla aquí.
+                    </span>
+                  </div>
+
+                  <div className="flex justify-end pt-2">
+                    <button
+                      type="button"
+                      disabled={bulkCoursesLoading || !bulkCoursesText.trim()}
+                      onClick={() => handleAddBulkCourses()}
+                      className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span>
+                        {bulkCoursesLoading
+                          ? 'Guardando cursos en Neon DB...'
+                          : `🚀 Crear Todos los Cursos para ${courseTabGrade}`}
+                      </span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* LISTADO DE CURSOS EXISTENTES PARA EL GRADO SELECCIONADO */}
+              <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
+                <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+                  <div className="flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-burgundy-900" />
+                    <h4 className="font-serif font-black text-lg text-slate-900">
+                      Cursos Oficiales Registrados para {courseTabGrade}
+                    </h4>
+                    <span className="bg-burgundy-100 text-burgundy-900 font-black text-xs px-2.5 py-0.5 rounded-full">
+                      {courseTabList.length} asignaturas
+                    </span>
+                  </div>
+                </div>
+
+                {courseTabLoading ? (
+                  <div className="py-8 text-center text-xs text-slate-400">
+                    <div className="animate-spin w-6 h-6 border-2 border-burgundy-800 border-t-transparent rounded-full mx-auto mb-2" />
+                    <span>Cargando asignaturas de {courseTabGrade}...</span>
+                  </div>
+                ) : courseTabList.length === 0 ? (
+                  <div className="py-10 text-center text-slate-400 space-y-2">
+                    <BookOpen className="w-10 h-10 mx-auto text-slate-300" />
+                    <p className="font-bold text-sm text-slate-600">
+                      No hay cursos registrados todavía para {courseTabGrade}.
+                    </p>
+                    <p className="text-xs text-slate-400">
+                      Usa los combos rápidos sugeridos arriba o el formulario para crearlos.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {courseTabList.map((c) => (
+                      <div
+                        key={c.id}
+                        className="bg-slate-50 hover:bg-white p-3.5 rounded-2xl border border-slate-200 shadow-xs transition hover:shadow-md flex items-start justify-between gap-2 group"
+                      >
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-lionGold-500 shrink-0" />
+                            <h5 className="font-bold text-xs text-slate-900 group-hover:text-burgundy-900 transition">
+                              {c.courseName}
+                            </h5>
+                          </div>
+                          <p className="text-[11px] text-slate-500 pl-3.5">
+                            {c.teacherName ? (
+                              <span className="text-slate-700 font-medium">Prof: {c.teacherName}</span>
+                            ) : (
+                              <span className="text-slate-400 italic">Sin docente</span>
+                            )}
+                          </p>
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteCourseFromTab(c.id, c.courseName)}
+                          title={`Eliminar ${c.courseName}`}
+                          className="opacity-40 group-hover:opacity-100 hover:bg-rose-100 text-slate-400 hover:text-rose-700 p-1.5 rounded-lg transition"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
             </div>
           )}
 
