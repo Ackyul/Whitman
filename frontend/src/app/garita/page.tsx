@@ -21,6 +21,11 @@ import {
 export default function GaritaTotemRoute() {
   const { currentUser, attendance, stats, refreshData } = useWhitman();
   const [dniScan, setDniScan] = useState('');
+  const dniScanRef = useRef(dniScan);
+  useEffect(() => {
+    dniScanRef.current = dniScan;
+  }, [dniScan]);
+
   const [loading, setLoading] = useState(false);
   const [lastScanResult, setLastScanResult] = useState<any | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -37,8 +42,6 @@ export default function GaritaTotemRoute() {
     (currentUser.hierarchy === 'JEFE_NORMAS' || currentUser.hierarchy === 'DIRECTOR');
 
   const inputRef = useRef<HTMLInputElement>(null);
-  const barcodeBufferRef = useRef<string>('');
-  const lastKeyTimeRef = useRef<number>(0);
 
   // Ajustar modo inicial según horarios configurados en la base de datos
   useEffect(() => {
@@ -60,54 +63,109 @@ export default function GaritaTotemRoute() {
       });
   }, []);
 
-  // 1. LISTENER GLOBAL PARA PISTOLA LECTORA DE CÓDIGO DE BARRAS FÍSICA (USB/Bluetooth) Y TECLA F2
+  // 1. LISTENER GLOBAL: Permite escribir/escanear desde cualquier lugar de la pantalla sin tener que hacer clic en el cuadro de texto
   useEffect(() => {
     const handleGlobalKeyDown = (e: KeyboardEvent) => {
-      const now = Date.now();
-      const diff = now - lastKeyTimeRef.current;
-      lastKeyTimeRef.current = now;
+      // Permitir atajos del navegador con modificadores (Ctrl+C, Ctrl+V, etc.)
+      if (e.ctrlKey || e.altKey || e.metaKey) return;
 
-      // Tecla rápida F2 para alternar entre MODO INGRESO y MODO SALIDA
+      // Atajo F2: Cambiar entre modo INGRESO y modo SALIDA
       if (e.key === 'F2') {
         e.preventDefault();
         setScanMode((prev) => (prev === 'INGRESO' ? 'SALIDA' : 'INGRESO'));
+        inputRef.current?.focus();
         return;
       }
 
-      // Si el usuario presiona Enter, procesar el buffer del escáner
-      if (e.key === 'Enter') {
-        if (barcodeBufferRef.current.length >= 8) {
+      const activeEl = document.activeElement;
+      const isInputFocused = activeEl === inputRef.current;
+
+      // Si el foco ya está en el input principal, dejar que maneje Enter y caracteres normalmente
+      if (isInputFocused) {
+        if (e.key === 'Enter') {
           e.preventDefault();
-          const scannedDni = barcodeBufferRef.current.slice(-8);
-          barcodeBufferRef.current = '';
-          processScan(scannedDni);
-          return;
+          const targetDni = dniScanRef.current.trim();
+          if (targetDni) {
+            processScan(targetDni);
+          }
         }
-        barcodeBufferRef.current = '';
         return;
       }
 
-      // Si es un número, acumular en el buffer de la pistola
-      if (/^\d$/.test(e.key)) {
-        if (diff > 250) {
-          barcodeBufferRef.current = e.key;
-        } else {
-          barcodeBufferRef.current += e.key;
+      // Si el foco está en otro campo editable ajeno, no intervenir
+      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && !isInputFocused) {
+        return;
+      }
+
+      // SI EL FOCO ESTÁ FUERA DEL INPUT (en el fondo, tarjetas, botones, etc.):
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        const targetDni = dniScanRef.current.trim();
+        if (targetDni) {
+          processScan(targetDni);
         }
+        return;
+      }
+
+      if (e.key === 'Backspace') {
+        e.preventDefault();
+        setDniScan((prev) => prev.slice(0, -1));
+        inputRef.current?.focus();
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        e.preventDefault();
+        setDniScan('');
+        inputRef.current?.focus();
+        return;
+      }
+
+      // Si es un caracter imprimible (letra, número, espacio):
+      if (e.key.length === 1) {
+        e.preventDefault();
+        setDniScan((prev) => prev + e.key);
+        inputRef.current?.focus();
+        return;
       }
     };
 
+    // Al hacer clic en cualquier lugar que no sea un botón/enlace interactivo, devolver el foco inmediatamente
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement | null;
+      if (!target) return;
+      const isInteractive = target.closest('button, a, select, textarea');
+      if (!isInteractive) {
+        inputRef.current?.focus();
+      }
+    };
+
+    const handleWindowFocus = () => {
+      inputRef.current?.focus();
+    };
+
     window.addEventListener('keydown', handleGlobalKeyDown);
-    return () => window.removeEventListener('keydown', handleGlobalKeyDown);
-  }, [scanMode]);
+    document.addEventListener('click', handleGlobalClick);
+    window.addEventListener('focus', handleWindowFocus);
 
-  // Mantener el input visible enfocado
+    return () => {
+      window.removeEventListener('keydown', handleGlobalKeyDown);
+      document.removeEventListener('click', handleGlobalClick);
+      window.removeEventListener('focus', handleWindowFocus);
+    };
+  }, []);
+
+  // Mantener el input visible enfocado automáticamente
   useEffect(() => {
-    inputRef.current?.focus();
-  }, [lastScanResult, scanMode]);
+    const timer = setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
+    return () => clearTimeout(timer);
+  }, [lastScanResult, scanMode, loading]);
 
-  const processScan = async (dniToProcess: string) => {
-    const cleanDni = dniToProcess.trim();
+  const processScan = async (dniToProcess?: string) => {
+    const rawDni = typeof dniToProcess === 'string' ? dniToProcess : dniScanRef.current;
+    const cleanDni = rawDni.trim();
     if (!cleanDni || loading) return;
 
     setLoading(true);
@@ -161,7 +219,9 @@ export default function GaritaTotemRoute() {
       clearTimerRef.current = setTimeout(() => setErrorMessage(null), 4000);
     } finally {
       setLoading(false);
-      inputRef.current?.focus();
+      setTimeout(() => {
+        inputRef.current?.focus();
+      }, 50);
     }
   };
 
@@ -384,8 +444,9 @@ export default function GaritaTotemRoute() {
                 {loading ? 'Leyendo...' : 'ESCANEAR'}
               </button>
             </div>
-            <p className="text-[11px] text-slate-400">
-              💡 La pistola lectora USB funciona automáticamente aun si el cursor no está dentro de la caja de texto.
+            <p className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
+              <span>⚡</span>
+              <span>Puedes teclear o escanear con la pistola desde cualquier lugar de la pantalla sin necesidad de hacer clic en el cuadro de texto.</span>
             </p>
           </div>
 
