@@ -87,39 +87,55 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
   return (
     <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-5 space-y-4">
       
-      {/* 1. CABECERA COMPACTA: MES, AÑO Y CONTROLES */}
-      <div className="flex items-center justify-between pb-3 border-b border-slate-100">
+      {/* 1. CABECERA CON NOMBRE CLARO DEL MES Y AÑO */}
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
-          <div className="flex items-center gap-1.5 text-burgundy-900 font-bold text-[11px] uppercase tracking-wider">
-            <CalendarIcon className="w-3.5 h-3.5 text-burgundy-800" />
-            <span>Calendario Mensual</span>
+          <div className="flex items-center gap-2">
+            <span className="inline-flex items-center gap-1.5 text-burgundy-900 bg-burgundy-50 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border border-burgundy-200">
+              <CalendarIcon className="w-3 h-3 text-burgundy-800" />
+              <span>Calendario de Asistencia</span>
+            </span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase">
+              • Mes Oficial
+            </span>
           </div>
-          <h2 className="text-xl sm:text-2xl font-black font-serif text-slate-900">
-            {MONTH_NAMES[currentMonth]} {currentYear}
-          </h2>
+          <div className="mt-1 flex items-baseline gap-2">
+            <h2 className="text-2xl sm:text-3xl font-black font-serif text-burgundy-950 tracking-tight">
+              Mes de {MONTH_NAMES[currentMonth]}
+            </h2>
+            <span className="text-lg sm:text-xl font-black text-lionGold-600 font-mono">
+              {currentYear}
+            </span>
+          </div>
+          <p className="text-xs text-slate-500 font-medium mt-0.5">
+            Registro mensual de entradas y salidas de {studentName || 'Estudiante'}
+          </p>
         </div>
 
         {/* Controles de Navegación */}
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-2 shrink-0">
           <button
             onClick={handleGoToday}
-            className="px-2.5 py-1 text-[11px] font-bold text-burgundy-950 bg-slate-100 hover:bg-slate-200 rounded-lg transition"
+            className="px-3 py-1.5 text-xs font-bold text-burgundy-950 bg-lionGold-100 hover:bg-lionGold-200 border border-lionGold-300 rounded-xl transition shadow-xs"
           >
-            Hoy
+            Mes Actual
           </button>
           
-          <div className="flex items-center bg-slate-100 p-0.5 rounded-lg border border-slate-200">
+          <div className="flex items-center bg-slate-100 p-1 rounded-xl border border-slate-200">
             <button
               onClick={handlePrevMonth}
               title="Mes anterior"
-              className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-white transition"
+              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
+            <span className="px-2 text-xs font-bold font-mono text-slate-700 min-w-16 text-center">
+              {MONTH_NAMES[currentMonth].slice(0, 3)}
+            </span>
             <button
               onClick={handleNextMonth}
               title="Mes siguiente"
-              className="p-1 rounded text-slate-600 hover:text-slate-900 hover:bg-white transition"
+              className="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white transition"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -127,9 +143,55 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* 2. LEYENDA RÁPIDA COMPACTA: PUNTUALES, TARDANZAS Y SALIDAS */}
-      <div className="flex flex-wrap items-center justify-between text-[11px] bg-slate-50 px-3 py-2 rounded-xl border border-slate-200/80 gap-2">
-        <div className="flex flex-wrap items-center gap-3">
+      {/* 2. SELECTOR DE MESES: PÍLDORAS PARA SALTAR A CUALQUIER MES DEL AÑO */}
+      <div className="space-y-1.5">
+        <div className="flex items-center justify-between text-[11px]">
+          <span className="font-bold text-slate-500 uppercase flex items-center gap-1">
+            <span>📅 Seleccionar Mes:</span>
+          </span>
+          <span className="font-bold text-burgundy-900">
+            Viendo: {MONTH_NAMES[currentMonth]} {currentYear}
+          </span>
+        </div>
+
+        {/* Barra horizontal desplazable con los 12 meses */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar scroll-smooth">
+          {MONTH_NAMES.map((mName, idx) => {
+            const isSelectedMonth = idx === currentMonth;
+            const isRealCurrentMonth = idx === today.getMonth() && currentYear === today.getFullYear();
+            
+            return (
+              <button
+                key={mName}
+                type="button"
+                onClick={() => {
+                  setCurrentMonth(idx);
+                  setSelectedDayRecord(null);
+                }}
+                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 ${
+                  isSelectedMonth
+                    ? 'bg-burgundy-900 text-white shadow font-black ring-2 ring-lionGold-400/50'
+                    : isRealCurrentMonth
+                    ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
+                }`}
+              >
+                <span>{mName}</span>
+                {isRealCurrentMonth && !isSelectedMonth && (
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600" title="Mes en curso" />
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* 3. LEYENDA RÁPIDA COMPACTA: PUNTUALES, TARDANZAS Y SALIDAS */}
+      <div className="flex flex-wrap items-center justify-between text-xs bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-200/80 gap-2">
+        <div className="flex flex-wrap items-center gap-3.5">
+          <span className="text-[11px] font-bold text-slate-500 uppercase">
+            Resumen de {MONTH_NAMES[currentMonth]}:
+          </span>
           <span className="flex items-center gap-1.5 text-slate-700 font-bold">
             <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
             {totalPresente} Puntuales
@@ -143,7 +205,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
             {totalSalidas} Salidas Registradas
           </span>
         </div>
-        <span className="text-slate-400 font-medium hidden sm:inline">
+        <span className="text-slate-400 font-medium hidden sm:inline text-[11px]">
           Haz clic en un día para ver detalle de Ingreso y Salida
         </span>
       </div>
