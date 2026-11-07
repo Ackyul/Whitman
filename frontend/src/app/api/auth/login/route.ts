@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { checkRateLimit, resetRateLimit, getClientIp } from '@/lib/rateLimit';
+import { isValidDni, constantTimeCompare } from '@/lib/security';
 
 export async function POST(request: Request) {
   try {
@@ -10,6 +12,31 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, message: 'Por favor ingresa tu número de DNI o código.' },
         { status: 400 }
+      );
+    }
+
+    if (!isValidDni(cleanId)) {
+      return NextResponse.json(
+        { success: false, message: 'El formato de DNI o código no es válido.' },
+        { status: 400 }
+      );
+    }
+
+    // 0. Protección contra fuerza bruta y ataques automatizados
+    const clientIp = getClientIp(request);
+    const rateLimitKey = `auth_${clientIp}_${cleanId}`;
+    const rateCheck = checkRateLimit(rateLimitKey, 7, 300); // Máximo 7 intentos cada 5 minutos
+
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: `Demasiados intentos fallidos. Por seguridad institucional, tu acceso está temporalmente pausado. Intenta de nuevo en ${rateCheck.resetInSeconds} segundos.`,
+        },
+        {
+          status: 429,
+          headers: { 'Retry-After': String(rateCheck.resetInSeconds) },
+        }
       );
     }
 
@@ -65,6 +92,7 @@ export async function POST(request: Request) {
         createdAt: new Date().toISOString(),
       };
 
+      resetRateLimit(rateLimitKey);
       return NextResponse.json({
         success: true,
         message: `¡Bienvenido(a) ${relTitle} ${parentUser.name}!`,
@@ -104,7 +132,7 @@ export async function POST(request: Request) {
 
       const student = rows[0];
       const expectedPass = String(student.password || student.dni || '').trim();
-      if (cleanPass !== expectedPass) {
+      if (!constantTimeCompare(cleanPass, expectedPass)) {
         return NextResponse.json(
           {
             success: false,
@@ -114,6 +142,7 @@ export async function POST(request: Request) {
         );
       }
 
+      resetRateLimit(rateLimitKey);
       delete student.password;
       return NextResponse.json({
         success: true,
@@ -150,7 +179,7 @@ export async function POST(request: Request) {
 
     const staff = staffRows[0];
     const expectedStaffPass = String(staff.password || staff.dni || '').trim();
-    if (cleanStaffPass !== expectedStaffPass) {
+    if (!constantTimeCompare(cleanStaffPass, expectedStaffPass)) {
       return NextResponse.json(
         {
           success: false,
@@ -160,6 +189,7 @@ export async function POST(request: Request) {
       );
     }
 
+    resetRateLimit(rateLimitKey);
     delete staff.password;
     return NextResponse.json({
       success: true,

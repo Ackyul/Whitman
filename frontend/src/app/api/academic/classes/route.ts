@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { sanitizeString } from '@/lib/security';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -60,6 +62,15 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`classes_${clientIp}`, 40, 60);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: 'Demasiadas solicitudes. Espera un momento.' },
+        { status: 429 }
+      );
+    }
+
     const {
       name,
       level = 'PRIMARIA',

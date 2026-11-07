@@ -1,8 +1,22 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { isValidDni, sanitizeString } from '@/lib/security';
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`att_scan_${clientIp}`, 120, 60); // 120 escaneos por minuto por terminal
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: 'Límite de peticiones por segundo alcanzado. Por favor espera unos momentos.',
+        },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const { dni, method = 'BARCODE_SCAN', customStatus, notes, scanType = 'INGRESO' } = body;
 
@@ -13,6 +27,16 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    if (!isValidDni(cleanDni)) {
+      return NextResponse.json(
+        { success: false, message: 'Formato de DNI inválido.' },
+        { status: 400 }
+      );
+    }
+
+    const cleanNotes = notes ? sanitizeString(notes, 500) : undefined;
+    const cleanMethod = sanitizeString(method, 50) || 'BARCODE_SCAN';
 
     if (!sql) {
       return NextResponse.json(

@@ -1,5 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { sanitizeString } from '@/lib/security';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -76,6 +78,15 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`grades_${clientIp}`, 60, 60);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: 'Demasiadas solicitudes. Espera un momento.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const {
       userId,
@@ -89,7 +100,13 @@ export async function POST(request: Request) {
       feedback = '',
     } = body;
 
-    if (!userId || !course || !title || score === undefined || score === null) {
+    const cleanCourse = sanitizeString(course, 100);
+    const cleanTitle = sanitizeString(title, 150);
+    const cleanPeriod = sanitizeString(period, 50);
+    const cleanTeacher = sanitizeString(teacherName, 150);
+    const cleanFeedback = sanitizeString(feedback, 1000);
+
+    if (!userId || !cleanCourse || !cleanTitle || score === undefined || score === null) {
       return NextResponse.json(
         { success: false, message: 'Alumno, curso, título y nota son obligatorios.' },
         { status: 400 }
@@ -175,16 +192,16 @@ export async function POST(request: Request) {
         student.id,
         student.name,
         student.dni,
-        course,
+        cleanCourse,
         student.level || 'COLEGIO',
         student.gradeOrClass || 'Sin Aula',
         evaluationType,
-        title,
+        cleanTitle,
         numScore,
         maxScore,
-        period,
-        teacherName,
-        feedback || '',
+        cleanPeriod,
+        cleanTeacher,
+        cleanFeedback || '',
       ]
     );
 

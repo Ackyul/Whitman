@@ -1,8 +1,19 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { isValidDni, sanitizeString } from '@/lib/security';
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`enroll_${clientIp}`, 40, 60);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: 'Demasiadas solicitudes. Espera un momento.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const {
       dni,
@@ -25,7 +36,7 @@ export async function POST(request: Request) {
     } = body;
 
     const cleanDni = String(dni || '').trim();
-    const cleanName = String(name || '').trim();
+    const cleanName = sanitizeString(name, 150);
     const studentPassword = String(password || cleanDni).trim();
     const hasFamily = (motherDni && String(motherDni).trim()) || (fatherDni && String(fatherDni).trim()) || (parentDni && String(parentDni).trim());
 
@@ -35,6 +46,13 @@ export async function POST(request: Request) {
           success: false,
           message: 'DNI, Nombre del alumno y al menos un DNI familiar (Madre, Padre o Apoderado) son obligatorios.',
         },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidDni(cleanDni)) {
+      return NextResponse.json(
+        { success: false, message: 'Formato de DNI de alumno inválido.' },
         { status: 400 }
       );
     }

@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
 
 const DEFAULT_SCHEDULE = {
   entryStart: '07:00',
@@ -71,6 +72,15 @@ export async function GET() {
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`schedule_${clientIp}`, 20, 60);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: 'Demasiadas solicitudes. Espera un momento.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const {
       entryStart = '07:00',
@@ -79,6 +89,20 @@ export async function POST(request: Request) {
       exitStart = '13:00',
       exitEnd = '15:00',
     } = body;
+
+    const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)$/;
+    if (
+      !timeRegex.test(entryStart) ||
+      !timeRegex.test(entryEnd) ||
+      !timeRegex.test(entryTolerance) ||
+      !timeRegex.test(exitStart) ||
+      !timeRegex.test(exitEnd)
+    ) {
+      return NextResponse.json(
+        { success: false, message: 'Formato de hora inválido. Usa formato HH:MM (ej: 08:00).' },
+        { status: 400 }
+      );
+    }
 
     if (!sql) {
       return NextResponse.json(

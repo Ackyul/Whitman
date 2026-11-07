@@ -1,8 +1,19 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
+import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
+import { isValidDni, sanitizeString } from '@/lib/security';
 
 export async function POST(request: Request) {
   try {
+    const clientIp = getClientIp(request);
+    const rateCheck = checkRateLimit(`staff_create_${clientIp}`, 30, 60);
+    if (!rateCheck.allowed) {
+      return NextResponse.json(
+        { success: false, message: 'Demasiadas solicitudes. Espera un momento.' },
+        { status: 429 }
+      );
+    }
+
     const body = await request.json();
     const {
       dni,
@@ -17,11 +28,18 @@ export async function POST(request: Request) {
     } = body;
 
     const cleanDni = String(dni || '').trim();
-    const cleanName = String(name || '').trim();
+    const cleanName = sanitizeString(name, 150);
 
     if (!cleanDni || !cleanName) {
       return NextResponse.json(
         { success: false, message: 'DNI y Nombre son obligatorios para el personal.' },
+        { status: 400 }
+      );
+    }
+
+    if (!isValidDni(cleanDni)) {
+      return NextResponse.json(
+        { success: false, message: 'Formato de DNI inválido.' },
         { status: 400 }
       );
     }
