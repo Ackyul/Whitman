@@ -27,6 +27,10 @@ import {
   Calendar,
   X,
   SlidersHorizontal,
+  Scale,
+  ArrowRightLeft,
+  ArrowUpRight,
+  ArrowDownRight,
 } from 'lucide-react';
 import {
   fetchAttendanceScheduleApi,
@@ -44,11 +48,22 @@ interface AttendanceLiveProps {
 
 export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
   records,
+  students,
   stats,
   onRefresh,
 }) => {
-  // Pestaña activa: 'horarios' o 'registros' (Poner el registro completamente aparte)
-  const [activeTab, setActiveTab] = useState<'horarios' | 'registros'>('horarios');
+  // Pestaña activa: 'horarios', 'registros' o 'diferencia'
+  const [activeTab, setActiveTab] = useState<'horarios' | 'registros' | 'diferencia'>('registros');
+
+  // Estados de comparación de diferencia entre días
+  const [compareDateA, setCompareDateA] = useState(() => new Date().toISOString().split('T')[0]);
+  const [compareDateB, setCompareDateB] = useState(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return d.toISOString().split('T')[0];
+  });
+  const [compareDiffFilter, setCompareDiffFilter] = useState<'TODOS' | 'SOLO_DIFERENCIAS' | 'FALTARON_B' | 'NUEVOS_B' | 'CAMBIO_PUNTUALIDAD'>('TODOS');
+  const [compareSearchQuery, setCompareSearchQuery] = useState('');
 
   // Configuración de Horarios de Asistencia
   const [schedule, setSchedule] = useState<AttendanceSchedule>({
@@ -209,14 +224,169 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
     }
   };
 
+  // Comparativa detallada entre Fecha A y Fecha B
+  const recordsCompareA = records.filter((a) => a.date === compareDateA);
+  const recordsCompareB = records.filter((a) => a.date === compareDateB);
+
+  const totalA = recordsCompareA.length;
+  const totalB = recordsCompareB.length;
+  const diffTotalAB = totalA - totalB;
+
+  const presentA = recordsCompareA.filter((a) => a.status === 'PRESENTE').length;
+  const presentB = recordsCompareB.filter((a) => a.status === 'PRESENTE').length;
+  const diffPresentAB = presentA - presentB;
+
+  const lateA = recordsCompareA.filter((a) => a.status === 'TARDANZA').length;
+  const lateB = recordsCompareB.filter((a) => a.status === 'TARDANZA').length;
+  const diffLateAB = lateA - lateB;
+
+  const studentMapA = new Map(recordsCompareA.map((r) => [r.userDni, r]));
+  const studentMapB = new Map(recordsCompareB.map((r) => [r.userDni, r]));
+  const allCompareDnis = Array.from(new Set([...Array.from(studentMapA.keys()), ...Array.from(studentMapB.keys())]));
+
+  interface StudentDayDiff {
+    dni: string;
+    name: string;
+    gradeOrClass: string;
+    level: string;
+    recordA?: (typeof recordsCompareA)[0];
+    recordB?: (typeof recordsCompareB)[0];
+    type: 'IGUAL' | 'FALTO_EN_B' | 'NUEVO_EN_B' | 'MEJORO_A_PUNTUAL' | 'PASO_A_TARDANZA' | 'OTRO_CAMBIO';
+    label: string;
+    badgeClass: string;
+  }
+
+  const comparisonItems: StudentDayDiff[] = allCompareDnis.map((dni) => {
+    const recA = studentMapA.get(dni);
+    const recB = studentMapB.get(dni);
+    const studentInfo = (students || []).find((s) => s.dni === dni);
+
+    const name = recA?.userName || recB?.userName || studentInfo?.name || `Alumno ${dni}`;
+    const gradeOrClass = recA?.gradeOrClass || recB?.gradeOrClass || studentInfo?.gradeOrClass || '—';
+    const level = recA?.level || recB?.level || studentInfo?.level || 'COLEGIO';
+
+    if (recA && !recB) {
+      return {
+        dni,
+        name,
+        gradeOrClass,
+        level,
+        recordA: recA,
+        recordB: undefined,
+        type: 'FALTO_EN_B',
+        label: `Faltó en Día 2 (${compareDateB})`,
+        badgeClass: 'bg-rose-100 text-rose-800 border-rose-300',
+      };
+    }
+
+    if (!recA && recB) {
+      return {
+        dni,
+        name,
+        gradeOrClass,
+        level,
+        recordA: undefined,
+        recordB: recB,
+        type: 'NUEVO_EN_B',
+        label: `Asistió solo en Día 2 (${compareDateB})`,
+        badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+      };
+    }
+
+    if (recA && recB) {
+      if (recA.status === recB.status) {
+        return {
+          dni,
+          name,
+          gradeOrClass,
+          level,
+          recordA: recA,
+          recordB: recB,
+          type: 'IGUAL',
+          label: `Mantuvo ${recA.status}`,
+          badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+        };
+      }
+      if (recA.status === 'TARDANZA' && recB.status === 'PRESENTE') {
+        return {
+          dni,
+          name,
+          gradeOrClass,
+          level,
+          recordA: recA,
+          recordB: recB,
+          type: 'MEJORO_A_PUNTUAL',
+          label: 'Mejoró a Puntual',
+          badgeClass: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        };
+      }
+      if (recA.status === 'PRESENTE' && recB.status === 'TARDANZA') {
+        return {
+          dni,
+          name,
+          gradeOrClass,
+          level,
+          recordA: recA,
+          recordB: recB,
+          type: 'PASO_A_TARDANZA',
+          label: 'Pasó a Tardanza',
+          badgeClass: 'bg-amber-100 text-amber-800 border-amber-300',
+        };
+      }
+      return {
+        dni,
+        name,
+        gradeOrClass,
+        level,
+        recordA: recA,
+        recordB: recB,
+        type: 'OTRO_CAMBIO',
+        label: `${recA.status} ➔ ${recB.status}`,
+        badgeClass: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+      };
+    }
+
+    return {
+      dni,
+      name,
+      gradeOrClass,
+      level,
+      type: 'IGUAL',
+      label: 'Sin cambios',
+      badgeClass: 'bg-slate-100 text-slate-700 border-slate-200',
+    };
+  });
+
+  const filteredComparison = comparisonItems.filter((item) => {
+    if (compareDiffFilter === 'SOLO_DIFERENCIAS' && item.type === 'IGUAL') return false;
+    if (compareDiffFilter === 'FALTARON_B' && item.type !== 'FALTO_EN_B') return false;
+    if (compareDiffFilter === 'NUEVOS_B' && item.type !== 'NUEVO_EN_B') return false;
+    if (compareDiffFilter === 'CAMBIO_PUNTUALIDAD' && item.type !== 'MEJORO_A_PUNTUAL' && item.type !== 'PASO_A_TARDANZA') return false;
+
+    if (compareSearchQuery.trim()) {
+      const q = compareSearchQuery.toLowerCase().trim();
+      return (
+        item.name.toLowerCase().includes(q) ||
+        item.dni.includes(q) ||
+        item.gradeOrClass.toLowerCase().includes(q)
+      );
+    }
+    return true;
+  });
+
+  const countAbsentB = comparisonItems.filter((i) => i.type === 'FALTO_EN_B').length;
+  const countNewB = comparisonItems.filter((i) => i.type === 'NUEVO_EN_B').length;
+  const countChangedPunctuality = comparisonItems.filter((i) => i.type === 'MEJORO_A_PUNTUAL' || i.type === 'PASO_A_TARDANZA').length;
+  const countDifferencesTotal = comparisonItems.filter((i) => i.type !== 'IGUAL').length;
+
   const hasActiveFilters = searchQuery.trim() !== '' || filterLevel !== 'TODOS' || filterStatus !== 'TODOS' || dateFilterMode !== 'HOY';
 
   return (
     <div className="space-y-6">
       
-      {/* NAVEGACIÓN APARTE: 1. HORARIOS DE CONTROL VS 2. REGISTRO DE ASISTENCIAS */}
+      {/* NAVEGACIÓN: 1. HORARIOS VS 2. REGISTROS VS 3. DIFERENCIA ENTRE DÍAS */}
       <div className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2">
-        <div className="grid grid-cols-2 gap-1.5 flex-1">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 flex-1">
           <button
             type="button"
             onClick={() => setActiveTab('horarios')}
@@ -227,7 +397,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
             }`}
           >
             <Clock className="w-4 h-4 text-lionGold-400 shrink-0" />
-            <span>1. Horarios de Control (Entrada & Salida)</span>
+            <span>1. Horarios de Control</span>
           </button>
 
           <button
@@ -240,7 +410,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
             }`}
           >
             <ClipboardList className="w-4 h-4 text-lionGold-400 shrink-0" />
-            <span>2. Registro de Asistencias & Búsqueda</span>
+            <span>2. Registro de Asistencias</span>
             <span
               className={`text-[10px] px-2 py-0.5 rounded-full font-black ml-1 ${
                 activeTab === 'registros'
@@ -249,6 +419,28 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
               }`}
             >
               {todayRecordsCount} hoy
+            </span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => setActiveTab('diferencia')}
+            className={`py-3 px-4 rounded-xl text-xs font-bold transition flex items-center justify-center gap-2 ${
+              activeTab === 'diferencia'
+                ? 'bg-burgundy-900 text-white shadow font-black'
+                : 'text-slate-600 hover:bg-slate-100'
+            }`}
+          >
+            <Scale className="w-4 h-4 text-lionGold-400 shrink-0" />
+            <span>3. Diferencia entre Días</span>
+            <span
+              className={`text-[10px] px-2 py-0.5 rounded-full font-black ml-1 ${
+                activeTab === 'diferencia'
+                  ? 'bg-lionGold-500 text-burgundy-950'
+                  : 'bg-emerald-100 text-emerald-800'
+              }`}
+            >
+              {countDifferencesTotal > 0 ? `${countDifferencesTotal} cambios` : 'Comparar'}
             </span>
           </button>
         </div>
@@ -776,6 +968,291 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
             </table>
           </div>
 
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* SECCIÓN 3: DIFERENCIA DE ASISTENCIAS ENTRE DÍAS          */}
+      {/* ======================================================== */}
+      {activeTab === 'diferencia' && (
+        <div className="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden space-y-6 p-6">
+          <div className="border-b border-slate-100 pb-4">
+            <div className="inline-flex items-center gap-2 text-xs font-black uppercase tracking-wider text-burgundy-900 bg-burgundy-50 px-3 py-1 rounded-full border border-burgundy-200 mb-1.5">
+              <Scale className="w-3.5 h-3.5 text-burgundy-800" />
+              <span>Comparador Histórico de Asistencia</span>
+            </div>
+            <h3 className="text-xl font-black text-slate-900 font-serif">
+              Diferencia de Asistencias entre Días
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Contrasta la asistencia entre dos fechas cualesquiera para medir variación en asistencias, puntualidad y detectar qué alumnos faltaron en cada jornada.
+            </p>
+          </div>
+
+          {/* SELECTOR DE FECHAS */}
+          <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="w-full md:w-5/12 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                Día 1 (Fecha Base):
+              </label>
+              <input
+                type="date"
+                value={compareDateA}
+                onChange={(e) => setCompareDateA(e.target.value)}
+                className="w-full font-mono text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-800 focus:outline-none focus:border-burgundy-700"
+              />
+              <span className="text-[10px] text-slate-400 mt-1 block font-medium">
+                {totalA} alumnos marcaron este día
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                const temp = compareDateA;
+                setCompareDateA(compareDateB);
+                setCompareDateB(temp);
+              }}
+              title="Intercambiar fechas"
+              className="p-3 rounded-xl bg-burgundy-50 text-burgundy-900 hover:bg-burgundy-100 transition shadow-xs active:scale-95 shrink-0"
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+            </button>
+
+            <div className="w-full md:w-5/12 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
+              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                Día 2 (Fecha a Contrastar):
+              </label>
+              <input
+                type="date"
+                value={compareDateB}
+                onChange={(e) => setCompareDateB(e.target.value)}
+                className="w-full font-mono text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-800 focus:outline-none focus:border-burgundy-700"
+              />
+              <span className="text-[10px] text-slate-400 mt-1 block font-medium">
+                {totalB} alumnos marcaron este día
+              </span>
+            </div>
+          </div>
+
+          {/* TARJETAS DE DIFERENCIA */}
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Diferencia Total</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className={`text-2xl font-black ${
+                  diffTotalAB > 0 ? 'text-emerald-700' : diffTotalAB < 0 ? 'text-rose-700' : 'text-slate-800'
+                }`}>
+                  {diffTotalAB > 0 ? `+${diffTotalAB}` : diffTotalAB}
+                </span>
+                <span className="text-xs text-slate-400 font-bold">alumnos</span>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                {totalA} (Día 1) vs {totalB} (Día 2)
+              </p>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Diferencia Puntuales</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className={`text-2xl font-black ${
+                  diffPresentAB > 0 ? 'text-emerald-700' : diffPresentAB < 0 ? 'text-rose-700' : 'text-slate-800'
+                }`}>
+                  {diffPresentAB > 0 ? `+${diffPresentAB}` : diffPresentAB}
+                </span>
+                <span className="text-xs text-slate-400 font-bold">puntuales</span>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                {presentA} vs {presentB}
+              </p>
+            </div>
+
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
+              <span className="text-[10px] font-bold text-slate-400 uppercase">Diferencia Tardanzas</span>
+              <div className="flex items-baseline gap-2 mt-1">
+                <span className={`text-2xl font-black ${
+                  diffLateAB < 0 ? 'text-emerald-700' : diffLateAB > 0 ? 'text-amber-700' : 'text-slate-800'
+                }`}>
+                  {diffLateAB > 0 ? `+${diffLateAB}` : diffLateAB}
+                </span>
+                <span className="text-xs text-slate-400 font-bold">tardanzas</span>
+              </div>
+              <p className="text-[10px] text-slate-500 mt-0.5">
+                {lateA} vs {lateB}
+              </p>
+            </div>
+
+            <div className="bg-gradient-to-br from-burgundy-900 to-burgundy-800 text-white p-4 rounded-2xl shadow-sm border border-lionGold-500/40">
+              <span className="text-[10px] font-bold text-lionGold-300 uppercase">Alumnos con Cambios</span>
+              <div className="text-2xl font-black text-white mt-1">
+                {countDifferencesTotal}
+              </div>
+              <p className="text-[10px] text-burgundy-200 mt-0.5">
+                {countAbsentB} faltaron en Día 2 • {countNewB} nuevos en Día 2
+              </p>
+            </div>
+          </div>
+
+          {/* FILTROS Y BUSCADOR */}
+          <div className="space-y-3">
+            <div className="flex flex-wrap items-center gap-1.5 text-xs">
+              <button
+                type="button"
+                onClick={() => setCompareDiffFilter('TODOS')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                  compareDiffFilter === 'TODOS'
+                    ? 'bg-burgundy-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Todos ({comparisonItems.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCompareDiffFilter('SOLO_DIFERENCIAS')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                  compareDiffFilter === 'SOLO_DIFERENCIAS'
+                    ? 'bg-burgundy-900 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                }`}
+              >
+                Solo con Diferencias ({countDifferencesTotal})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCompareDiffFilter('FALTARON_B')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                  compareDiffFilter === 'FALTARON_B'
+                    ? 'bg-rose-700 text-white shadow-xs'
+                    : 'bg-rose-50 text-rose-800 hover:bg-rose-100'
+                }`}
+              >
+                🔴 Faltaron en Día 2 ({countAbsentB})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCompareDiffFilter('NUEVOS_B')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                  compareDiffFilter === 'NUEVOS_B'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100'
+                }`}
+              >
+                🟢 Asistieron solo en Día 2 ({countNewB})
+              </button>
+              <button
+                type="button"
+                onClick={() => setCompareDiffFilter('CAMBIO_PUNTUALIDAD')}
+                className={`px-3 py-1.5 rounded-lg font-bold transition ${
+                  compareDiffFilter === 'CAMBIO_PUNTUALIDAD'
+                    ? 'bg-amber-700 text-white shadow-xs'
+                    : 'bg-amber-50 text-amber-800 hover:bg-amber-100'
+                }`}
+              >
+                ⚠️ Varió Puntualidad ({countChangedPunctuality})
+              </button>
+            </div>
+
+            <div className="relative">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+              <input
+                type="text"
+                placeholder="Filtrar comparativa por nombre o número de DNI del alumno..."
+                value={compareSearchQuery}
+                onChange={(e) => setCompareSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-8 py-2.5 text-xs rounded-xl border border-slate-300 bg-white font-medium focus:outline-none focus:border-burgundy-700 shadow-xs"
+              />
+              {compareSearchQuery && (
+                <button
+                  type="button"
+                  onClick={() => setCompareSearchQuery('')}
+                  className="absolute right-3 top-3 text-slate-400 hover:text-slate-700"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
+          </div>
+
+          {/* TABLA COMPARATIVA */}
+          <div className="rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+            {filteredComparison.length > 0 ? (
+              <div className="overflow-x-auto max-h-96 overflow-y-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200 sticky top-0 bg-slate-50">
+                    <tr>
+                      <th className="py-2.5 px-3.5">Estudiante</th>
+                      <th className="py-2.5 px-3.5">Aula</th>
+                      <th className="py-2.5 px-3.5">Día 1 ({compareDateA})</th>
+                      <th className="py-2.5 px-3.5">Día 2 ({compareDateB})</th>
+                      <th className="py-2.5 px-3.5">Diferencia</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                    {filteredComparison.map((item) => (
+                      <tr key={item.dni} className="hover:bg-slate-50/80 transition">
+                        <td className="py-2.5 px-3.5">
+                          <p className="font-bold text-slate-900">{item.name}</p>
+                          <p className="text-[10px] text-slate-400 font-mono">DNI: {item.dni}</p>
+                        </td>
+                        <td className="py-2.5 px-3.5">
+                          <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">
+                            {item.gradeOrClass}
+                          </span>
+                        </td>
+                        <td className="py-2.5 px-3.5">
+                          {item.recordA ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                item.recordA.status === 'PRESENTE'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {item.recordA.status}
+                              </span>
+                              <span className="font-mono text-[10px] text-slate-500">({item.recordA.time})</span>
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-[10px] italic">No registró</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3.5">
+                          {item.recordB ? (
+                            <div className="flex items-center gap-1.5">
+                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                                item.recordB.status === 'PRESENTE'
+                                  ? 'bg-emerald-100 text-emerald-800'
+                                  : 'bg-amber-100 text-amber-800'
+                              }`}>
+                                {item.recordB.status}
+                              </span>
+                              <span className="font-mono text-[10px] text-slate-500">({item.recordB.time})</span>
+                            </div>
+                          ) : (
+                            <span className="text-rose-600 font-bold text-[10px]">No registró</span>
+                          )}
+                        </td>
+                        <td className="py-2.5 px-3.5">
+                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${item.badgeClass}`}>
+                            {item.label}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="p-8 text-center text-slate-400 space-y-1">
+                <p className="text-xs font-bold text-slate-600">
+                  No hay alumnos que coincidan con el filtro seleccionado.
+                </p>
+                <p className="text-[11px] text-slate-400">
+                  Intenta con otro filtro de diferencias o verifica las fechas seleccionadas.
+                </p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 
