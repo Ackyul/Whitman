@@ -930,57 +930,21 @@ export default function GestionAcademicaPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      
-      {/* 1. ENCABEZADO INSTITUCIONAL */}
-      <div className="bg-gradient-to-r from-burgundy-950 via-burgundy-900 to-burgundy-850 text-white rounded-3xl p-5 sm:p-7 shadow-xl border-2 border-lionGold-500/50 flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <div className="inline-flex items-center gap-2 bg-lionGold-500/20 text-lionGold-300 text-[10px] sm:text-xs font-black px-3 py-0.5 rounded-full border border-lionGold-400/30 mb-1">
-            <span>SISTEMA DE GESTIÓN ACADÉMICA 2026</span>
-            <span>•</span>
-            <span className="text-emerald-400">● Base de Datos Neon PostgreSQL</span>
+      {googleAdmin && (
+        <div className="flex justify-end">
+          <div className="inline-flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-xs text-xs">
+            <span className="font-bold text-slate-700">{googleAdmin.name || googleAdmin.email}</span>
+            <button
+              onClick={handleLogoutGoogle}
+              title="Cerrar sesión de Google"
+              className="text-burgundy-900 hover:text-burgundy-750 font-bold ml-1 flex items-center gap-1"
+            >
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Salir</span>
+            </button>
           </div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-black font-serif tracking-tight">
-            Gestión, Matrícula & Cuentas Whitman
-          </h1>
-          <p className="text-xs text-burgundy-200 mt-0.5 max-w-xl">
-            Crea alumnos, organiza grados, configura secciones y realiza mezclas automáticas equitativas para las aulas.
-          </p>
         </div>
-
-        {hasAccess ? (
-          <div className="flex items-center gap-3 bg-burgundy-950/70 p-2.5 rounded-2xl border border-lionGold-500/40">
-            {googleAdmin?.picture ? (
-              <img src={googleAdmin.picture} alt="Google Avatar" className="w-9 h-9 rounded-full border border-lionGold-400" />
-            ) : (
-              <div className="w-9 h-9 rounded-full bg-lionGold-500 text-burgundy-950 font-black flex items-center justify-center text-xs shadow-inner">
-                {currentUser?.name ? currentUser.name.charAt(0).toUpperCase() : '👤'}
-              </div>
-            )}
-            <div className="text-left pr-2">
-              <span className="text-[10px] font-mono text-emerald-400 font-bold block">
-                {currentUser?.hierarchyTitle ? `✓ ${currentUser.hierarchyTitle.toUpperCase()}` : '✓ ACCESO AUTORIZADO'}
-              </span>
-              <p className="text-xs font-bold text-white max-w-[200px] truncate">
-                {currentUser?.name || googleAdmin?.name || googleAdmin?.email}
-              </p>
-            </div>
-            {googleAdmin && (
-              <button
-                onClick={handleLogoutGoogle}
-                title="Cerrar sesión de Google"
-                className="p-1.5 text-burgundy-200 hover:text-white hover:bg-burgundy-800 rounded-lg transition"
-              >
-                <LogOut className="w-4 h-4" />
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="flex items-center gap-2 bg-burgundy-950/50 p-2.5 rounded-2xl border border-lionGold-500/20 text-xs text-lionGold-300">
-            <Lock className="w-4 h-4 text-lionGold-400" />
-            <span>Seguridad: Coordinación, Normas & Dirección</span>
-          </div>
-        )}
-      </div>
+      )}
 
       {/* NOTIFICACIÓN FLOTANTE */}
       {notification && (
