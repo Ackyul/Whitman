@@ -20,7 +20,7 @@ export async function POST(request: Request) {
       name,
       email,
       hierarchy = 'PROFESOR',
-      hierarchyTitle = 'Profesor(a) de Aula',
+      hierarchyTitle = 'Profesor(a)',
       level = 'SECUNDARIA',
       gradeOrClass = 'Todas las aulas',
       phone,

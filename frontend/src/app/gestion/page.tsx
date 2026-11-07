@@ -323,7 +323,7 @@ export default function GestionAcademicaPage() {
     name: '',
     email: '',
     hierarchy: 'PROFESOR' as HierarchyLevel,
-    hierarchyTitle: 'Profesor de Aula',
+    hierarchyTitle: 'Profesor(a)',
     level: 'SECUNDARIA' as EducationLevel,
     gradeOrClass: 'Matemática y Ciencias',
     phone: '',
@@ -784,7 +784,7 @@ export default function GestionAcademicaPage() {
         name: '',
         email: '',
         hierarchy: 'PROFESOR',
-        hierarchyTitle: 'Profesor de Aula',
+        hierarchyTitle: 'Profesor(a)',
         level: 'SECUNDARIA',
         gradeOrClass: 'Matemática y Ciencias',
         phone: '',
@@ -2018,7 +2018,7 @@ export default function GestionAcademicaPage() {
                       value={staffForm.hierarchy}
                       onChange={(e) => {
                         const h = e.target.value as HierarchyLevel;
-                        let title = 'Profesor de Aula';
+                        let title = 'Profesor(a)';
                         if (h === 'DIRECTOR') title = 'Director General';
                         if (h === 'COORDINADOR') title = 'Coordinador Académico';
                         if (h === 'JEFE_NORMAS') title = 'Jefe de Normas y Disciplina';
@@ -2026,7 +2026,7 @@ export default function GestionAcademicaPage() {
                       }}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white focus:outline-none focus:border-burgundy-700"
                     >
-                      <option value="PROFESOR">👨‍🏫 Profesor(a) de Aula / Asignatura</option>
+                      <option value="PROFESOR">👨‍🏫 Profesor(a)</option>
                       <option value="COORDINADOR">📋 Coordinador Académico</option>
                       <option value="JEFE_NORMAS">🛡️ Jefe de Normas y Disciplina</option>
                       <option value="DIRECTOR">🏛️ Director(a) General</option>
