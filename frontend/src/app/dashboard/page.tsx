@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useWhitman } from '../../context/WhitmanContext';
@@ -20,6 +20,11 @@ import {
   Sparkles,
   Lock,
   Award,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  CalendarCheck,
+  X,
 } from 'lucide-react';
 
 export default function SecureDashboardPage() {
@@ -32,6 +37,12 @@ export default function SecureDashboardPage() {
     stats,
     logout,
   } = useWhitman();
+
+  // Estados para ver el tema de asistencias solo si se desea
+  const [showAttendanceSection, setShowAttendanceSection] = useState(false);
+  const [attendanceSearchQuery, setAttendanceSearchQuery] = useState('');
+  const [attendanceDateMode, setAttendanceDateMode] = useState<'HOY' | 'TODAS' | 'CUSTOM'>('HOY');
+  const [attendanceCustomDate, setAttendanceCustomDate] = useState(() => new Date().toISOString().split('T')[0]);
 
   // 1. PANTALLA DE BLOQUEO SI NO ESTÁ AUTENTICADO
   if (!currentUser) {
@@ -415,8 +426,24 @@ export default function SecureDashboardPage() {
   }
 
   // 4. DASHBOARD SEGURO PARA DOCENTES Y DIRECCIÓN
-  const recentAttendance = attendance.slice(0, 5);
-  const topGrades = [...grades].sort((a, b) => b.score - a.score).slice(0, 4);
+  const todayStr = new Date().toISOString().split('T')[0];
+  const todayRecords = attendance.filter((a) => a.date === todayStr);
+
+  const filteredAttendance = attendance.filter((a) => {
+    if (attendanceDateMode === 'HOY' && a.date !== todayStr) return false;
+    if (attendanceDateMode === 'CUSTOM' && a.date !== attendanceCustomDate) return false;
+
+    if (attendanceSearchQuery.trim()) {
+      const q = attendanceSearchQuery.toLowerCase().trim();
+      const matchName = a.userName?.toLowerCase().includes(q);
+      const matchDni = a.userDni?.includes(q);
+      const matchClass = a.gradeOrClass?.toLowerCase().includes(q);
+      if (!matchName && !matchDni && !matchClass) return false;
+    }
+    return true;
+  });
+
+  const topGrades = [...grades].sort((a, b) => b.score - a.score).slice(0, 6);
 
   // La garita solo es visible para el Jefe de Normas y Disciplina o Dirección General
   const canAccessGarita =
@@ -537,92 +564,378 @@ export default function SecureDashboardPage() {
         </div>
       )}
 
-      {/* Métricas Generales */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-emerald-600 border border-slate-200">
-          <span className="text-xs font-bold text-slate-400 uppercase">Puntuales Hoy</span>
-          <div className="text-3xl font-black text-slate-800 mt-1">{stats.todayAttendance.present}</div>
-          <p className="text-[11px] text-slate-400">Antes de las 08:00 AM</p>
-        </div>
+      {/* MÓDULO OPCIONAL DE ASISTENCIAS: VER SOLO SI SE DESEA */}
+      <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden transition-all">
+        <button
+          type="button"
+          onClick={() => setShowAttendanceSection(!showAttendanceSection)}
+          className="w-full p-4 sm:p-5 flex items-center justify-between hover:bg-slate-50 transition text-left group"
+        >
+          <div className="flex items-center gap-3.5">
+            <div className="w-11 h-11 rounded-xl bg-burgundy-100 text-burgundy-900 flex items-center justify-center font-bold shrink-0">
+              <CalendarCheck className="w-5 h-5 text-burgundy-800" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-burgundy-800 transition">
+                  Módulo de Asistencias & Control de Portería
+                </h3>
+                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                  Opcional
+                </span>
+              </div>
+              <p className="text-xs text-slate-500 mt-0.5">
+                {showAttendanceSection
+                  ? 'Haz clic aquí para ocultar el panel de asistencias'
+                  : 'Despliega aquí para ver las asistencias de hoy o consultar por fecha, nombre y DNI'}
+              </p>
+            </div>
+          </div>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-amber-500 border border-slate-200">
-          <span className="text-xs font-bold text-slate-400 uppercase">Tardanzas Hoy</span>
-          <div className="text-3xl font-black text-slate-800 mt-1">{stats.todayAttendance.late}</div>
-          <p className="text-[11px] text-slate-400">Con tolerancia garita</p>
-        </div>
+          <div className="flex items-center gap-2.5 shrink-0">
+            <span className="text-xs font-bold px-3 py-1 rounded-full bg-emerald-50 text-emerald-800 border border-emerald-200">
+              {todayRecords.length} registrados hoy
+            </span>
+            <div className="p-2 rounded-xl bg-slate-100 group-hover:bg-burgundy-100 text-slate-600 group-hover:text-burgundy-900 transition">
+              {showAttendanceSection ? <ChevronUp className="w-5 h-5" /> : <ChevronDown className="w-5 h-5" />}
+            </div>
+          </div>
+        </button>
 
-        <div className="bg-white p-5 rounded-2xl shadow-sm border-l-4 border-burgundy-800 border border-slate-200">
-          <span className="text-xs font-bold text-slate-400 uppercase">Ingresos Totales</span>
-          <div className="text-3xl font-black text-slate-800 mt-1">{stats.todayAttendance.totalMarked}</div>
-          <p className="text-[11px] text-slate-400">De 1,000 alumnos</p>
-        </div>
+        {showAttendanceSection && (
+          <div className="border-t border-slate-200 p-5 sm:p-6 bg-slate-50/60 space-y-6">
+            
+            {/* ------------------------------------------------------------------ */}
+            {/* 1. PRIMERO: VERSE LAS ASISTENCIAS DEL DÍA                         */}
+            {/* ------------------------------------------------------------------ */}
+            <div className="space-y-4">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 pb-3">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
+                  <h4 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide">
+                    1. Asistencias del Día ({todayStr})
+                  </h4>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-slate-500">
+                    {todayRecords.length} ingresos registrados hoy
+                  </span>
+                  <Link
+                    href="/asistencia"
+                    className="text-xs text-burgundy-800 font-bold hover:underline ml-2"
+                  >
+                    Abrir Módulo Completo →
+                  </Link>
+                </div>
+              </div>
 
-        <div className="bg-gradient-to-br from-burgundy-900 to-burgundy-800 text-white p-5 rounded-2xl shadow-lg border border-lionGold-500/40">
-          <span className="text-xs font-bold text-lionGold-300 uppercase">Ratio de Asistencia</span>
-          <div className="text-3xl font-black text-white mt-1">{stats.todayAttendance.attendanceRate}%</div>
-          <p className="text-[11px] text-burgundy-200">En tiempo real</p>
-        </div>
+              {/* Métricas del Día de Hoy */}
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+                <div className="bg-white p-4 rounded-xl shadow-xs border-l-4 border-emerald-600 border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Puntuales Hoy</span>
+                  <div className="text-2xl font-black text-slate-800 mt-0.5">{stats?.todayAttendance.present ?? 0}</div>
+                  <p className="text-[10px] text-slate-400">Antes de las 08:00 AM</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl shadow-xs border-l-4 border-amber-500 border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Tardanzas Hoy</span>
+                  <div className="text-2xl font-black text-slate-800 mt-0.5">{stats?.todayAttendance.late ?? 0}</div>
+                  <p className="text-[10px] text-slate-400">Con tolerancia garita</p>
+                </div>
+
+                <div className="bg-white p-4 rounded-xl shadow-xs border-l-4 border-burgundy-800 border border-slate-200">
+                  <span className="text-[10px] font-bold text-slate-400 uppercase">Ingresos Totales</span>
+                  <div className="text-2xl font-black text-slate-800 mt-0.5">{stats?.todayAttendance.totalMarked ?? 0}</div>
+                  <p className="text-[10px] text-slate-400">En Neon DB</p>
+                </div>
+
+                <div className="bg-gradient-to-br from-burgundy-900 to-burgundy-800 text-white p-4 rounded-xl shadow-xs border border-lionGold-500/40">
+                  <span className="text-[10px] font-bold text-lionGold-300 uppercase">Ratio Asistencia</span>
+                  <div className="text-2xl font-black text-white mt-0.5">{stats?.todayAttendance.attendanceRate ?? 0}%</div>
+                  <p className="text-[10px] text-burgundy-200">En tiempo real</p>
+                </div>
+              </div>
+
+              {/* Lista / Tabla de Asistencias del Día */}
+              <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-xs">
+                {todayRecords.length > 0 ? (
+                  <div className="overflow-x-auto max-h-72 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200 sticky top-0 bg-slate-50">
+                        <tr>
+                          <th className="py-2.5 px-3.5">Estudiante</th>
+                          <th className="py-2.5 px-3.5">Nivel / Aula</th>
+                          <th className="py-2.5 px-3.5">Ingreso</th>
+                          <th className="py-2.5 px-3.5">Salida</th>
+                          <th className="py-2.5 px-3.5">Método</th>
+                          <th className="py-2.5 px-3.5">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                        {todayRecords.map((a) => (
+                          <tr key={a.id} className="hover:bg-slate-50/80 transition">
+                            <td className="py-2.5 px-3.5">
+                              <p className="font-bold text-slate-900">{a.userName}</p>
+                              <p className="text-[10px] text-slate-400 font-mono">DNI: {a.userDni}</p>
+                            </td>
+                            <td className="py-2.5 px-3.5">
+                              <span className="inline-block bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">
+                                {a.gradeOrClass}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3.5 font-mono">
+                              <span className="text-emerald-700 font-bold">🟢 {a.time}</span>
+                            </td>
+                            <td className="py-2.5 px-3.5 font-mono">
+                              {a.exitTime ? (
+                                <span className="text-indigo-700 font-bold">🟠 {a.exitTime}</span>
+                              ) : (
+                                <span className="text-slate-400 text-[10px] italic">Pendiente</span>
+                              )}
+                            </td>
+                            <td className="py-2.5 px-3.5">
+                              <span className="text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
+                                {a.method}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3.5">
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  a.status === 'PRESENTE'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : a.status === 'TARDANZA'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-rose-100 text-rose-800'
+                                }`}
+                              >
+                                {a.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-8 text-center text-slate-400 space-y-1">
+                    <Clock className="w-8 h-8 mx-auto text-slate-300 mb-2" />
+                    <p className="text-xs font-bold text-slate-600">Aún no hay ingresos marcados el día de hoy.</p>
+                    <p className="text-[11px] text-slate-400">
+                      Cuando los alumnos escaneen su carnet o DNI en la garita, aparecerán registrados aquí al instante.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* ------------------------------------------------------------------ */}
+            {/* 2. LUEGO: REVISAR DE QUÉ DÍA Y POR NOMBRE Y DNI                   */}
+            {/* ------------------------------------------------------------------ */}
+            <div className="bg-white p-5 rounded-2xl border border-slate-200 shadow-xs space-y-4">
+              <div className="border-b border-slate-100 pb-3">
+                <div className="flex items-center gap-2">
+                  <Search className="w-4 h-4 text-burgundy-800" />
+                  <h4 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide">
+                    2. Revisar por Fecha (De qué día), Nombre y DNI
+                  </h4>
+                </div>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Selecciona la fecha y busca por el nombre o número de DNI del alumno para consultar su historial de asistencia.
+                </p>
+              </div>
+
+              {/* Controles de Búsqueda y Filtro de Fecha */}
+              <div className="grid grid-cols-1 md:grid-cols-12 gap-3 items-center">
+                {/* Selector de Rango de Fecha ("De qué día") */}
+                <div className="md:col-span-5 flex items-center gap-1.5 bg-slate-100 p-1 rounded-xl text-xs font-bold">
+                  <button
+                    type="button"
+                    onClick={() => setAttendanceDateMode('HOY')}
+                    className={`px-3 py-1.5 rounded-lg transition ${
+                      attendanceDateMode === 'HOY'
+                        ? 'bg-burgundy-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Hoy
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAttendanceDateMode('TODAS')}
+                    className={`px-3 py-1.5 rounded-lg transition ${
+                      attendanceDateMode === 'TODAS'
+                        ? 'bg-burgundy-900 text-white shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    Historial
+                  </button>
+                  <div className="flex-1 flex items-center">
+                    <input
+                      type="date"
+                      value={attendanceCustomDate}
+                      onChange={(e) => {
+                        setAttendanceCustomDate(e.target.value);
+                        setAttendanceDateMode('CUSTOM');
+                      }}
+                      className={`w-full px-2 py-1 rounded-lg text-xs font-mono font-bold border transition ${
+                        attendanceDateMode === 'CUSTOM'
+                          ? 'bg-burgundy-900 text-white border-burgundy-950'
+                          : 'bg-white text-slate-700 border-slate-200'
+                      }`}
+                    />
+                  </div>
+                </div>
+
+                {/* Buscador en Vivo por Nombre y DNI */}
+                <div className="md:col-span-7 relative">
+                  <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
+                  <input
+                    type="text"
+                    placeholder="Buscar por Nombre o DNI del alumno (Ej: 61460126, Yoshua)..."
+                    value={attendanceSearchQuery}
+                    onChange={(e) => setAttendanceSearchQuery(e.target.value)}
+                    className="w-full pl-9 pr-8 py-2 text-xs rounded-xl border border-slate-300 bg-white font-medium focus:outline-none focus:border-burgundy-700 focus:ring-1 focus:ring-burgundy-700"
+                  />
+                  {attendanceSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setAttendanceSearchQuery('')}
+                      className="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-700"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Indicador de Filtro y Resultados */}
+              <div className="flex items-center justify-between text-xs text-slate-500 pt-1">
+                <span>
+                  Mostrando {filteredAttendance.length} registro(s) para:{' '}
+                  <strong>
+                    {attendanceDateMode === 'HOY'
+                      ? `Hoy (${todayStr})`
+                      : attendanceDateMode === 'CUSTOM'
+                      ? `Fecha ${attendanceCustomDate}`
+                      : 'Todo el Historial'}
+                  </strong>
+                  {attendanceSearchQuery && ` • Búsqueda: "${attendanceSearchQuery}"`}
+                </span>
+                {(attendanceSearchQuery || attendanceDateMode !== 'HOY') && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAttendanceSearchQuery('');
+                      setAttendanceDateMode('HOY');
+                    }}
+                    className="text-burgundy-800 font-bold hover:underline"
+                  >
+                    Restablecer filtros
+                  </button>
+                )}
+              </div>
+
+              {/* Tabla de Resultados de la Consulta */}
+              <div className="rounded-xl border border-slate-200 overflow-hidden">
+                {filteredAttendance.length > 0 ? (
+                  <div className="overflow-x-auto max-h-80 overflow-y-auto">
+                    <table className="w-full text-left text-xs">
+                      <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200 sticky top-0 bg-slate-50">
+                        <tr>
+                          <th className="py-2.5 px-3">Estudiante</th>
+                          <th className="py-2.5 px-3">Fecha</th>
+                          <th className="py-2.5 px-3">Nivel / Aula</th>
+                          <th className="py-2.5 px-3">Ingreso</th>
+                          <th className="py-2.5 px-3">Salida</th>
+                          <th className="py-2.5 px-3">Estado</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-100 font-medium text-slate-700">
+                        {filteredAttendance.slice(0, 50).map((a) => (
+                          <tr key={a.id} className="hover:bg-slate-50/80 transition">
+                            <td className="py-2 px-3">
+                              <p className="font-bold text-slate-900">{a.userName}</p>
+                              <p className="text-[10px] text-slate-400 font-mono">DNI: {a.userDni}</p>
+                            </td>
+                            <td className="py-2 px-3 font-mono text-[11px] text-slate-600">
+                              {a.date}
+                            </td>
+                            <td className="py-2 px-3">
+                              <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium">
+                                {a.gradeOrClass}
+                              </span>
+                            </td>
+                            <td className="py-2 px-3 font-mono text-emerald-700 font-bold">
+                              {a.time}
+                            </td>
+                            <td className="py-2 px-3 font-mono text-indigo-700 font-bold">
+                              {a.exitTime || <span className="text-slate-400 text-[10px] italic font-normal">Pendiente</span>}
+                            </td>
+                            <td className="py-2 px-3">
+                              <span
+                                className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  a.status === 'PRESENTE'
+                                    ? 'bg-emerald-100 text-emerald-800'
+                                    : a.status === 'TARDANZA'
+                                    ? 'bg-amber-100 text-amber-800'
+                                    : 'bg-rose-100 text-rose-800'
+                                }`}
+                              >
+                                {a.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                ) : (
+                  <div className="p-6 text-center text-slate-400 space-y-1">
+                    <p className="text-xs font-bold text-slate-600">
+                      No se encontraron registros para los criterios indicados.
+                    </p>
+                    <p className="text-[11px] text-slate-400">
+                      Verifica la fecha seleccionada o los dígitos del DNI / nombres ingresados.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+          </div>
+        )}
       </div>
 
-      {/* Columnas: Últimos Ingresos vs Cuadro de Honor */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
-            <h3 className="font-bold text-slate-900 text-sm">Últimos Ingresos por Portería</h3>
-            <Link href="/asistencia" className="text-xs text-burgundy-800 font-bold hover:underline">
-              Ver todos →
-            </Link>
-          </div>
-          <div className="divide-y divide-slate-100">
-            {recentAttendance.length > 0 ? (
-              recentAttendance.map((a) => (
-                <div key={a.id} className="py-2.5 flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-xs text-slate-800">{a.userName}</p>
-                    <p className="text-[10px] text-slate-400">DNI: {a.userDni} • {a.gradeOrClass}</p>
-                  </div>
-                  <div className="text-right">
-                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${a.status === 'PRESENTE' ? 'bg-emerald-100 text-emerald-800' : 'bg-amber-100 text-amber-800'}`}>
-                      {a.status}
-                    </span>
-                    <p className="text-[10px] font-mono text-slate-500 mt-0.5">{a.time}</p>
-                  </div>
-                </div>
-              ))
-            ) : (
-              <p className="text-xs text-slate-400 py-6 text-center">
-                Aún no hay ingresos marcados hoy en portería.
-              </p>
-            )}
-          </div>
-        </div>
-
-        <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-3">
-          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+      {/* 4. MEJORES PUNTAJES DE SIMULACROS (SIEMPRE VISIBLE EN EL DASHBOARD) */}
+      <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 space-y-3">
+        <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+          <div className="flex items-center gap-2">
+            <Trophy className="w-4 h-4 text-lionGold-500" />
             <h3 className="font-bold text-slate-900 text-sm">Mejores Puntajes de Simulacros</h3>
-            <Link href="/notas" className="text-xs text-burgundy-800 font-bold hover:underline">
-              Ver notas →
-            </Link>
           </div>
-          <div className="divide-y divide-slate-100">
-            {topGrades.length > 0 ? (
-              topGrades.map((g, idx) => (
-                <div key={g.id} className="py-2.5 flex items-center justify-between">
-                  <div>
-                    <p className="font-bold text-xs text-slate-800">#{idx + 1} {g.userName}</p>
-                    <p className="text-[10px] text-burgundy-700 font-semibold">{g.course} • {g.title}</p>
-                  </div>
-                  <span className="text-xs font-black text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">
-                    {g.score.toFixed(1)} / 20
-                  </span>
+          <Link href="/notas" className="text-xs text-burgundy-800 font-bold hover:underline">
+            Ver todas las notas →
+          </Link>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+          {topGrades.length > 0 ? (
+            topGrades.map((g, idx) => (
+              <div key={g.id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
+                <div>
+                  <p className="font-bold text-xs text-slate-800">#{idx + 1} {g.userName}</p>
+                  <p className="text-[10px] text-burgundy-700 font-semibold">{g.course} • {g.title}</p>
                 </div>
-              ))
-            ) : (
-              <p className="text-xs text-slate-400 py-6 text-center">
-                Aún no hay evaluaciones registradas en el ciclo.
-              </p>
-            )}
-          </div>
+                <span className="text-xs font-black text-emerald-700 bg-emerald-100/70 border border-emerald-200 px-2.5 py-1 rounded-lg">
+                  {g.score.toFixed(1)} / 20
+                </span>
+              </div>
+            ))
+          ) : (
+            <p className="text-xs text-slate-400 py-6 text-center col-span-2">
+              Aún no hay evaluaciones registradas en el ciclo.
+            </p>
+          )}
         </div>
       </div>
 
