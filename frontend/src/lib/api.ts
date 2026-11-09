@@ -40,7 +40,7 @@ export async function loginUser(
   identifier: string,
   role: UserRole = 'ALUMNO',
   password?: string
-): Promise<{ success: boolean; user: User; linkedStudents?: User[]; message: string }> {
+): Promise<{ success: boolean; user: User; linkedStudents?: User[]; sessionToken?: string; message: string }> {
   try {
     const res = await fetchWithTimeout(`${getApiBase()}/api/auth/login`, {
       method: 'POST',
@@ -300,6 +300,28 @@ export async function createGrade(grade: any): Promise<GradeRecord> {
   });
   const json = await res.json();
   if (!res.ok) throw new Error(json.message || 'Error al registrar nota');
+  return json.data;
+}
+
+export async function createGradesBulk(gradesList: any[]): Promise<{ count: number; message: string; data: GradeRecord[] }> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/grades`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ grades: gradesList }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al registrar notas en lote');
+  return json;
+}
+
+export async function updateGradeApi(id: string, updates: { score?: number; feedback?: string; title?: string; period?: string }): Promise<GradeRecord> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/grades`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ id, ...updates }),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al actualizar nota');
   return json.data;
 }
 

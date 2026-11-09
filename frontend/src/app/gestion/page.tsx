@@ -1754,6 +1754,77 @@ export default function GestionAcademicaPage() {
                   </form>
                 )}
 
+                {/* SECCIÓN RESALTADA: ALUMNOS SIN ASIGNAR A NINGÚN AULA */}
+                {unassignedStudents.length > 0 && (
+                  <div className="bg-amber-50/70 border-2 border-amber-300 rounded-3xl p-5 space-y-3">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-amber-200 pb-2.5">
+                      <div className="flex items-center gap-2">
+                        <span className="w-8 h-8 rounded-xl bg-amber-500 text-white flex items-center justify-center font-black text-sm">
+                          ⏳
+                        </span>
+                        <div>
+                          <h4 className="font-black text-sm text-amber-950 uppercase tracking-wide">
+                            Alumnos Sin Asignar a Ningún Aula ({unassignedStudents.length} pendientes)
+                          </h4>
+                          <p className="text-xs text-amber-800">
+                            Están matriculados en {selectedGrade} pero aún no tienen aula o sección asignada.
+                          </p>
+                        </div>
+                      </div>
+                      {classesForSelectedGrade.length > 0 && (
+                        <button
+                          type="button"
+                          onClick={handleAutoBalance}
+                          disabled={loading}
+                          className="bg-amber-600 hover:bg-amber-700 text-white text-xs font-black px-4 py-2 rounded-xl shadow-sm transition flex items-center gap-1.5 self-start sm:self-auto"
+                        >
+                          <Shuffle className="w-3.5 h-3.5" />
+                          <span>Asignar Todos Equitativamente</span>
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 max-h-72 overflow-y-auto pr-1">
+                      {unassignedStudents.map((st) => (
+                        <div
+                          key={st.id}
+                          className="bg-white p-3 rounded-2xl border border-amber-200 shadow-2xs flex flex-col justify-between gap-2"
+                        >
+                          <div>
+                            <p className="font-bold text-xs text-slate-900 truncate">{st.name}</p>
+                            <p className="text-[10px] text-slate-400 font-mono">DNI: {st.dni}</p>
+                          </div>
+                          <div className="flex items-center gap-1.5">
+                            <span className="text-[10px] font-bold text-slate-500 shrink-0">Asignar a:</span>
+                            <select
+                              defaultValue=""
+                              onChange={(e) => {
+                                if (e.target.value) {
+                                  handleMoveStudent(st.id, st.name, e.target.value);
+                                }
+                              }}
+                              className="w-full text-[11px] font-bold bg-amber-50 border border-amber-300 rounded-lg p-1 text-amber-950 focus:outline-none"
+                            >
+                              <option value="" disabled>Seleccionar aula...</option>
+                              {classesForSelectedGrade.map((cls) => {
+                                const count = studentsInSelectedGrade.filter(
+                                  (u) => (u.gradeOrClass || '').toLowerCase().trim() === cls.name.toLowerCase().trim()
+                                ).length;
+                                const vac = (cls.capacity || 35) - count;
+                                return (
+                                  <option key={cls.id || cls.code} value={cls.name}>
+                                    {cls.name} ({vac > 0 ? `${vac} vacantes` : 'Completa'})
+                                  </option>
+                                );
+                              })}
+                            </select>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
                 {/* COLUMNAS PARA CADA AULA CREADA */}
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 items-start">
                   {/* COLUMNAS PARA CADA AULA CREADA */}
@@ -2101,6 +2172,54 @@ export default function GestionAcademicaPage() {
                   <span>{loading ? 'Creando en Base de Datos...' : 'Registrar Docente en Neon DB'}</span>
                 </button>
               </form>
+
+              {/* LISTA Y ASIGNACIÓN DE PERSONAL DOCENTE */}
+              <div className="pt-6 border-t border-slate-100 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h4 className="font-serif font-black text-base text-slate-900">
+                      Personal Docente y Directivo Registrado
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      Profesores y jerarquías con acceso y asignación académica.
+                    </p>
+                  </div>
+                  <span className="text-xs font-bold text-slate-500">
+                    Total: {users.filter((u) => u.role === 'DOCENTE' || u.role === 'ADMIN').length}
+                  </span>
+                </div>
+
+                <div className="border border-slate-200 rounded-2xl overflow-hidden">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-700 font-black uppercase text-[10px] border-b border-slate-200">
+                      <tr>
+                        <th className="py-2.5 px-3">DNI</th>
+                        <th className="py-2.5 px-3">Nombres y Apellidos</th>
+                        <th className="py-2.5 px-3">Jerarquía Institucional</th>
+                        <th className="py-2.5 px-3">Cursos / Aulas Asignadas</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {users
+                        .filter((u) => u.role === 'DOCENTE' || u.role === 'ADMIN')
+                        .map((prof) => (
+                          <tr key={prof.id} className="hover:bg-slate-50 transition">
+                            <td className="py-2.5 px-3 font-mono font-bold text-slate-700">{prof.dni}</td>
+                            <td className="py-2.5 px-3 font-bold text-slate-900">{prof.name}</td>
+                            <td className="py-2.5 px-3">
+                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-burgundy-50 text-burgundy-900 border border-burgundy-200">
+                                {prof.hierarchyTitle || prof.hierarchy || 'Profesor(a)'}
+                              </span>
+                            </td>
+                            <td className="py-2.5 px-3 text-slate-600 font-medium">
+                              {prof.gradeOrClass || 'Todas las aulas'}
+                            </td>
+                          </tr>
+                        ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
             </div>
           )}
 

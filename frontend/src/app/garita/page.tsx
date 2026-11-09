@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { useWhitman } from '../../context/WhitmanContext';
-import { markAttendance, fetchAttendanceScheduleApi } from '../../lib/api';
+import { markAttendance, updateAttendanceStatus, fetchAttendanceScheduleApi } from '../../lib/api';
 import { soundFX } from '../../lib/soundFX';
 import {
   ScanLine,
@@ -16,10 +16,16 @@ import {
   ShieldCheck,
   LogIn,
   LogOut,
+  Search,
+  Printer,
+  X,
+  UserCheck,
+  Check,
+  FileSpreadsheet,
 } from 'lucide-react';
 
 export default function GaritaTotemRoute() {
-  const { currentUser, attendance, stats, refreshData } = useWhitman();
+  const { currentUser, attendance, students, stats, refreshData } = useWhitman();
   const [dniScan, setDniScan] = useState('');
   const dniScanRef = useRef(dniScan);
   useEffect(() => {
@@ -33,6 +39,18 @@ export default function GaritaTotemRoute() {
 
   // Modo de escaneo: INGRESO (Entrada) o SALIDA (Despacho)
   const [scanMode, setScanMode] = useState<'INGRESO' | 'SALIDA'>('INGRESO');
+
+  // Búsqueda Manual para alumnos sin carnet físico
+  const [manualSearch, setManualSearch] = useState('');
+  const manualInputRef = useRef<HTMLInputElement>(null);
+
+  // Modal para Justificar Asistencia
+  const [justifyingRecord, setJustifyingRecord] = useState<any | null>(null);
+  const [justificationReason, setJustificationReason] = useState('Motivo de salud / cita médica');
+  const [savingJustification, setSavingJustification] = useState(false);
+
+  // Modal de Impresión del Parte Diario Oficial
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   const clearTimerRef = useRef<NodeJS.Timeout | null>(null);
 
@@ -79,8 +97,14 @@ export default function GaritaTotemRoute() {
 
       const activeEl = document.activeElement;
       const isInputFocused = activeEl === inputRef.current;
+      const isManualSearchFocused = activeEl === manualInputRef.current;
 
-      // Si el foco ya está en el input principal, dejar que maneje Enter y caracteres normalmente
+      // Si está escribiendo en el buscador manual o modal, no interceptar
+      if (isManualSearchFocused || (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && !isInputFocused)) {
+        return;
+      }
+
+      // Si el foco ya está en el input principal, dejar que maneje Enter normalmente
       if (isInputFocused) {
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -92,12 +116,7 @@ export default function GaritaTotemRoute() {
         return;
       }
 
-      // Si el foco está en otro campo editable ajeno, no intervenir
-      if (activeEl && (activeEl.tagName === 'INPUT' || activeEl.tagName === 'TEXTAREA') && !isInputFocused) {
-        return;
-      }
-
-      // SI EL FOCO ESTÁ FUERA DEL INPUT (en el fondo, tarjetas, botones, etc.):
+      // SI EL FOCO ESTÁ FUERA DEL INPUT (en el fondo, tarjetas, etc.):
       if (e.key === 'Enter') {
         e.preventDefault();
         const targetDni = dniScanRef.current.trim();
@@ -134,7 +153,7 @@ export default function GaritaTotemRoute() {
     const handleGlobalClick = (e: MouseEvent) => {
       const target = e.target as HTMLElement | null;
       if (!target) return;
-      const isInteractive = target.closest('button, a, select, textarea');
+      const isInteractive = target.closest('button, a, select, textarea, input');
       if (!isInteractive) {
         inputRef.current?.focus();
       }
@@ -159,19 +178,19 @@ export default function GaritaTotemRoute() {
   useEffect(() => {
     const timer = setTimeout(() => {
       inputRef.current?.focus();
-    }, 100);
+    }, 150);
     return () => clearTimeout(timer);
-  }, [lastScanResult, scanMode, loading]);
+  }, [scanMode]);
 
-  const processScan = async (dniToProcess?: string) => {
-    const rawDni = typeof dniToProcess === 'string' ? dniToProcess : dniScanRef.current;
+  const processScan = async (rawDni: string, forcedMode?: 'INGRESO' | 'SALIDA') => {
     const cleanDni = rawDni.trim();
-    if (!cleanDni || loading) return;
+    if (!cleanDni) return;
+
+    const currentMode = forcedMode || scanMode;
 
     setLoading(true);
     setErrorMessage(null);
 
-    // Cancelar cualquier temporizador de limpieza anterior
     if (clearTimerRef.current) {
       clearTimeout(clearTimerRef.current);
       clearTimerRef.current = null;
@@ -181,14 +200,14 @@ export default function GaritaTotemRoute() {
       const res = await markAttendance({
         dni: cleanDni,
         method: 'DNI_MANUAL',
-        scanType: scanMode,
+        scanType: currentMode,
       });
 
       const record = res.data;
 
       // Reproducir sonido de confirmación adecuado
       if (soundEnabled) {
-        if (scanMode === 'SALIDA') {
+        if (currentMode === 'SALIDA') {
           soundFX.playSalida();
         } else if (record?.status === 'PRESENTE') {
           soundFX.playPuntual();
@@ -200,11 +219,12 @@ export default function GaritaTotemRoute() {
       setLastScanResult({
         record,
         user: res.user,
-        scanMode,
+        scanMode: currentMode,
         timestamp: new Date().toLocaleTimeString('es-PE'),
       });
 
       setDniScan('');
+      setManualSearch('');
       refreshData();
 
       // Mantener visible la confirmación durante 8 segundos
@@ -225,6 +245,42 @@ export default function GaritaTotemRoute() {
     }
   };
 
+  // Cambiar estado a Puntual directamente
+  const handleQuickChangeToPuntual = async (recordId: string) => {
+    try {
+      await updateAttendanceStatus(recordId, 'PRESENTE', 'Corregido a puntual por Normas y Disciplina');
+      refreshData();
+      if (lastScanResult && lastScanResult.record.id === recordId) {
+        setLastScanResult({
+          ...lastScanResult,
+          record: { ...lastScanResult.record, status: 'PRESENTE' },
+        });
+      }
+    } catch (err: any) {
+      alert(err.message || 'Error al actualizar estado');
+    }
+  };
+
+  // Guardar justificación de asistencia
+  const handleSaveJustification = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!justifyingRecord) return;
+    setSavingJustification(true);
+    try {
+      await updateAttendanceStatus(
+        justifyingRecord.id,
+        'JUSTIFICADO',
+        `Justificado: ${justificationReason}`
+      );
+      setJustifyingRecord(null);
+      refreshData();
+    } catch (err: any) {
+      alert(err.message || 'Error al justificar');
+    } finally {
+      setSavingJustification(false);
+    }
+  };
+
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch(() => {});
@@ -238,8 +294,22 @@ export default function GaritaTotemRoute() {
   const todayAttendance = attendance.filter((a) => a.date?.startsWith(todayStr));
   const totalIngresos = todayAttendance.filter((a) => a.time).length;
   const totalSalidas = todayAttendance.filter((a) => Boolean(a.exitTime)).length;
+  const totalPuntuales = todayAttendance.filter((a) => a.status === 'PRESENTE').length;
+  const totalTardanzas = todayAttendance.filter((a) => a.status === 'TARDANZA').length;
+  const totalJustificados = todayAttendance.filter((a) => a.status === 'JUSTIFICADO').length;
 
-  // PROTECCIÓN DE RUTA: Solo Jefe de Normas y Disciplina o Dirección General
+  // Filtrado de alumnos para búsqueda manual sin carnet físico
+  const manualFilteredStudents = manualSearch.trim()
+    ? students
+        .filter(
+          (s) =>
+            s.name.toLowerCase().includes(manualSearch.toLowerCase()) ||
+            s.dni.includes(manualSearch.trim())
+        )
+        .slice(0, 6)
+    : [];
+
+  // PROTECCIÓN DE RUTA
   if (!isAuthorized) {
     return (
       <div className="max-w-lg mx-auto py-16 text-center space-y-6">
@@ -282,7 +352,8 @@ export default function GaritaTotemRoute() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between gap-3">
+      {/* Barra Superior con Botones de Navegación e Impresión */}
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <Link
           href="/dashboard"
           className="inline-flex items-center gap-2 text-xs font-bold text-burgundy-900 bg-white border border-slate-200 px-3.5 py-2 rounded-xl shadow-sm hover:bg-burgundy-50 transition"
@@ -291,18 +362,30 @@ export default function GaritaTotemRoute() {
           <span>Volver al Dashboard</span>
         </Link>
 
-        {/* Solo botón de Pantalla Completa */}
-        <button
-          onClick={toggleFullScreen}
-          className="p-2 sm:px-3.5 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 text-xs font-bold transition flex items-center gap-2 shadow-sm"
-          title="Modo pantalla completa para tablet o monitor de portería"
-        >
-          <Maximize2 className="w-4 h-4 text-burgundy-800" />
-          <span className="hidden sm:inline">Pantalla Completa</span>
-        </button>
+        <div className="flex items-center gap-2">
+          {/* Botón de Impresión de Parte Diario Oficial */}
+          <button
+            onClick={() => setShowPrintModal(true)}
+            className="px-3.5 py-2 bg-burgundy-900 hover:bg-burgundy-850 text-white rounded-xl text-xs font-black transition flex items-center gap-2 shadow-sm"
+            title="Generar formato oficial de parte diario para Normas y Disciplina"
+          >
+            <Printer className="w-4 h-4 text-lionGold-400" />
+            <span>Imprimir Parte Diario Oficial</span>
+          </button>
+
+          {/* Botón de Pantalla Completa */}
+          <button
+            onClick={toggleFullScreen}
+            className="p-2 sm:px-3.5 sm:py-2 bg-white hover:bg-slate-50 text-slate-700 rounded-xl border border-slate-200 text-xs font-bold transition flex items-center gap-2 shadow-sm"
+            title="Modo pantalla completa para tablet o monitor de portería"
+          >
+            <Maximize2 className="w-4 h-4 text-burgundy-800" />
+            <span className="hidden sm:inline">Pantalla Completa</span>
+          </button>
+        </div>
       </div>
 
-      {/* Flujo de Hoy: Ingresos y Salidas (Sin Aforo) */}
+      {/* Flujo de Hoy: Ingresos y Salidas */}
       <div className="bg-white rounded-2xl p-5 shadow-sm border border-slate-200 grid grid-cols-1 md:grid-cols-2 gap-4">
         {/* Flujo Ingresos */}
         <div className="flex items-center gap-4">
@@ -311,16 +394,21 @@ export default function GaritaTotemRoute() {
           </div>
           <div>
             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">
-              INGRESOS REGISTRADOS HOY
+              INGRESOS REGISTRADOS HOY ({todayStr})
             </span>
             <div className="flex flex-wrap items-center gap-2 mt-0.5">
               <span className="text-xl sm:text-2xl font-black text-slate-900">{totalIngresos} alumnos</span>
               <span className="text-xs bg-emerald-100 text-emerald-800 font-bold px-2.5 py-0.5 rounded-full border border-emerald-300">
-                {stats?.todayAttendance?.present || 0} puntuales
+                {totalPuntuales} puntuales
               </span>
               <span className="text-xs bg-amber-100 text-amber-800 font-bold px-2.5 py-0.5 rounded-full border border-amber-300">
-                {stats?.todayAttendance?.late || 0} tardanzas
+                {totalTardanzas} tardanzas
               </span>
+              {totalJustificados > 0 && (
+                <span className="text-xs bg-blue-100 text-blue-800 font-bold px-2.5 py-0.5 rounded-full border border-blue-300">
+                  {totalJustificados} justificados
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -344,10 +432,10 @@ export default function GaritaTotemRoute() {
         </div>
       </div>
 
-      {/* Área Central: Dos Columnas (Izquierda: Selector Entrada/Salida & Escáner / Derecha: Confirmación con Check Gigante) */}
+      {/* Área Central: Dos Columnas */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
         
-        {/* Columna Izquierda: Terminal Láser */}
+        {/* Columna Izquierda: Terminal Láser & Búsqueda Manual */}
         <div className="bg-white rounded-3xl p-6 sm:p-8 shadow-md border border-slate-200 flex flex-col justify-between space-y-6">
           <div className="space-y-4">
             
@@ -444,37 +532,80 @@ export default function GaritaTotemRoute() {
                 {loading ? 'Leyendo...' : 'ESCANEAR'}
               </button>
             </div>
-            <p className="text-[11px] text-slate-500 font-medium flex items-center gap-1.5">
-              <span>⚡</span>
-              <span>Puedes teclear o escanear con la pistola desde cualquier lugar de la pantalla sin necesidad de hacer clic en el cuadro de texto.</span>
-            </p>
-          </div>
 
-          {/* Información de Operación de Garita */}
-          <div className="p-6 rounded-3xl border-2 border-dashed border-slate-200 text-center text-slate-400 bg-slate-50/50 space-y-2.5">
-            <ScanLine className="w-10 h-10 mx-auto text-slate-300 animate-pulse" />
-            <h3 className="text-sm font-black text-slate-700">
-              Terminal de Garita Whitman • {scanMode === 'INGRESO' ? 'Ingreso Matutino' : 'Marcado de Salida'}
-            </h3>
-            <p className="text-xs text-slate-500 max-w-sm mx-auto">
-              {scanMode === 'INGRESO'
-                ? 'Apunta la pistola lectora al código de barras del carnet para registrar la entrada del alumno.'
-                : 'Apunta la pistola lectora al código de barras del carnet para marcar la salida y retiro del alumno.'}
-            </p>
-            <div className="inline-flex items-center gap-2 bg-white px-3 py-1 rounded-full border border-slate-200 text-[11px] text-slate-500 font-semibold shadow-sm">
-              <span>Ingreso puntual: hasta 08:05 AM</span>
-              <span>•</span>
-              <span>Salida: Todo el turno escolar</span>
+            {/* BÚSQUEDA MANUAL PARA ALUMNOS SIN CARNET FÍSICO */}
+            <div className="pt-2 border-t border-slate-100 space-y-2">
+              <div className="flex items-center justify-between text-xs font-black text-slate-700 uppercase tracking-wide">
+                <span>Marcado Manual (Alumnos sin carnet físico):</span>
+                {manualSearch && (
+                  <button
+                    type="button"
+                    onClick={() => setManualSearch('')}
+                    className="text-slate-400 hover:text-slate-700 text-[10px] font-bold"
+                  >
+                    Limpiar
+                  </button>
+                )}
+              </div>
+
+              <div className="relative">
+                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-3" />
+                <input
+                  ref={manualInputRef}
+                  type="text"
+                  placeholder="Escribe el nombre o DNI del alumno sin carnet..."
+                  value={manualSearch}
+                  onChange={(e) => setManualSearch(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-none focus:border-burgundy-700 focus:ring-2 focus:ring-burgundy-100 bg-slate-50"
+                />
+              </div>
+
+              {/* Lista Desplegable de Coincidencias */}
+              {manualFilteredStudents.length > 0 && (
+                <div className="bg-white rounded-2xl border border-slate-200 shadow-lg p-2 space-y-1.5 animate-in fade-in duration-100 max-h-56 overflow-y-auto">
+                  {manualFilteredStudents.map((st) => (
+                    <div
+                      key={st.id}
+                      className="p-2 rounded-xl hover:bg-slate-50 flex items-center justify-between gap-2 border border-slate-100"
+                    >
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-slate-900 truncate">{st.name}</p>
+                        <p className="text-[10px] text-slate-500 font-mono">
+                          DNI: {st.dni} • {st.gradeOrClass}
+                        </p>
+                      </div>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => processScan(st.dni, 'INGRESO')}
+                          className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg shadow-xs transition"
+                        >
+                          🟢 Ingreso
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => processScan(st.dni, 'SALIDA')}
+                          className="bg-amber-600 hover:bg-amber-700 text-white font-bold text-[10px] px-2.5 py-1 rounded-lg shadow-xs transition"
+                        >
+                          🟠 Salida
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
 
+          {/* Información de Sincronización */}
           <div className="pt-2 text-xs text-slate-400 flex items-center justify-between border-t border-slate-100">
             <span>Sincronizado con Neon PostgreSQL en la nube</span>
             <span>Colegio Whitman • Portería Central</span>
           </div>
         </div>
 
-        {/* Columna Derecha: Confirmación de Alumno con Check Gigante */}
+        {/* Columna Derecha: Confirmación con Check Gigante */}
         <div className="flex flex-col">
           {lastScanResult ? (
             <div
@@ -501,8 +632,8 @@ export default function GaritaTotemRoute() {
                 </div>
               </div>
 
-              {/* Badge de Estado */}
-              <div>
+              {/* Badge de Estado con Botón para Corregir en Vivo */}
+              <div className="flex flex-col items-center gap-2">
                 <span
                   className={`font-black text-xs sm:text-sm px-5 py-1.5 rounded-full uppercase tracking-wider text-white shadow-sm inline-flex items-center gap-1.5 ${
                     lastScanResult.scanMode === 'SALIDA'
@@ -518,6 +649,17 @@ export default function GaritaTotemRoute() {
                     ? '✓ INGRESO PUNTUAL CONFIRMADO'
                     : '⚠ REGISTRO CON TARDANZA'}
                 </span>
+
+                {/* Si marcó tardanza por error o tolerancia, botón para cambiar a puntual en 1 clic */}
+                {lastScanResult.scanMode === 'INGRESO' && lastScanResult.record.status === 'TARDANZA' && (
+                  <button
+                    type="button"
+                    onClick={() => handleQuickChangeToPuntual(lastScanResult.record.id)}
+                    className="text-[11px] font-bold bg-white text-emerald-800 border border-emerald-300 hover:bg-emerald-100 px-3 py-1 rounded-full shadow-xs transition"
+                  >
+                    ✓ Cambiar a Puntual (Tolerancia)
+                  </button>
+                )}
               </div>
 
               {/* Nombre Gigante del Alumno */}
@@ -565,9 +707,6 @@ export default function GaritaTotemRoute() {
                   {errorMessage}
                 </p>
               </div>
-              <p className="text-[11px] text-slate-500 font-medium">
-                Verifique que el alumno esté matriculado en la base de datos de Whitman.
-              </p>
             </div>
           ) : (
             <div className="h-full min-h-[400px] rounded-3xl p-8 border-2 border-dashed border-slate-200 bg-white flex flex-col items-center justify-center text-center space-y-3 shadow-sm">
@@ -578,13 +717,284 @@ export default function GaritaTotemRoute() {
                 Esperando Registro • {scanMode === 'INGRESO' ? 'Entrada' : 'Salida'}
               </h3>
               <p className="text-xs text-slate-500 max-w-xs leading-relaxed">
-                Al escanear el carnet o DNI, aquí se mostrará el nombre del alumno y el check de confirmación de {scanMode === 'INGRESO' ? 'ingreso' : 'salida'} en tiempo real.
+                Al escanear el carnet o buscar manualmente, aquí se mostrará el nombre del alumno y el check de confirmación de {scanMode === 'INGRESO' ? 'ingreso' : 'salida'} en tiempo real.
               </p>
             </div>
           )}
         </div>
-
       </div>
+
+      {/* REGISTRO DE ASISTENCIAS DE HOY CON ACCIONES DIRECTAS EN VIVO */}
+      {todayAttendance.length > 0 && (
+        <div className="bg-white rounded-3xl p-6 shadow-sm border border-slate-200 space-y-4">
+          <div className="flex items-center justify-between border-b border-slate-100 pb-3">
+            <div>
+              <h3 className="text-base font-black text-slate-900 font-serif">
+                Últimos Registros del Día ({todayAttendance.length} alumnos registrados hoy)
+              </h3>
+              <p className="text-xs text-slate-500">
+                Control de asistencia, corrección de tardanzas a puntual y justificación de faltas.
+              </p>
+            </div>
+            <button
+              onClick={() => setShowPrintModal(true)}
+              className="text-xs font-bold text-burgundy-900 hover:underline flex items-center gap-1.5"
+            >
+              <Printer className="w-3.5 h-3.5" />
+              <span>Imprimir Formato Oficial</span>
+            </button>
+          </div>
+
+          <div className="max-h-72 overflow-y-auto border border-slate-100 rounded-2xl">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-slate-50 text-slate-700 font-bold uppercase text-[10px] border-b border-slate-200 sticky top-0">
+                <tr>
+                  <th className="py-2.5 px-3">Hora In</th>
+                  <th className="py-2.5 px-3">Hora Out</th>
+                  <th className="py-2.5 px-3">Estudiante</th>
+                  <th className="py-2.5 px-3">Aula</th>
+                  <th className="py-2.5 px-3">Estado</th>
+                  <th className="py-2.5 px-3 text-right">Acción Rápida</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-100">
+                {todayAttendance.slice(0, 15).map((att) => (
+                  <tr key={att.id} className="hover:bg-slate-50 transition">
+                    <td className="py-2.5 px-3 font-mono font-bold text-emerald-700">{att.time || '—'}</td>
+                    <td className="py-2.5 px-3 font-mono font-bold text-amber-700">{att.exitTime || '—'}</td>
+                    <td className="py-2.5 px-3">
+                      <span className="font-bold text-slate-900 block">{att.userName}</span>
+                      <span className="text-[10px] text-slate-400 font-mono">DNI: {att.userDni}</span>
+                    </td>
+                    <td className="py-2.5 px-3 text-slate-600">{att.gradeOrClass}</td>
+                    <td className="py-2.5 px-3">
+                      <span
+                        className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                          att.status === 'PRESENTE'
+                            ? 'bg-emerald-100 text-emerald-800'
+                            : att.status === 'TARDANZA'
+                            ? 'bg-amber-100 text-amber-800'
+                            : 'bg-blue-100 text-blue-800'
+                        }`}
+                      >
+                        {att.status}
+                      </span>
+                    </td>
+                    <td className="py-2.5 px-3 text-right">
+                      <div className="inline-flex items-center gap-1.5">
+                        {att.status === 'TARDANZA' && (
+                          <button
+                            type="button"
+                            onClick={() => handleQuickChangeToPuntual(att.id)}
+                            className="text-[10px] font-bold text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-2 py-0.5 rounded border border-emerald-200 transition"
+                          >
+                            Puntual
+                          </button>
+                        )}
+                        {att.status !== 'JUSTIFICADO' && (
+                          <button
+                            type="button"
+                            onClick={() => setJustifyingRecord(att)}
+                            className="text-[10px] font-bold text-blue-700 bg-blue-50 hover:bg-blue-100 px-2 py-0.5 rounded border border-blue-200 transition"
+                          >
+                            Justificar
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 1: JUSTIFICAR ASISTENCIA                           */}
+      {/* ======================================================== */}
+      {justifyingRecord && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-md w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150">
+            <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-850 px-6 py-4 text-white flex items-center justify-between">
+              <h3 className="font-bold text-base">Justificar Asistencia / Tardanza</h3>
+              <button
+                onClick={() => setJustifyingRecord(null)}
+                className="text-burgundy-200 hover:text-white text-lg font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveJustification} className="p-6 space-y-4">
+              <div>
+                <span className="text-[10px] font-bold uppercase text-slate-400 block">Estudiante</span>
+                <p className="text-sm font-black text-slate-900">{justifyingRecord.userName}</p>
+                <p className="text-xs text-slate-500">
+                  DNI: {justifyingRecord.userDni} • {justifyingRecord.gradeOrClass}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                  Motivo de la Justificación *
+                </label>
+                <select
+                  value={justificationReason}
+                  onChange={(e) => setJustificationReason(e.target.value)}
+                  className="w-full text-xs font-semibold border border-slate-300 rounded-xl px-3 py-2.5 bg-white text-slate-800 focus:outline-none focus:border-burgundy-700"
+                >
+                  <option value="Motivo de salud / cita médica">Motivo de salud / cita médica (certificado)</option>
+                  <option value="Permiso por trámite personal o familiar">Permiso por trámite personal o familiar</option>
+                  <option value="Tolerancia especial autorizada por Normas">Tolerancia especial autorizada por Normas</option>
+                  <option value="Representación institucional / deportiva">Representación institucional / deportiva</option>
+                  <option value="Fuerza mayor / transporte">Fuerza mayor / transporte</option>
+                </select>
+              </div>
+
+              <div className="pt-2 flex items-center justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setJustifyingRecord(null)}
+                  className="px-4 py-2.5 rounded-xl text-xs font-bold text-slate-600 hover:bg-slate-100"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingJustification}
+                  className="bg-burgundy-900 hover:bg-burgundy-850 text-white font-black px-5 py-2.5 rounded-xl text-xs shadow-md transition disabled:opacity-50"
+                >
+                  {savingJustification ? 'Guardando...' : 'Confirmar Justificación'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ======================================================== */}
+      {/* MODAL 2: PARTE DIARIO INSTITUCIONAL (IMPRIMIBLE)          */}
+      {/* ======================================================== */}
+      {showPrintModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4 overflow-y-auto">
+          <div className="bg-white rounded-3xl shadow-2xl max-w-4xl w-full overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-150 my-6">
+            {/* Header del Modal (Oculto al imprimir) */}
+            <div className="bg-gradient-to-r from-burgundy-900 to-burgundy-850 px-6 py-4 text-white flex items-center justify-between print:hidden">
+              <div className="flex items-center gap-2">
+                <Printer className="w-5 h-5 text-lionGold-400" />
+                <h3 className="font-bold text-base">Vista Previa • Parte Diario Oficial de Asistencia</h3>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => window.print()}
+                  className="bg-lionGold-500 hover:bg-lionGold-400 text-burgundy-950 font-black px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-md"
+                >
+                  <Printer className="w-4 h-4" />
+                  <span>Imprimir Documento</span>
+                </button>
+                <button
+                  onClick={() => setShowPrintModal(false)}
+                  className="text-burgundy-200 hover:text-white text-lg font-bold px-2"
+                >
+                  ✕
+                </button>
+              </div>
+            </div>
+
+            {/* CONTENIDO IMPRIMIBLE OFICIAL */}
+            <div className="p-8 sm:p-12 space-y-6 text-slate-900 bg-white" id="parte-diario-print">
+              {/* Membrete Institucional */}
+              <div className="border-b-2 border-burgundy-900 pb-4 flex items-center justify-between">
+                <div>
+                  <span className="text-[11px] font-black tracking-widest text-burgundy-900 uppercase">
+                    I.E.P. WALT WHITMAN • LIMA - PERÚ
+                  </span>
+                  <h1 className="text-xl sm:text-2xl font-black font-serif text-slate-900 mt-1">
+                    PARTE DIARIO OFICIAL DE CONTROL DE ASISTENCIA Y PUNTUALIDAD
+                  </h1>
+                  <p className="text-xs text-slate-500 font-medium">
+                    Jefatura de Normas, Disciplina y Convivencia Escolar • Año Lectivo 2026
+                  </p>
+                </div>
+                <div className="text-right font-mono text-xs text-slate-700">
+                  <p><strong>Fecha:</strong> {todayStr}</p>
+                  <p><strong>Hora Emisión:</strong> {new Date().toLocaleTimeString('es-PE')}</p>
+                </div>
+              </div>
+
+              {/* Resumen Estadístico */}
+              <div className="grid grid-cols-4 gap-3 text-center border border-slate-200 rounded-2xl p-4 bg-slate-50">
+                <div>
+                  <span className="text-[10px] font-black text-slate-500 uppercase block">Total Asistentes</span>
+                  <span className="text-xl font-black text-slate-900">{totalIngresos}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-emerald-700 uppercase block">Puntuales</span>
+                  <span className="text-xl font-black text-emerald-800">{totalPuntuales}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-amber-700 uppercase block">Tardanzas</span>
+                  <span className="text-xl font-black text-amber-800">{totalTardanzas}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-blue-700 uppercase block">Justificados</span>
+                  <span className="text-xl font-black text-blue-800">{totalJustificados}</span>
+                </div>
+              </div>
+
+              {/* Tabla de Alumnos */}
+              <div className="overflow-x-auto border border-slate-200 rounded-2xl">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-100 text-slate-800 font-black uppercase text-[10px] border-b border-slate-200">
+                    <tr>
+                      <th className="py-2 px-3">#</th>
+                      <th className="py-2 px-3">Hora Ingreso</th>
+                      <th className="py-2 px-3">Hora Salida</th>
+                      <th className="py-2 px-3">DNI</th>
+                      <th className="py-2 px-3">Apellidos y Nombres</th>
+                      <th className="py-2 px-3">Grado / Aula</th>
+                      <th className="py-2 px-3">Estado</th>
+                      <th className="py-2 px-3">Observaciones</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {todayAttendance.map((rec, index) => (
+                      <tr key={rec.id}>
+                        <td className="py-2 px-3 font-mono text-slate-400">{index + 1}</td>
+                        <td className="py-2 px-3 font-mono font-bold">{rec.time || '—'}</td>
+                        <td className="py-2 px-3 font-mono">{rec.exitTime || '—'}</td>
+                        <td className="py-2 px-3 font-mono">{rec.userDni}</td>
+                        <td className="py-2 px-3 font-bold">{rec.userName}</td>
+                        <td className="py-2 px-3">{rec.gradeOrClass}</td>
+                        <td className="py-2 px-3">
+                          <span className="font-bold text-[10px] uppercase">{rec.status}</span>
+                        </td>
+                        <td className="py-2 px-3 text-slate-500 italic">{rec.notes || '—'}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+
+              {/* Firmas Institucionales */}
+              <div className="pt-12 grid grid-cols-2 gap-12 text-center text-xs">
+                <div>
+                  <div className="border-t border-slate-400 w-48 mx-auto pt-2" />
+                  <p className="font-bold text-slate-900">Jefe de Normas y Disciplina</p>
+                  <p className="text-[10px] text-slate-500">I.E.P. Walt Whitman</p>
+                </div>
+                <div>
+                  <div className="border-t border-slate-400 w-48 mx-auto pt-2" />
+                  <p className="font-bold text-slate-900">Dirección General</p>
+                  <p className="text-[10px] text-slate-500">I.E.P. Walt Whitman</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

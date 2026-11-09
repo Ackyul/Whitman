@@ -92,12 +92,24 @@ export async function POST(request: Request) {
         createdAt: new Date().toISOString(),
       };
 
+      const sessionToken = `tok_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+      try {
+        await (sql as any).query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_session_token VARCHAR(128);`);
+        await (sql as any).query(`
+          UPDATE users SET current_session_token = $1
+          WHERE TRIM(mother_dni) = $2 OR TRIM(father_dni) = $2 OR TRIM(parent_dni) = $2;
+        `, [sessionToken, cleanId]);
+      } catch (tokErr) {
+        console.warn('Error guardando sessionToken para padre:', tokErr);
+      }
+
       resetRateLimit(rateLimitKey);
       return NextResponse.json({
         success: true,
         message: `¡Bienvenido(a) ${relTitle} ${parentUser.name}!`,
         user: parentUser,
         linkedStudents: rows,
+        sessionToken,
       });
     }
 
@@ -142,12 +154,21 @@ export async function POST(request: Request) {
         );
       }
 
+      const sessionToken = `tok_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+      try {
+        await (sql as any).query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_session_token VARCHAR(128);`);
+        await (sql as any).query(`UPDATE users SET current_session_token = $1 WHERE id = $2;`, [sessionToken, student.id]);
+      } catch (tokErr) {
+        console.warn('Error guardando sessionToken para alumno:', tokErr);
+      }
+
       resetRateLimit(rateLimitKey);
       delete student.password;
       return NextResponse.json({
         success: true,
         message: `¡Bienvenido León ${student.name}!`,
         user: student,
+        sessionToken,
       });
     }
 
@@ -189,12 +210,21 @@ export async function POST(request: Request) {
       );
     }
 
+    const sessionToken = `tok_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+    try {
+      await (sql as any).query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS current_session_token VARCHAR(128);`);
+      await (sql as any).query(`UPDATE users SET current_session_token = $1 WHERE id = $2;`, [sessionToken, staff.id]);
+    } catch (tokErr) {
+      console.warn('Error guardando sessionToken para staff:', tokErr);
+    }
+
     resetRateLimit(rateLimitKey);
     delete staff.password;
     return NextResponse.json({
       success: true,
       message: `¡Bienvenido ${staff.name}!`,
       user: staff,
+      sessionToken,
     });
   } catch (err: any) {
     console.error('Error en login route:', err);
