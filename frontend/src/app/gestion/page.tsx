@@ -648,9 +648,15 @@ export default function GestionAcademicaPage() {
 
     setLoading(true);
     try {
+      const isAcademiaLater =
+        studentForm.level === 'ACADEMIA' &&
+        (studentForm.grade === 'ASIGNAR_LUEGO' || !studentForm.grade);
+
       const payload = {
         ...studentForm,
-        gradeOrClass: `${studentForm.grade} - Sin Asignar`,
+        gradeOrClass: isAcademiaLater
+          ? 'Academia - Por Asignar'
+          : `${studentForm.grade} - Sin Asignar`,
       };
       const res = await enrollStudentApi(payload);
       notify('success', `¡Matrícula exitosa! ${res.message || 'Alumno registrado en la base de datos'}`);
@@ -824,11 +830,20 @@ export default function GestionAcademicaPage() {
         const dni = parts[0];
         const name = parts[1];
         let levelRaw = (parts[2] || 'SECUNDARIA').toUpperCase();
-        let level: EducationLevel = levelRaw.includes('PRIM') ? 'PRIMARIA' : 'SECUNDARIA';
+        let level: EducationLevel = levelRaw.includes('PRIM')
+          ? 'PRIMARIA'
+          : levelRaw.includes('ACAD')
+          ? 'ACADEMIA'
+          : 'SECUNDARIA';
 
-        // Si no se especificó aula, o dice "Sin Asignar", se matricula como Sin Asignar
-        let gradeOrClass = parts[3] || `${level === 'PRIMARIA' ? '1ro Primaria' : '1ro Secundaria'} - Sin Asignar`;
-        if (gradeOrClass && !gradeOrClass.includes(' - ')) {
+        // Si no se especificó aula, o dice "Sin Asignar", se matricula como Sin Asignar / Por Asignar
+        let gradeOrClass = parts[3];
+        if (!gradeOrClass || gradeOrClass.toLowerCase().includes('asignar')) {
+          gradeOrClass =
+            level === 'ACADEMIA'
+              ? 'Academia - Por Asignar'
+              : `${level === 'PRIMARIA' ? '1ro Primaria' : '1ro Secundaria'} - Sin Asignar`;
+        } else if (!gradeOrClass.includes(' - ')) {
           gradeOrClass = `${gradeOrClass} - Sin Asignar`;
         }
 
@@ -1162,12 +1177,10 @@ export default function GestionAcademicaPage() {
                             const lvl = e.target.value as EducationLevel;
                             const gradesOfLvl = gradesList.filter((g) => g.level === lvl);
                             const firstGrade =
-                              gradesOfLvl[0]?.name ||
-                              (lvl === 'PRIMARIA'
-                                ? '1ro Primaria'
-                                : lvl === 'ACADEMIA'
-                                ? 'Ciclo Semianual UNI'
-                                : '1ro Secundaria');
+                              lvl === 'ACADEMIA'
+                                ? 'ASIGNAR_LUEGO'
+                                : gradesOfLvl[0]?.name ||
+                                  (lvl === 'PRIMARIA' ? '1ro Primaria' : '1ro Secundaria');
                             setStudentForm({
                               ...studentForm,
                               level: lvl,
@@ -1178,13 +1191,13 @@ export default function GestionAcademicaPage() {
                         >
                           <option value="PRIMARIA">Primaria</option>
                           <option value="SECUNDARIA">Secundaria</option>
-                          <option value="ACADEMIA">Academia</option>
+                          <option value="ACADEMIA">🦁 Academia Preuniversitaria</option>
                         </select>
                       </div>
 
                       <div>
                         <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                          Grado Escolar *
+                          {studentForm.level === 'ACADEMIA' ? 'Ciclo / Aula o Sección' : 'Grado Escolar *'}
                         </label>
                         <select
                           value={studentForm.grade}
@@ -1193,7 +1206,21 @@ export default function GestionAcademicaPage() {
                           }
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white text-slate-800 focus:outline-none focus:border-burgundy-700"
                         >
-                          {gradesList.filter((g) => g.level === studentForm.level).length === 0 ? (
+                          {studentForm.level === 'ACADEMIA' && (
+                            <option value="ASIGNAR_LUEGO">
+                              ⏳ Asignar luego a curso o sección (Por definir)
+                            </option>
+                          )}
+                          {studentForm.level === 'ACADEMIA' ? (
+                            (gradesList.filter((g) => g.level === 'ACADEMIA').length > 0
+                              ? gradesList.filter((g) => g.level === 'ACADEMIA').map((g) => g.name)
+                              : BASE_GRADES_BY_LEVEL['ACADEMIA']
+                            ).map((gName) => (
+                              <option key={gName} value={gName}>
+                                {gName}
+                              </option>
+                            ))
+                          ) : gradesList.filter((g) => g.level === studentForm.level).length === 0 ? (
                             <option value="">
                               ⚠️ No hay grados creados en {studentForm.level}. Créalos en la pestaña 2
                             </option>
