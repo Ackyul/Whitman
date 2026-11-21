@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -53,7 +53,7 @@ interface GoogleAdminProfile {
   picture?: string;
 }
 
-const BASE_GRADES_BY_LEVEL: Record<'PRIMARIA' | 'SECUNDARIA', string[]> = {
+const BASE_GRADES_BY_LEVEL: Record<'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA', string[]> = {
   PRIMARIA: [
     '1ro Primaria',
     '2do Primaria',
@@ -68,6 +68,12 @@ const BASE_GRADES_BY_LEVEL: Record<'PRIMARIA' | 'SECUNDARIA', string[]> = {
     '3ro Secundaria',
     '4to Secundaria',
     '5to Secundaria',
+  ],
+  ACADEMIA: [
+    'Ciclo Semianual UNI',
+    'Ciclo San Marcos',
+    'Ciclo Anual',
+    'Ciclo Repaso Intensivo',
   ],
 };
 
@@ -336,7 +342,7 @@ export default function GestionAcademicaPage() {
   const [bulkStatus, setBulkStatus] = useState<string | null>(null);
 
   // --- ESTADOS Y HANDLERS PARA TAB 4: CREACIÓN Y GESTIÓN DE CURSOS ---
-  const [courseTabLevel, setCourseTabLevel] = useState<'SECUNDARIA' | 'PRIMARIA'>('SECUNDARIA');
+  const [courseTabLevel, setCourseTabLevel] = useState<'SECUNDARIA' | 'PRIMARIA' | 'ACADEMIA'>('SECUNDARIA');
   const [courseTabGrade, setCourseTabGrade] = useState<string>('3ro Secundaria');
   const [courseTabList, setCourseTabList] = useState<Course[]>([]);
   const [courseTabLoading, setCourseTabLoading] = useState(false);
@@ -525,16 +531,15 @@ export default function GestionAcademicaPage() {
     try {
       const g = await fetchAcademicGradesApi();
       if (g) {
-        const cleaned = g.filter((item) => item.level !== 'ACADEMIA');
-        setGradesList(cleaned);
-        if (cleaned.length > 0) {
+        setGradesList(g);
+        if (g.length > 0) {
           setSelectedGrade((prev) => {
-            const exists = cleaned.some((x) => x.name === prev);
-            return exists ? prev : cleaned[0].name;
+            const exists = g.some((x) => x.name === prev);
+            return exists ? prev : g[0].name;
           });
           setStudentForm((prev) => ({
             ...prev,
-            grade: prev.grade || cleaned[0].name,
+            grade: prev.grade || g[0].name,
           }));
         }
       }
@@ -617,10 +622,11 @@ export default function GestionAcademicaPage() {
     setTimeout(() => setNotification(null), 5500);
   };
 
-  // Helper para deducir el nivel de un grado (Colegio: Primaria o Secundaria)
+  // Helper para deducir el nivel de un grado (Colegio: Primaria o Secundaria, o Academia)
   const getLevelForGrade = (gradeName: string): EducationLevel => {
     const lower = gradeName.toLowerCase();
     if (lower.includes('prim')) return 'PRIMARIA';
+    if (lower.includes('acad') || lower.includes('ciclo') || lower.includes('uni') || lower.includes('san marcos') || lower.includes('repaso')) return 'ACADEMIA';
     return 'SECUNDARIA';
   };
 
@@ -1153,9 +1159,15 @@ export default function GestionAcademicaPage() {
                         <select
                           value={studentForm.level}
                           onChange={(e) => {
-                            const lvl = (e.target.value as 'PRIMARIA' | 'SECUNDARIA');
+                            const lvl = e.target.value as EducationLevel;
                             const gradesOfLvl = gradesList.filter((g) => g.level === lvl);
-                            const firstGrade = gradesOfLvl[0]?.name || (lvl === 'PRIMARIA' ? '1ro Primaria' : '1ro Secundaria');
+                            const firstGrade =
+                              gradesOfLvl[0]?.name ||
+                              (lvl === 'PRIMARIA'
+                                ? '1ro Primaria'
+                                : lvl === 'ACADEMIA'
+                                ? 'Ciclo Semianual UNI'
+                                : '1ro Secundaria');
                             setStudentForm({
                               ...studentForm,
                               level: lvl,
@@ -1164,8 +1176,9 @@ export default function GestionAcademicaPage() {
                           }}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white text-slate-800 focus:outline-none focus:border-burgundy-700"
                         >
-                          <option value="PRIMARIA">🎒 Primaria</option>
-                          <option value="SECUNDARIA">🏫 Secundaria</option>
+                          <option value="PRIMARIA">Primaria</option>
+                          <option value="SECUNDARIA">Secundaria</option>
+                          <option value="ACADEMIA">Academia</option>
                         </select>
                       </div>
 
@@ -1535,8 +1548,9 @@ export default function GestionAcademicaPage() {
                           onChange={(e) => setNewGradeLevel(e.target.value as any)}
                           className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-burgundy-700"
                         >
-                          <option value="PRIMARIA">🎒 Primaria</option>
-                          <option value="SECUNDARIA">🏫 Secundaria</option>
+                          <option value="PRIMARIA">Primaria</option>
+                          <option value="SECUNDARIA">Secundaria</option>
+                          <option value="ACADEMIA">Academia</option>
                         </select>
                       </div>
                     </div>
@@ -2257,26 +2271,26 @@ export default function GestionAcademicaPage() {
                       <span>Gestión & Creación de Cursos por Grado</span>
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Configura las asignaturas oficiales (ej: Mate 1, Mate 2, 7 CyT Física, 10 CyT Anatomía) para cada grado de Primaria y Secundaria.
+                      Configura los cursos y asignaturas oficiales para Primaria, Secundaria y Academia Preuniversitaria.
                     </p>
                   </div>
 
-                  {/* Selector Nivel */}
-                  <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl shrink-0">
+                  {/* Selector Nivel: Secundaria, Primaria y Academia */}
+                  <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl shrink-0">
                     <button
                       type="button"
                       onClick={() => {
                         setCourseTabLevel('SECUNDARIA');
                         setCourseTabGrade('3ro Secundaria');
                       }}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                         courseTabLevel === 'SECUNDARIA'
                           ? 'bg-burgundy-900 text-white shadow-sm'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       <Building className="w-3.5 h-3.5" />
-                      <span>🏛️ Secundaria</span>
+                      <span>Secundaria</span>
                     </button>
                     <button
                       type="button"
@@ -2284,25 +2298,42 @@ export default function GestionAcademicaPage() {
                         setCourseTabLevel('PRIMARIA');
                         setCourseTabGrade('1ro Primaria');
                       }}
-                      className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                         courseTabLevel === 'PRIMARIA'
                           ? 'bg-burgundy-900 text-white shadow-sm'
                           : 'text-slate-600 hover:text-slate-900'
                       }`}
                     >
                       <School className="w-3.5 h-3.5" />
-                      <span>🏫 Primaria</span>
+                      <span>Primaria</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCourseTabLevel('ACADEMIA');
+                        setCourseTabGrade('Ciclo Semianual UNI');
+                      }}
+                      className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                        courseTabLevel === 'ACADEMIA'
+                          ? 'bg-burgundy-900 text-white shadow-sm'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      <GraduationCap className="w-3.5 h-3.5" />
+                      <span>🦁 Academia</span>
                     </button>
                   </div>
                 </div>
 
-                {/* Grados Disponibles en Pestañas Rápidas */}
+                {/* Grados / Ciclos Disponibles en Pestañas Rápidas */}
                 <div>
                   <label className="block text-xs font-bold text-slate-600 uppercase mb-2">
-                    Selecciona el Grado para configurar sus cursos:
+                    {courseTabLevel === 'ACADEMIA'
+                      ? 'Selecciona el Ciclo de Academia para configurar sus cursos:'
+                      : 'Selecciona el Grado para configurar sus cursos:'}
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {(gradesList.length > 0
+                    {(gradesList.length > 0 && gradesList.some((g) => g.level === courseTabLevel)
                       ? gradesList.filter((g) => g.level === courseTabLevel).map((g) => g.name)
                       : BASE_GRADES_BY_LEVEL[courseTabLevel]
                     ).map((gradeName) => {
@@ -2324,131 +2355,6 @@ export default function GestionAcademicaPage() {
                       );
                     })}
                   </div>
-                </div>
-              </div>
-
-              {/* Plantillas Sugeridas con 1 Clic según el Grado */}
-              <div className="bg-gradient-to-br from-amber-500/10 via-lionGold-500/5 to-white p-5 rounded-3xl border border-lionGold-400/50 space-y-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles className="w-4 h-4 text-burgundy-900" />
-                    <h4 className="text-xs font-black uppercase text-slate-900 tracking-wider">
-                      Combos Rápidos Sugeridos para {courseTabGrade}
-                    </h4>
-                  </div>
-                  <span className="text-xs text-slate-500">1-clic para agregar el combo completo</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-                  
-                  {/* Combo Matemática */}
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-amber-900 uppercase flex items-center gap-1.5">
-                        <span>📐</span> Combo Matemática
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleAddBulkCourses([
-                            'Mate 1 (Aritmética)',
-                            'Mate 2 (Álgebra)',
-                            'Mate 4 (Geometría)',
-                            'Trigonometría',
-                            'Razonamiento Matemático',
-                          ])
-                        }
-                        className="text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-2.5 py-1 rounded-lg transition"
-                      >
-                        + Cargar Combo
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-500 leading-tight">
-                      Mate 1 (Aritmética), Mate 2 (Álgebra), Mate 4 (Geometría), Trigonometría, RM.
-                    </p>
-                  </div>
-
-                  {/* Combo Ciencia y Tecnología (Adaptado por Grado: 3ro, 5to, etc.) */}
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-emerald-900 uppercase flex items-center gap-1.5">
-                        <span>🧪</span> Combo CyT {courseTabGrade.includes('3') ? '(3ro)' : courseTabGrade.includes('5') ? '(5to)' : ''}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() => {
-                          if (courseTabGrade.includes('3') || courseTabGrade.includes('3ro')) {
-                            handleAddBulkCourses([
-                              '7 CyT (Física)',
-                              '10 CyT (Anatomía)',
-                              'Química',
-                              'Biología',
-                            ]);
-                          } else if (courseTabGrade.includes('5') || courseTabGrade.includes('5to')) {
-                            handleAddBulkCourses([
-                              '7 CyT (Física 1)',
-                              '8 CyT (Física 2)',
-                              'Química',
-                              'Anatomía',
-                            ]);
-                          } else if (courseTabLevel === 'PRIMARIA') {
-                            handleAddBulkCourses([
-                              'Ciencia y Tecnología',
-                              'Medio Ambiente',
-                              'Biología elemental',
-                            ]);
-                          } else {
-                            handleAddBulkCourses([
-                              'Ciencia y Tecnología (Física)',
-                              'Ciencia y Tecnología (Química)',
-                              'Biología',
-                              'Anatomía',
-                            ]);
-                          }
-                        }}
-                        className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold px-2.5 py-1 rounded-lg transition"
-                      >
-                        + Cargar Combo
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-500 leading-tight">
-                      {courseTabGrade.includes('3')
-                        ? '7 CyT (Física), 10 CyT (Anatomía), Química, Biología.'
-                        : courseTabGrade.includes('5')
-                        ? '7 CyT (Física 1), 8 CyT (Física 2), Química, Anatomía.'
-                        : courseTabLevel === 'PRIMARIA'
-                        ? 'Ciencia y Tecnología, Medio Ambiente, Biología elemental.'
-                        : 'Física, Química, Biología, Anatomía adaptados al grado.'}
-                    </p>
-                  </div>
-
-                  {/* Combo Letras & Humanidades */}
-                  <div className="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
-                    <div className="flex items-center justify-between">
-                      <span className="font-bold text-xs text-indigo-900 uppercase flex items-center gap-1.5">
-                        <span>📚</span> Combo Letras
-                      </span>
-                      <button
-                        type="button"
-                        onClick={() =>
-                          handleAddBulkCourses([
-                            'Lenguaje y Literatura',
-                            'Razonamiento Verbal',
-                            'Historia del Perú',
-                            'Historia Universal',
-                            'Inglés',
-                          ])
-                        }
-                        className="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold px-2.5 py-1 rounded-lg transition"
-                      >
-                        + Cargar Combo
-                      </button>
-                    </div>
-                    <p className="text-xs text-slate-500 leading-tight">
-                      Lenguaje y Literatura, Razonamiento Verbal, Historia del Perú, Historia Universal, Inglés.
-                    </p>
-                  </div>
-
                 </div>
               </div>
 
@@ -2637,7 +2543,7 @@ export default function GestionAcademicaPage() {
                       No hay cursos registrados todavía para {courseTabGrade}.
                     </p>
                     <p className="text-xs text-slate-400">
-                      Usa los combos rápidos sugeridos arriba o el formulario para crearlos.
+                      Usa el formulario individual o la carga masiva en bloque para crearlos.
                     </p>
                   </div>
                 ) : (
