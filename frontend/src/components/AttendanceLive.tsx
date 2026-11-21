@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import {
@@ -412,7 +412,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
             <ClipboardList className="w-4 h-4 text-lionGold-400 shrink-0" />
             <span>2. Registro de Asistencias</span>
             <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-black ml-1 ${
+              className={`text-xs px-2 py-0.5 rounded-full font-black ml-1 ${
                 activeTab === 'registros'
                   ? 'bg-lionGold-500 text-burgundy-950'
                   : 'bg-burgundy-100 text-burgundy-900'
@@ -434,7 +434,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
             <Scale className="w-4 h-4 text-lionGold-400 shrink-0" />
             <span>3. Diferencia entre Días</span>
             <span
-              className={`text-[10px] px-2 py-0.5 rounded-full font-black ml-1 ${
+              className={`text-xs px-2 py-0.5 rounded-full font-black ml-1 ${
                 activeTab === 'diferencia'
                   ? 'bg-lionGold-500 text-burgundy-950'
                   : 'bg-emerald-100 text-emerald-800'
@@ -461,7 +461,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
               <div className="mt-2 text-2xl md:text-3xl font-black text-slate-800">
                 {stats?.todayAttendance.present ?? 0}
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">Ingreso antes de las {schedule.entryEnd}</p>
+              <p className="text-xs text-slate-400 mt-1">Ingreso antes de las {schedule.entryEnd}</p>
             </div>
 
             <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-amber-500 border border-slate-200">
@@ -472,7 +472,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
               <div className="mt-2 text-2xl md:text-3xl font-black text-slate-800">
                 {stats?.todayAttendance.late ?? 0}
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">Hasta tolerancia {schedule.entryTolerance}</p>
+              <p className="text-xs text-slate-400 mt-1">Hasta tolerancia {schedule.entryTolerance}</p>
             </div>
 
             <div className="bg-white p-4 rounded-2xl shadow-sm border-l-4 border-burgundy-800 border border-slate-200">
@@ -483,7 +483,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
               <div className="mt-2 text-2xl md:text-3xl font-black text-slate-800">
                 {stats?.todayAttendance.totalMarked ?? 0}
               </div>
-              <p className="text-[11px] text-slate-400 mt-1">De {stats?.totalStudents ?? 0} alumnos matriculados</p>
+              <p className="text-xs text-slate-400 mt-1">De {stats?.totalStudents ?? 0} alumnos matriculados</p>
             </div>
 
             <div className="bg-gradient-to-br from-burgundy-900 to-burgundy-800 text-white p-4 rounded-2xl shadow-lg border border-lionGold-500/40">
@@ -494,7 +494,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
               <div className="mt-2 text-2xl md:text-3xl font-black text-white">
                 {stats?.todayAttendance.attendanceRate ?? 0}%
               </div>
-              <p className="text-[11px] text-burgundy-200 mt-1">¡Garra del León Whitman!</p>
+              <p className="text-xs text-burgundy-200 mt-1">¡Garra del León Whitman!</p>
             </div>
           </div>
 
@@ -518,7 +518,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
               <div className={`p-3 rounded-2xl border flex items-center gap-3 ${currentMode.badgeColor}`}>
                 <currentMode.icon className="w-5 h-5 shrink-0" />
                 <div>
-                  <span className="text-[10px] font-black uppercase tracking-wider block">
+                  <span className="text-xs font-black uppercase tracking-wider block">
                     {currentMode.label}
                   </span>
                   <span className="text-xs font-medium leading-tight block">
@@ -558,7 +558,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                       <h4 className="font-black text-sm uppercase tracking-wide">
                         Horario de Entrada (Ingreso)
                       </h4>
-                      <p className="text-[11px] text-emerald-700 font-medium">
+                      <p className="text-xs text-emerald-700 font-medium">
                         Rango para registrar la llegada de los estudiantes
                       </p>
                     </div>
@@ -566,7 +566,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                         De qué hora (Inicio):
                       </label>
                       <input
@@ -576,11 +576,11 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                         required
                         className="w-full bg-white px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
                       />
-                      <span className="text-[10px] text-slate-400 mt-0.5 block">Apertura de garita</span>
+                      <span className="text-xs text-slate-400 mt-0.5 block">Apertura de garita</span>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                         Hasta qué hora (Puntual):
                       </label>
                       <input
@@ -590,12 +590,12 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                         required
                         className="w-full bg-white px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:border-emerald-600"
                       />
-                      <span className="text-[10px] text-slate-400 mt-0.5 block">Límite para ser PRESENTE</span>
+                      <span className="text-xs text-slate-400 mt-0.5 block">Límite para ser PRESENTE</span>
                     </div>
                   </div>
 
                   <div>
-                    <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                       Tolerancia Máxima / Tardanza hasta:
                     </label>
                     <input
@@ -605,7 +605,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                       required
                       className="w-full bg-white px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:border-amber-600"
                     />
-                    <span className="text-[10px] text-slate-400 mt-0.5 block">
+                    <span className="text-xs text-slate-400 mt-0.5 block">
                       Marcados entre la hora puntual y esta hora se guardan como TARDANZA.
                     </span>
                   </div>
@@ -621,7 +621,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                       <h4 className="font-black text-sm uppercase tracking-wide">
                         Horario de Salida (Despacho)
                       </h4>
-                      <p className="text-[11px] text-indigo-700 font-medium">
+                      <p className="text-xs text-indigo-700 font-medium">
                         Rango para registrar la retirada de los estudiantes
                       </p>
                     </div>
@@ -629,7 +629,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                         De qué hora (Inicio):
                       </label>
                       <input
@@ -639,11 +639,11 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                         required
                         className="w-full bg-white px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:border-indigo-600"
                       />
-                      <span className="text-[10px] text-slate-400 mt-0.5 block">Inicio toque de salida</span>
+                      <span className="text-xs text-slate-400 mt-0.5 block">Inicio toque de salida</span>
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                         Hasta qué hora (Fin):
                       </label>
                       <input
@@ -653,7 +653,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                         required
                         className="w-full bg-white px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-mono font-bold text-slate-800 focus:outline-none focus:border-indigo-600"
                       />
-                      <span className="text-[10px] text-slate-400 mt-0.5 block">Cierre de despacho</span>
+                      <span className="text-xs text-slate-400 mt-0.5 block">Cierre de despacho</span>
                     </div>
                   </div>
 
@@ -661,7 +661,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                     <p className="font-bold flex items-center gap-1.5 mb-1">
                       <span>ℹ️ Marcado Automático:</span>
                     </p>
-                    <p className="text-[11px] leading-relaxed text-slate-600">
+                    <p className="text-xs leading-relaxed text-slate-600">
                       Alumnos escanean en Garita con pistola láser; el sistema asigna Entrada o Salida según las horas establecidas aquí.
                     </p>
                   </div>
@@ -809,7 +809,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                 {filteredRecords.length} estudiantes
               </span>
               {hasActiveFilters && (
-                <span className="text-[11px] text-slate-400 italic">
+                <span className="text-xs text-slate-400 italic">
                   (Filtros activos)
                 </span>
               )}
@@ -835,7 +835,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
           {/* TABLA DE RESULTADOS DE ASISTENCIA */}
           <div className="overflow-x-auto rounded-2xl border border-slate-200">
             <table className="w-full text-left text-xs text-slate-600">
-              <thead className="bg-slate-100/80 text-[10px] font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
+              <thead className="bg-slate-100/80 text-xs font-bold uppercase tracking-wider text-slate-500 border-b border-slate-200">
                 <tr>
                   <th className="px-5 py-3.5">Estudiante</th>
                   <th className="px-4 py-3.5">Nivel / Aula</th>
@@ -877,12 +877,12 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                             <div className="font-bold text-slate-900 flex items-center gap-1.5">
                               <span>{item.userName}</span>
                               {idx === 0 && item.date === todayStr && (
-                                <span className="text-[9px] bg-lionGold-500 text-burgundy-950 font-black px-1.5 py-0.2 rounded uppercase">
+                                <span className="text-xs bg-lionGold-500 text-burgundy-950 font-black px-1.5 py-0.2 rounded uppercase">
                                   En vivo
                                 </span>
                               )}
                             </div>
-                            <div className="text-[11px] text-slate-400 font-mono">DNI: {item.userDni}</div>
+                            <div className="text-xs text-slate-400 font-mono">DNI: {item.userDni}</div>
                           </div>
                         </div>
                       </td>
@@ -890,21 +890,21 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                       <td className="px-4 py-3.5">
                         <div className="flex items-center gap-1">
                           {item.level === 'ACADEMIA' ? (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-burgundy-900 bg-burgundy-50 px-2 py-0.5 rounded border border-burgundy-200">
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-burgundy-900 bg-burgundy-50 px-2 py-0.5 rounded border border-burgundy-200">
                               <Building className="w-3 h-3 text-burgundy-700" />
                               Academia
                             </span>
                           ) : (
-                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-indigo-900 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
+                            <span className="inline-flex items-center gap-1 text-xs font-bold text-indigo-900 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200">
                               <School className="w-3 h-3 text-indigo-700" />
                               Colegio
                             </span>
                           )}
                         </div>
-                        <div className="text-[11px] text-slate-500 mt-0.5 font-medium">{item.gradeOrClass}</div>
+                        <div className="text-xs text-slate-500 mt-0.5 font-medium">{item.gradeOrClass}</div>
                       </td>
 
-                      <td className="px-4 py-3.5 font-mono text-[11px] text-slate-700">
+                      <td className="px-4 py-3.5 font-mono text-xs text-slate-700">
                         {item.date}
                       </td>
 
@@ -918,7 +918,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                               🟠 Out: {item.exitTime}
                             </span>
                           ) : (
-                            <span className="text-slate-400 font-normal text-[10px]">
+                            <span className="text-slate-400 font-normal text-xs">
                               Salida: Pendiente
                             </span>
                           )}
@@ -926,7 +926,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                       </td>
 
                       <td className="px-4 py-3.5">
-                        <span className="text-[11px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono">
+                        <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-mono">
                           {item.method || 'LÁSER'}
                         </span>
                       </td>
@@ -992,7 +992,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
           {/* SELECTOR DE FECHAS */}
           <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="w-full md:w-5/12 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
                 Día 1 (Fecha Base):
               </label>
               <input
@@ -1001,7 +1001,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                 onChange={(e) => setCompareDateA(e.target.value)}
                 className="w-full font-mono text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-800 focus:outline-none focus:border-burgundy-700"
               />
-              <span className="text-[10px] text-slate-400 mt-1 block font-medium">
+              <span className="text-xs text-slate-400 mt-1 block font-medium">
                 {totalA} alumnos marcaron este día
               </span>
             </div>
@@ -1020,7 +1020,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
             </button>
 
             <div className="w-full md:w-5/12 bg-white p-3.5 rounded-xl border border-slate-200 shadow-xs">
-              <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+              <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
                 Día 2 (Fecha a Contrastar):
               </label>
               <input
@@ -1029,7 +1029,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                 onChange={(e) => setCompareDateB(e.target.value)}
                 className="w-full font-mono text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-800 focus:outline-none focus:border-burgundy-700"
               />
-              <span className="text-[10px] text-slate-400 mt-1 block font-medium">
+              <span className="text-xs text-slate-400 mt-1 block font-medium">
                 {totalB} alumnos marcaron este día
               </span>
             </div>
@@ -1038,7 +1038,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
           {/* TARJETAS DE DIFERENCIA */}
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Diferencia Total</span>
+              <span className="text-xs font-bold text-slate-400 uppercase">Diferencia Total</span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className={`text-2xl font-black ${
                   diffTotalAB > 0 ? 'text-emerald-700' : diffTotalAB < 0 ? 'text-rose-700' : 'text-slate-800'
@@ -1047,13 +1047,13 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                 </span>
                 <span className="text-xs text-slate-400 font-bold">alumnos</span>
               </div>
-              <p className="text-[10px] text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 {totalA} (Día 1) vs {totalB} (Día 2)
               </p>
             </div>
 
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Diferencia Puntuales</span>
+              <span className="text-xs font-bold text-slate-400 uppercase">Diferencia Puntuales</span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className={`text-2xl font-black ${
                   diffPresentAB > 0 ? 'text-emerald-700' : diffPresentAB < 0 ? 'text-rose-700' : 'text-slate-800'
@@ -1062,13 +1062,13 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                 </span>
                 <span className="text-xs text-slate-400 font-bold">puntuales</span>
               </div>
-              <p className="text-[10px] text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 {presentA} vs {presentB}
               </p>
             </div>
 
             <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200">
-              <span className="text-[10px] font-bold text-slate-400 uppercase">Diferencia Tardanzas</span>
+              <span className="text-xs font-bold text-slate-400 uppercase">Diferencia Tardanzas</span>
               <div className="flex items-baseline gap-2 mt-1">
                 <span className={`text-2xl font-black ${
                   diffLateAB < 0 ? 'text-emerald-700' : diffLateAB > 0 ? 'text-amber-700' : 'text-slate-800'
@@ -1077,17 +1077,17 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                 </span>
                 <span className="text-xs text-slate-400 font-bold">tardanzas</span>
               </div>
-              <p className="text-[10px] text-slate-500 mt-0.5">
+              <p className="text-xs text-slate-500 mt-0.5">
                 {lateA} vs {lateB}
               </p>
             </div>
 
             <div className="bg-gradient-to-br from-burgundy-900 to-burgundy-800 text-white p-4 rounded-2xl shadow-sm border border-lionGold-500/40">
-              <span className="text-[10px] font-bold text-lionGold-300 uppercase">Alumnos con Cambios</span>
+              <span className="text-xs font-bold text-lionGold-300 uppercase">Alumnos con Cambios</span>
               <div className="text-2xl font-black text-white mt-1">
                 {countDifferencesTotal}
               </div>
-              <p className="text-[10px] text-burgundy-200 mt-0.5">
+              <p className="text-xs text-burgundy-200 mt-0.5">
                 {countAbsentB} faltaron en Día 2 • {countNewB} nuevos en Día 2
               </p>
             </div>
@@ -1179,7 +1179,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
             {filteredComparison.length > 0 ? (
               <div className="overflow-x-auto max-h-96 overflow-y-auto">
                 <table className="w-full text-left text-xs">
-                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200 sticky top-0 bg-slate-50">
+                  <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-xs border-b border-slate-200 sticky top-0 bg-slate-50">
                     <tr>
                       <th className="py-2.5 px-3.5">Estudiante</th>
                       <th className="py-2.5 px-3.5">Aula</th>
@@ -1193,47 +1193,47 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                       <tr key={item.dni} className="hover:bg-slate-50/80 transition">
                         <td className="py-2.5 px-3.5">
                           <p className="font-bold text-slate-900">{item.name}</p>
-                          <p className="text-[10px] text-slate-400 font-mono">DNI: {item.dni}</p>
+                          <p className="text-xs text-slate-400 font-mono">DNI: {item.dni}</p>
                         </td>
                         <td className="py-2.5 px-3.5">
-                          <span className="text-[10px] bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">
+                          <span className="text-xs bg-slate-100 text-slate-700 px-2 py-0.5 rounded font-medium">
                             {item.gradeOrClass}
                           </span>
                         </td>
                         <td className="py-2.5 px-3.5">
                           {item.recordA ? (
                             <div className="flex items-center gap-1.5">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
                                 item.recordA.status === 'PRESENTE'
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : 'bg-amber-100 text-amber-800'
                               }`}>
                                 {item.recordA.status}
                               </span>
-                              <span className="font-mono text-[10px] text-slate-500">({item.recordA.time})</span>
+                              <span className="font-mono text-xs text-slate-500">({item.recordA.time})</span>
                             </div>
                           ) : (
-                            <span className="text-slate-400 text-[10px] italic">No registró</span>
+                            <span className="text-slate-400 text-xs italic">No registró</span>
                           )}
                         </td>
                         <td className="py-2.5 px-3.5">
                           {item.recordB ? (
                             <div className="flex items-center gap-1.5">
-                              <span className={`text-[10px] font-bold px-2 py-0.5 rounded ${
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded ${
                                 item.recordB.status === 'PRESENTE'
                                   ? 'bg-emerald-100 text-emerald-800'
                                   : 'bg-amber-100 text-amber-800'
                               }`}>
                                 {item.recordB.status}
                               </span>
-                              <span className="font-mono text-[10px] text-slate-500">({item.recordB.time})</span>
+                              <span className="font-mono text-xs text-slate-500">({item.recordB.time})</span>
                             </div>
                           ) : (
-                            <span className="text-rose-600 font-bold text-[10px]">No registró</span>
+                            <span className="text-rose-600 font-bold text-xs">No registró</span>
                           )}
                         </td>
                         <td className="py-2.5 px-3.5">
-                          <span className={`text-[10px] font-bold px-2.5 py-0.5 rounded-full border ${item.badgeClass}`}>
+                          <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${item.badgeClass}`}>
                             {item.label}
                           </span>
                         </td>
@@ -1247,7 +1247,7 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
                 <p className="text-xs font-bold text-slate-600">
                   No hay alumnos que coincidan con el filtro seleccionado.
                 </p>
-                <p className="text-[11px] text-slate-400">
+                <p className="text-xs text-slate-400">
                   Intenta con otro filtro de diferencias o verifica las fechas seleccionadas.
                 </p>
               </div>
@@ -1259,3 +1259,4 @@ export const AttendanceLive: React.FC<AttendanceLiveProps> = ({
     </div>
   );
 };
+

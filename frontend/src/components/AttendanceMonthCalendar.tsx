@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { AttendanceRecord } from '../types';
@@ -91,11 +91,11 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
         <div>
           <div className="flex items-center gap-2">
-            <span className="inline-flex items-center gap-1.5 text-burgundy-900 bg-burgundy-50 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border border-burgundy-200">
+            <span className="inline-flex items-center gap-1.5 text-burgundy-900 bg-burgundy-50 px-2.5 py-0.5 rounded-full text-xs font-black uppercase tracking-wider border border-burgundy-200">
               <CalendarIcon className="w-3 h-3 text-burgundy-800" />
               <span>Calendario de Asistencia</span>
             </span>
-            <span className="text-[10px] font-bold text-slate-500 uppercase">
+            <span className="text-xs font-bold text-slate-500 uppercase">
               • Mes Oficial
             </span>
           </div>
@@ -145,7 +145,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
 
       {/* 2. SELECTOR DE MESES: PÍLDORAS PARA SALTAR A CUALQUIER MES DEL AÑO */}
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-[11px]">
+        <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-slate-500 uppercase flex items-center gap-1">
             <span>📅 Seleccionar Mes:</span>
           </span>
@@ -189,7 +189,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
       {/* 3. LEYENDA RÁPIDA COMPACTA: PUNTUALES, TARDANZAS Y SALIDAS */}
       <div className="flex flex-wrap items-center justify-between text-xs bg-slate-50 px-3.5 py-2.5 rounded-2xl border border-slate-200/80 gap-2">
         <div className="flex flex-wrap items-center gap-3.5">
-          <span className="text-[11px] font-bold text-slate-500 uppercase">
+          <span className="text-xs font-bold text-slate-500 uppercase">
             Resumen de {MONTH_NAMES[currentMonth]}:
           </span>
           <span className="flex items-center gap-1.5 text-slate-700 font-bold">
@@ -205,14 +205,14 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
             {totalSalidas} Salidas Registradas
           </span>
         </div>
-        <span className="text-slate-400 font-medium hidden sm:inline text-[11px]">
+        <span className="text-slate-400 font-medium hidden sm:inline text-xs">
           Haz clic en un día para ver detalle de Ingreso y Salida
         </span>
       </div>
 
       {/* 3. GRILLA COMPACTA (Lunes a Domingo) */}
       <div className="space-y-1">
-        <div className="grid grid-cols-7 text-center font-bold text-[10px] text-slate-400 uppercase py-1 border-b border-slate-100">
+        <div className="grid grid-cols-7 text-center font-bold text-xs text-slate-400 uppercase py-1 border-b border-slate-100">
           {DAY_NAMES.map((name, idx) => (
             <div key={idx} className={idx >= 5 ? 'text-slate-300' : ''}>
               {name}
@@ -251,7 +251,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
                 }`}
               >
                 <div className="flex items-center justify-between leading-none">
-                  <span className={`text-[10px] font-bold ${isToday ? 'text-burgundy-900 font-black' : 'text-slate-600'}`}>
+                  <span className={`text-xs font-bold ${isToday ? 'text-burgundy-900 font-black' : 'text-slate-600'}`}>
                     {dayNum}
                   </span>
                   {isToday && (
@@ -275,7 +275,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
                       )}
                     </div>
                   ) : (
-                    <span className="text-[10px] text-slate-200">•</span>
+                    <span className="text-xs text-slate-200">•</span>
                   )}
                 </div>
               </div>
@@ -293,7 +293,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
                 Fecha: {selectedDayRecord.date}
               </span>
               <span
-                className={`text-[10px] font-black uppercase px-2 py-0.5 rounded ${
+                className={`text-xs font-black uppercase px-2 py-0.5 rounded ${
                   selectedDayRecord.status === 'PRESENTE'
                     ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-400/30'
                     : 'bg-amber-500/20 text-amber-300 border border-amber-400/30'
@@ -303,7 +303,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
               </span>
             </div>
 
-            <span className="text-[10px] bg-burgundy-900 px-2 py-0.5 rounded border border-lionGold-400/30 font-mono text-lionGold-300">
+            <span className="text-xs bg-burgundy-900 px-2 py-0.5 rounded border border-lionGold-400/30 font-mono text-lionGold-300">
               Método: {selectedDayRecord.method}
             </span>
           </div>
@@ -317,7 +317,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
                   <LogIn className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-emerald-300 block">
+                  <span className="text-xs uppercase font-bold text-emerald-300 block">
                     🟢 Hora de Ingreso
                   </span>
                   <span className="font-mono font-black text-sm text-white">
@@ -325,7 +325,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
                   </span>
                 </div>
               </div>
-              <span className="text-[10px] text-emerald-300 font-bold">
+              <span className="text-xs text-emerald-300 font-bold">
                 {selectedDayRecord.status === 'PRESENTE' ? 'Puntual' : 'Tardanza'}
               </span>
             </div>
@@ -337,7 +337,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
                   <LogOut className="w-4 h-4" />
                 </div>
                 <div>
-                  <span className="text-[10px] uppercase font-bold text-amber-300 block">
+                  <span className="text-xs uppercase font-bold text-amber-300 block">
                     🟠 Hora de Salida
                   </span>
                   <span className="font-mono font-black text-sm text-white">
@@ -346,7 +346,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
                 </div>
               </div>
               <span
-                className={`text-[10px] font-bold ${
+                className={`text-xs font-bold ${
                   selectedDayRecord.exitTime ? 'text-amber-300' : 'text-slate-400'
                 }`}
               >
@@ -356,7 +356,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
           </div>
 
           {selectedDayRecord.notes && (
-            <p className="text-[11px] text-burgundy-200 italic pt-1 border-t border-burgundy-800/50">
+            <p className="text-xs text-burgundy-200 italic pt-1 border-t border-burgundy-800/50">
               Observación: {selectedDayRecord.notes}
             </p>
           )}
@@ -371,3 +371,4 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
     </div>
   );
 };
+

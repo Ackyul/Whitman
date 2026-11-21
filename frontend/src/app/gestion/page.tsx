@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
@@ -972,7 +972,7 @@ export default function GestionAcademicaPage() {
           </div>
 
           <div>
-            <span className="text-[10px] font-black uppercase tracking-wider text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
+            <span className="text-xs font-black uppercase tracking-wider text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
               ACCESO A COORDINACIÓN, NORMAS Y DIRECCIÓN
             </span>
             <h2 className="text-2xl font-black font-serif text-slate-900 mt-2">
@@ -1026,7 +1026,7 @@ export default function GestionAcademicaPage() {
               <ShieldCheck className="w-5 h-5 text-lionGold-400 shrink-0" />
               <div>
                 <p className="text-xs font-black tracking-wide">Panel Directivo • Seguridad y Respaldo Institucional</p>
-                <p className="text-[11px] text-slate-200">
+                <p className="text-xs text-slate-200">
                   Protección perimetral Cloudflare WAF, Restauración al segundo (Neon PITR) y Cifrado.
                 </p>
               </div>
@@ -1110,7 +1110,7 @@ export default function GestionAcademicaPage() {
                   
                   {/* Sección Alumno */}
                   <div className="space-y-4">
-                    <span className="text-[11px] font-black uppercase text-burgundy-900 tracking-wider">
+                    <span className="text-xs font-black uppercase text-burgundy-900 tracking-wider">
                       A. Datos del Alumno
                     </span>
 
@@ -1209,7 +1209,7 @@ export default function GestionAcademicaPage() {
                           onChange={(e) => setStudentForm({ ...studentForm, password: e.target.value })}
                           className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-sm focus:outline-none focus:border-burgundy-700"
                         />
-                        <p className="text-[10px] text-slate-400 mt-1">
+                        <p className="text-xs text-slate-400 mt-1">
                           Si se deja en blanco, su contraseña inicial será su DNI.
                         </p>
                       </div>
@@ -1228,7 +1228,7 @@ export default function GestionAcademicaPage() {
                       </div>
                     </div>
 
-                    <p className="text-[11px] text-slate-400">
+                    <p className="text-xs text-slate-400">
                       💡 El alumno quedará registrado en su grado escolar. La asignación de aula y balanceo se realiza desde la pestaña <strong>"2. Grados, Aulas & Mezcla"</strong>.
                     </p>
                   </div>
@@ -1236,10 +1236,10 @@ export default function GestionAcademicaPage() {
                   {/* Sección Familiar */}
                   <div className="space-y-4 pt-4 border-t border-slate-100">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                      <span className="text-[11px] font-black uppercase text-burgundy-900 tracking-wider">
+                      <span className="text-xs font-black uppercase text-burgundy-900 tracking-wider">
                         B. Datos Familiares (Acceso al Portal para Madre, Padre y Apoderado)
                       </span>
-                      <span className="text-[10px] font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 w-fit">
+                      <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 w-fit">
                         ✓ Cada uno podrá ingresar con su propio DNI
                       </span>
                     </div>
@@ -1248,11 +1248,11 @@ export default function GestionAcademicaPage() {
                     <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                       <div className="flex items-center gap-1.5 text-xs font-black text-slate-800 uppercase">
                         <span>👩 Datos de la Madre</span>
-                        <span className="text-[10px] text-slate-400 font-normal">(Recomendado para portal de notas)</span>
+                        <span className="text-xs text-slate-400 font-normal">(Recomendado para portal de notas)</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 mb-1">DNI de la Madre</label>
+                          <label className="block text-xs font-bold text-slate-600 mb-1">DNI de la Madre</label>
                           <input
                             type="text"
                             maxLength={8}
@@ -1263,7 +1263,7 @@ export default function GestionAcademicaPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 mb-1">Nombres de la Madre</label>
+                          <label className="block text-xs font-bold text-slate-600 mb-1">Nombres de la Madre</label>
                           <input
                             type="text"
                             placeholder="Ej: Lizbeth Huaccoto"
@@ -1273,7 +1273,7 @@ export default function GestionAcademicaPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 mb-1">Celular de la Madre</label>
+                          <label className="block text-xs font-bold text-slate-600 mb-1">Celular de la Madre</label>
                           <input
                             type="tel"
                             placeholder="+51 945572343"
@@ -1289,11 +1289,11 @@ export default function GestionAcademicaPage() {
                     <div className="p-3.5 rounded-2xl bg-slate-50 border border-slate-200 space-y-2.5">
                       <div className="flex items-center gap-1.5 text-xs font-black text-slate-800 uppercase">
                         <span>👨 Datos del Padre</span>
-                        <span className="text-[10px] text-slate-400 font-normal">(Recomendado para avisos de garita)</span>
+                        <span className="text-xs text-slate-400 font-normal">(Recomendado para avisos de garita)</span>
                       </div>
                       <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 mb-1">DNI del Padre</label>
+                          <label className="block text-xs font-bold text-slate-600 mb-1">DNI del Padre</label>
                           <input
                             type="text"
                             maxLength={8}
@@ -1304,7 +1304,7 @@ export default function GestionAcademicaPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 mb-1">Nombres del Padre</label>
+                          <label className="block text-xs font-bold text-slate-600 mb-1">Nombres del Padre</label>
                           <input
                             type="text"
                             placeholder="Ej: Don Pedro Salazar"
@@ -1314,7 +1314,7 @@ export default function GestionAcademicaPage() {
                           />
                         </div>
                         <div>
-                          <label className="block text-[11px] font-bold text-slate-600 mb-1">Celular del Padre</label>
+                          <label className="block text-xs font-bold text-slate-600 mb-1">Celular del Padre</label>
                           <input
                             type="tel"
                             placeholder="+51 987654321"
@@ -1341,7 +1341,7 @@ export default function GestionAcademicaPage() {
                       {studentForm.hasSeparateGuardian && (
                         <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2">
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-600 mb-1">Parentesco</label>
+                            <label className="block text-xs font-bold text-slate-600 mb-1">Parentesco</label>
                             <input
                               type="text"
                               placeholder="Ej: Tía Legal"
@@ -1351,7 +1351,7 @@ export default function GestionAcademicaPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-600 mb-1">DNI Apoderado</label>
+                            <label className="block text-xs font-bold text-slate-600 mb-1">DNI Apoderado</label>
                             <input
                               type="text"
                               maxLength={8}
@@ -1362,7 +1362,7 @@ export default function GestionAcademicaPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-600 mb-1">Nombre Completo</label>
+                            <label className="block text-xs font-bold text-slate-600 mb-1">Nombre Completo</label>
                             <input
                               type="text"
                               placeholder="Ej: Rosa Huaccoto"
@@ -1372,7 +1372,7 @@ export default function GestionAcademicaPage() {
                             />
                           </div>
                           <div>
-                            <label className="block text-[11px] font-bold text-slate-600 mb-1">Celular</label>
+                            <label className="block text-xs font-bold text-slate-600 mb-1">Celular</label>
                             <input
                               type="tel"
                               placeholder="+51 977889900"
@@ -1410,7 +1410,7 @@ export default function GestionAcademicaPage() {
                   {lastEnrolledStudent ? (
                     <div className="mt-4 p-4 rounded-2xl bg-slate-50 border border-slate-200 space-y-3">
                       <div>
-                        <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
+                        <span className="text-xs font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded border border-emerald-200">
                           Matrícula Activa 2026
                         </span>
                         <h3 className="font-black text-base text-slate-900 mt-1 truncate">
@@ -1508,12 +1508,12 @@ export default function GestionAcademicaPage() {
                         <Plus className="w-4 h-4 text-burgundy-800" />
                         <span>Crear Nuevo Grado o Año Escolar</span>
                       </h4>
-                      <span className="text-[11px] font-mono text-burgundy-700">Se guardará en Neon DB</span>
+                      <span className="text-xs font-mono text-burgundy-700">Se guardará en Neon DB</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="sm:col-span-2">
-                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                           Nombre del Grado *
                         </label>
                         <input
@@ -1527,7 +1527,7 @@ export default function GestionAcademicaPage() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                           Nivel Educativo *
                         </label>
                         <select
@@ -1595,7 +1595,7 @@ export default function GestionAcademicaPage() {
                         >
                           <span>{g}</span>
                           <span
-                            className={`text-[10px] px-2 py-0.5 rounded-full font-mono ${
+                            className={`text-xs px-2 py-0.5 rounded-full font-mono ${
                               isSelected ? 'bg-lionGold-500 text-burgundy-950 font-black' : 'bg-slate-200 text-slate-600'
                             }`}
                           >
@@ -1674,7 +1674,7 @@ export default function GestionAcademicaPage() {
                         <Shuffle className="w-4 h-4 text-lionGold-400" />
                         <span>⚡ Mezcla Automática Equitativa</span>
                       </button>
-                      <label className="flex items-center gap-1.5 text-[10px] text-slate-500 cursor-pointer self-center">
+                      <label className="flex items-center gap-1.5 text-xs text-slate-500 cursor-pointer self-center">
                         <input
                           type="checkbox"
                           checked={redistributeAll}
@@ -1698,12 +1698,12 @@ export default function GestionAcademicaPage() {
                         <School className="w-4 h-4 text-burgundy-800" />
                         <span>Crear Nueva Aula / Sección para {selectedGrade}</span>
                       </h4>
-                      <span className="text-[11px] font-mono text-burgundy-700">Se guardará en Neon DB</span>
+                      <span className="text-xs font-mono text-burgundy-700">Se guardará en Neon DB</span>
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                           Sección / Nombre *
                         </label>
                         <input
@@ -1717,7 +1717,7 @@ export default function GestionAcademicaPage() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                           Turno *
                         </label>
                         <select
@@ -1731,7 +1731,7 @@ export default function GestionAcademicaPage() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                           Capacidad Máx.
                         </label>
                         <input
@@ -1743,7 +1743,7 @@ export default function GestionAcademicaPage() {
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                           Número de Aula Física
                         </label>
                         <input
@@ -1813,10 +1813,10 @@ export default function GestionAcademicaPage() {
                         >
                           <div>
                             <p className="font-bold text-xs text-slate-900 truncate">{st.name}</p>
-                            <p className="text-[10px] text-slate-400 font-mono">DNI: {st.dni}</p>
+                            <p className="text-xs text-slate-400 font-mono">DNI: {st.dni}</p>
                           </div>
                           <div className="flex items-center gap-1.5">
-                            <span className="text-[10px] font-bold text-slate-500 shrink-0">Asignar a:</span>
+                            <span className="text-xs font-bold text-slate-500 shrink-0">Asignar a:</span>
                             <select
                               defaultValue=""
                               onChange={(e) => {
@@ -1824,7 +1824,7 @@ export default function GestionAcademicaPage() {
                                   handleMoveStudent(st.id, st.name, e.target.value);
                                 }
                               }}
-                              className="w-full text-[11px] font-bold bg-amber-50 border border-amber-300 rounded-lg p-1 text-amber-950 focus:outline-none"
+                              className="w-full text-xs font-bold bg-amber-50 border border-amber-300 rounded-lg p-1 text-amber-950 focus:outline-none"
                             >
                               <option value="" disabled>Seleccionar aula...</option>
                               {classesForSelectedGrade.map((cls) => {
@@ -1879,7 +1879,7 @@ export default function GestionAcademicaPage() {
                             )}
                           </div>
 
-                          <div className="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+                          <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
                             <span>Turno: {cls.shift}</span>
                             <span className="font-bold text-slate-800">
                               {occupancy} / {maxCap} alumnos
@@ -1909,12 +1909,12 @@ export default function GestionAcademicaPage() {
                               >
                                 <div className="flex items-start justify-between gap-1">
                                   <p className="font-bold text-xs text-slate-900 leading-tight truncate">{stu.name}</p>
-                                  <span className="text-[9px] font-mono text-slate-400 shrink-0">{stu.dni}</span>
+                                  <span className="text-xs font-mono text-slate-400 shrink-0">{stu.dni}</span>
                                 </div>
 
                                 {/* Selector para mover alumno */}
                                 <div className="flex items-center gap-1.5 pt-1 border-t border-slate-200/60">
-                                  <span className="text-[10px] text-slate-400 shrink-0">Mover a:</span>
+                                  <span className="text-xs text-slate-400 shrink-0">Mover a:</span>
                                   <select
                                     defaultValue=""
                                     onChange={(e) => {
@@ -1922,7 +1922,7 @@ export default function GestionAcademicaPage() {
                                         handleMoveStudent(stu.id, stu.name, e.target.value);
                                       }
                                     }}
-                                    className="w-full text-[10px] font-bold bg-white border border-slate-200 rounded p-1 text-slate-700 focus:outline-none focus:border-burgundy-700"
+                                    className="w-full text-xs font-bold bg-white border border-slate-200 rounded p-1 text-slate-700 focus:outline-none focus:border-burgundy-700"
                                   >
                                     <option value="" disabled>
                                       Cambiar aula...
@@ -1974,7 +1974,7 @@ export default function GestionAcademicaPage() {
                         <BookOpen className="w-5 h-5 text-burgundy-900" />
                         <span>Cursos Oficiales de {selectedGrade} ({coursesOfGrade.length})</span>
                       </h4>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-xs text-slate-500">
                         Los alumnos matriculados en cualquier sección de {selectedGrade} verán estos cursos en su boletín de notas.
                       </p>
                     </div>
@@ -2118,10 +2118,10 @@ export default function GestionAcademicaPage() {
                       }}
                       className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 text-sm font-bold bg-white focus:outline-none focus:border-burgundy-700"
                     >
-                      <option value="PROFESOR">👨‍🏫 Profesor(a)</option>
-                      <option value="COORDINADOR">📋 Coordinador Académico</option>
-                      <option value="JEFE_NORMAS">🛡️ Jefe de Normas y Disciplina</option>
-                      <option value="DIRECTOR">🏛️ Director(a) General</option>
+                      <option value="PROFESOR">Profesor(a)</option>
+                      <option value="COORDINADOR">Coordinador Académico</option>
+                      <option value="JEFE_NORMAS">Jefe de Normas y Disciplina</option>
+                      <option value="DIRECTOR">Director(a) General</option>
                     </select>
                   </div>
 
@@ -2179,7 +2179,7 @@ export default function GestionAcademicaPage() {
                     onChange={(e) => setStaffForm({ ...staffForm, password: e.target.value })}
                     className="w-full px-3.5 py-2.5 rounded-xl border border-slate-300 font-mono text-sm focus:outline-none focus:border-burgundy-700"
                   />
-                  <p className="text-[10px] text-slate-400 mt-1">
+                  <p className="text-xs text-slate-400 mt-1">
                     Clave con la que ingresará al aula virtual (si se deja vacío, será su propio DNI).
                   </p>
                 </div>
@@ -2212,7 +2212,7 @@ export default function GestionAcademicaPage() {
 
                 <div className="border border-slate-200 rounded-2xl overflow-hidden">
                   <table className="w-full text-left text-xs">
-                    <thead className="bg-slate-50 text-slate-700 font-black uppercase text-[10px] border-b border-slate-200">
+                    <thead className="bg-slate-50 text-slate-700 font-black uppercase text-xs border-b border-slate-200">
                       <tr>
                         <th className="py-2.5 px-3">DNI</th>
                         <th className="py-2.5 px-3">Nombres y Apellidos</th>
@@ -2228,7 +2228,7 @@ export default function GestionAcademicaPage() {
                             <td className="py-2.5 px-3 font-mono font-bold text-slate-700">{prof.dni}</td>
                             <td className="py-2.5 px-3 font-bold text-slate-900">{prof.name}</td>
                             <td className="py-2.5 px-3">
-                              <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-burgundy-50 text-burgundy-900 border border-burgundy-200">
+                              <span className="text-xs font-bold px-2 py-0.5 rounded-full bg-burgundy-50 text-burgundy-900 border border-burgundy-200">
                                 {prof.hierarchyTitle || prof.hierarchy || 'Profesor(a)'}
                               </span>
                             </td>
@@ -2336,7 +2336,7 @@ export default function GestionAcademicaPage() {
                       Combos Rápidos Sugeridos para {courseTabGrade}
                     </h4>
                   </div>
-                  <span className="text-[11px] text-slate-500">1-clic para agregar el combo completo</span>
+                  <span className="text-xs text-slate-500">1-clic para agregar el combo completo</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
@@ -2358,12 +2358,12 @@ export default function GestionAcademicaPage() {
                             'Razonamiento Matemático',
                           ])
                         }
-                        className="text-[10px] bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-2.5 py-1 rounded-lg transition"
+                        className="text-xs bg-amber-100 hover:bg-amber-200 text-amber-900 font-bold px-2.5 py-1 rounded-lg transition"
                       >
                         + Cargar Combo
                       </button>
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-tight">
+                    <p className="text-xs text-slate-500 leading-tight">
                       Mate 1 (Aritmética), Mate 2 (Álgebra), Mate 4 (Geometría), Trigonometría, RM.
                     </p>
                   </div>
@@ -2406,12 +2406,12 @@ export default function GestionAcademicaPage() {
                             ]);
                           }
                         }}
-                        className="text-[10px] bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold px-2.5 py-1 rounded-lg transition"
+                        className="text-xs bg-emerald-100 hover:bg-emerald-200 text-emerald-900 font-bold px-2.5 py-1 rounded-lg transition"
                       >
                         + Cargar Combo
                       </button>
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-tight">
+                    <p className="text-xs text-slate-500 leading-tight">
                       {courseTabGrade.includes('3')
                         ? '7 CyT (Física), 10 CyT (Anatomía), Química, Biología.'
                         : courseTabGrade.includes('5')
@@ -2439,12 +2439,12 @@ export default function GestionAcademicaPage() {
                             'Inglés',
                           ])
                         }
-                        className="text-[10px] bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold px-2.5 py-1 rounded-lg transition"
+                        className="text-xs bg-indigo-100 hover:bg-indigo-200 text-indigo-900 font-bold px-2.5 py-1 rounded-lg transition"
                       >
                         + Cargar Combo
                       </button>
                     </div>
-                    <p className="text-[11px] text-slate-500 leading-tight">
+                    <p className="text-xs text-slate-500 leading-tight">
                       Lenguaje y Literatura, Razonamiento Verbal, Historia del Perú, Historia Universal, Inglés.
                     </p>
                   </div>
@@ -2462,14 +2462,14 @@ export default function GestionAcademicaPage() {
                       <Plus className="w-4 h-4 text-burgundy-900" />
                       <span>Agregar Curso Individual</span>
                     </h4>
-                    <p className="text-[11px] text-slate-500">
+                    <p className="text-xs text-slate-500">
                       Crea un curso con código (ej. Mate 1, 7 CyT) o nombre libre.
                     </p>
                   </div>
 
                   {/* Botones de prefijos rápidos */}
                   <div>
-                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1.5">
+                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">
                       Botones de Código Rápido:
                     </label>
                     <div className="flex flex-wrap gap-1.5">
@@ -2478,7 +2478,7 @@ export default function GestionAcademicaPage() {
                           key={pre}
                           type="button"
                           onClick={() => setCourseCodePrefix(pre)}
-                          className={`text-[10px] font-mono px-2 py-1 rounded-lg border transition ${
+                          className={`text-xs font-mono px-2 py-1 rounded-lg border transition ${
                             courseCodePrefix === pre
                               ? 'bg-burgundy-900 text-white border-burgundy-950 font-bold'
                               : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
@@ -2493,7 +2493,7 @@ export default function GestionAcademicaPage() {
                   <form onSubmit={handleAddSingleCourse} className="space-y-3.5">
                     <div className="grid grid-cols-2 gap-2.5">
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                           Prefijo / Código:
                         </label>
                         <input
@@ -2505,7 +2505,7 @@ export default function GestionAcademicaPage() {
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                           Asignatura:
                         </label>
                         <input
@@ -2521,7 +2521,7 @@ export default function GestionAcademicaPage() {
 
                     {/* Previsualización del Nombre del Curso */}
                     <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
-                      <span className="text-[10px] text-slate-400 font-bold uppercase block mb-0.5">
+                      <span className="text-xs text-slate-400 font-bold uppercase block mb-0.5">
                         Nombre Resultante en Boleta:
                       </span>
                       <span className="font-bold text-burgundy-950">
@@ -2533,7 +2533,7 @@ export default function GestionAcademicaPage() {
 
                     {/* Selector de Docente Encargado (Opcional) */}
                     <div>
-                      <label className="block text-[11px] font-bold text-slate-700 uppercase mb-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
                         Profesor(a) Encargado(a) (Opcional):
                       </label>
                       <select
@@ -2570,7 +2570,7 @@ export default function GestionAcademicaPage() {
                         <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
                         <span>Carga Masiva de Cursos en Bloque</span>
                       </h4>
-                      <p className="text-[11px] text-slate-500">
+                      <p className="text-xs text-slate-500">
                         Pega una lista de cursos (uno por renglón) para crearlos todos simultáneamente.
                       </p>
                     </div>
@@ -2587,7 +2587,7 @@ export default function GestionAcademicaPage() {
                       placeholder={`Mate 1 (Aritmética)\nMate 2 (Álgebra)\nMate 4 (Geometría)\n7 CyT (Física)\n10 CyT (Anatomía)\nLenguaje y Literatura\nInglés`}
                       className="w-full p-3 rounded-2xl border border-slate-300 font-mono text-xs text-slate-800 focus:outline-none focus:border-burgundy-700"
                     />
-                    <span className="text-[11px] text-slate-400">
+                    <span className="text-xs text-slate-400">
                       💡 Tip: Puedes copiar directamente una columna de Excel o Word y pegarla aquí.
                     </span>
                   </div>
@@ -2654,7 +2654,7 @@ export default function GestionAcademicaPage() {
                               {c.courseName}
                             </h5>
                           </div>
-                          <p className="text-[11px] text-slate-500 pl-3.5">
+                          <p className="text-xs text-slate-500 pl-3.5">
                             {c.teacherName ? (
                               <span className="text-slate-700 font-medium">Prof: {c.teacherName}</span>
                             ) : (
@@ -2686,3 +2686,4 @@ export default function GestionAcademicaPage() {
     </div>
   );
 }
+

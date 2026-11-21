@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import { AttendanceRecord } from '../types';
@@ -92,7 +92,7 @@ export const AttendanceTablePaginated: React.FC<Props> = ({
       {/* Tabla con Día y Hora Exacta */}
       <div className="overflow-x-auto">
         <table className="w-full text-left text-sm text-slate-600">
-          <thead className="bg-slate-50 text-[11px] font-black uppercase text-slate-500 border-b border-slate-200">
+          <thead className="bg-slate-50 text-xs font-black uppercase text-slate-500 border-b border-slate-200">
             <tr>
               <th className="px-4 py-3.5">Día y Fecha</th>
               <th className="px-4 py-3.5">Hora Ingreso</th>
@@ -254,3 +254,4 @@ export const AttendanceTablePaginated: React.FC<Props> = ({
     </div>
   );
 };
+

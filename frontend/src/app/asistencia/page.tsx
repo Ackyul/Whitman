@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React from 'react';
 import Link from 'next/link';
@@ -72,7 +72,7 @@ export default function AsistenciaRoute() {
                   />
                 </div>
                 <div>
-                  <span className="text-[10px] font-bold uppercase bg-burgundy-100 text-burgundy-900 px-2 py-0.5 rounded">
+                  <span className="text-xs font-bold uppercase bg-burgundy-100 text-burgundy-900 px-2 py-0.5 rounded">
                     {student.level === 'ACADEMIA' ? '🦁 Academia Preuniversitaria' : '🏫 Colegio'}
                   </span>
                   <h2 className="text-xl font-black text-slate-900 mt-1">{student.name}</h2>
@@ -98,11 +98,11 @@ export default function AsistenciaRoute() {
                         </div>
                       )}
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Ingreso de Hoy</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase">Ingreso de Hoy</p>
                         <p className="text-sm font-black text-slate-900">
                           {todayRecord.status} ({todayRecord.time})
                         </p>
-                        <p className="text-[11px] text-slate-500">{todayRecord.notes || 'Ingreso en garita'}</p>
+                        <p className="text-xs text-slate-500">{todayRecord.notes || 'Ingreso en garita'}</p>
                       </div>
                     </>
                   ) : (
@@ -111,9 +111,9 @@ export default function AsistenciaRoute() {
                         <Clock className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Ingreso de Hoy</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase">Ingreso de Hoy</p>
                         <p className="text-sm font-bold text-slate-700">Aún no registra ingreso</p>
-                        <p className="text-[11px] text-slate-400">Garita activa desde las 07:00 AM</p>
+                        <p className="text-xs text-slate-400">Garita activa desde las 07:00 AM</p>
                       </div>
                     </>
                   )}
@@ -127,11 +127,11 @@ export default function AsistenciaRoute() {
                         <CheckCircle2 className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Salida Registrada</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase">Salida Registrada</p>
                         <p className="text-sm font-black text-slate-900">
                           Salida a las {todayRecord.exitTime}
                         </p>
-                        <p className="text-[11px] text-emerald-700 font-semibold">Alumno retirado del colegio</p>
+                        <p className="text-xs text-emerald-700 font-semibold">Alumno retirado del colegio</p>
                       </div>
                     </>
                   ) : (
@@ -140,11 +140,11 @@ export default function AsistenciaRoute() {
                         <Clock className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Salida de Hoy</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase">Salida de Hoy</p>
                         <p className="text-sm font-medium text-slate-600">
                           {todayRecord ? 'En clases (Pendiente de salida)' : 'Pendiente'}
                         </p>
-                        <p className="text-[11px] text-slate-400">Se registrará en portería</p>
+                        <p className="text-xs text-slate-400">Se registrará en portería</p>
                       </div>
                     </>
                   )}
@@ -225,11 +225,11 @@ export default function AsistenciaRoute() {
                 : 'bg-white border-slate-200'
             }`}>
               <div className="flex items-center justify-between pb-3 border-b border-slate-100">
-                <span className="text-[11px] font-black uppercase tracking-wider text-slate-500">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
                   Asistencia de Hoy ({today})
                 </span>
                 <span
-                  className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full ${
+                  className={`text-xs font-black uppercase px-2.5 py-0.5 rounded-full ${
                     todayRecord
                       ? todayRecord.status === 'PRESENTE'
                         ? 'bg-emerald-100 text-emerald-800'
@@ -250,11 +250,11 @@ export default function AsistenciaRoute() {
                         <CheckCircle2 className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-[10px] text-emerald-800 font-bold uppercase">🟢 Ingreso Confirmado</p>
+                        <p className="text-xs text-emerald-800 font-bold uppercase">🟢 Ingreso Confirmado</p>
                         <p className="text-lg font-black font-mono text-slate-900 leading-tight">
                           {todayRecord.time}
                         </p>
-                        <p className="text-[10px] text-slate-500">{todayRecord.status === 'PRESENTE' ? 'Puntual' : 'Tardanza'}</p>
+                        <p className="text-xs text-slate-500">{todayRecord.status === 'PRESENTE' ? 'Puntual' : 'Tardanza'}</p>
                       </div>
                     </>
                   ) : (
@@ -263,9 +263,9 @@ export default function AsistenciaRoute() {
                         <Clock className="w-6 h-6 text-slate-400" />
                       </div>
                       <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">🟢 Ingreso</p>
+                        <p className="text-xs text-slate-400 font-bold uppercase">🟢 Ingreso</p>
                         <p className="text-sm font-bold text-slate-700">Sin registrar hoy</p>
-                        <p className="text-[10px] text-slate-400">Pasa carnet por garita</p>
+                        <p className="text-xs text-slate-400">Pasa carnet por garita</p>
                       </div>
                     </>
                   )}
@@ -279,11 +279,11 @@ export default function AsistenciaRoute() {
                         <CheckCircle2 className="w-6 h-6" />
                       </div>
                       <div>
-                        <p className="text-[10px] text-amber-800 font-bold uppercase">🟠 Salida Confirmada</p>
+                        <p className="text-xs text-amber-800 font-bold uppercase">🟠 Salida Confirmada</p>
                         <p className="text-lg font-black font-mono text-slate-900 leading-tight">
                           {todayRecord.exitTime}
                         </p>
-                        <p className="text-[10px] text-emerald-700 font-bold">Retiro registrado</p>
+                        <p className="text-xs text-emerald-700 font-bold">Retiro registrado</p>
                       </div>
                     </>
                   ) : (
@@ -292,11 +292,11 @@ export default function AsistenciaRoute() {
                         <Clock className="w-6 h-6 text-slate-400" />
                       </div>
                       <div>
-                        <p className="text-[10px] text-slate-400 font-bold uppercase">🟠 Salida</p>
+                        <p className="text-xs text-slate-400 font-bold uppercase">🟠 Salida</p>
                         <p className="text-sm font-bold text-slate-700">
                           {todayRecord ? 'En clases (Por marcar)' : 'Pendiente'}
                         </p>
-                        <p className="text-[10px] text-slate-400">Marca salida al salir</p>
+                        <p className="text-xs text-slate-400">Marca salida al salir</p>
                       </div>
                     </>
                   )}
@@ -313,7 +313,7 @@ export default function AsistenciaRoute() {
                     Lista Rápida de Esta Semana
                   </h4>
                 </div>
-                <span className="text-[10px] text-slate-400 font-medium">Lunes a Sábado</span>
+                <span className="text-xs text-slate-400 font-medium">Lunes a Sábado</span>
               </div>
 
               <div className="space-y-1.5">
@@ -342,7 +342,7 @@ export default function AsistenciaRoute() {
                           }`}
                         />
                         <span className="font-bold text-slate-800">{item.label}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">
+                        <span className="text-xs text-slate-400 font-mono">
                           ({item.dayNum}/{item.monthNum})
                         </span>
                       </div>
@@ -350,7 +350,7 @@ export default function AsistenciaRoute() {
                       <div>
                         {rec ? (
                           <span
-                            className={`inline-flex items-center gap-1 font-mono font-bold text-[11px] px-2 py-0.5 rounded-full ${
+                            className={`inline-flex items-center gap-1 font-mono font-bold text-xs px-2 py-0.5 rounded-full ${
                               rec.status === 'TARDANZA'
                                 ? 'bg-amber-100 text-amber-800'
                                 : 'bg-emerald-100 text-emerald-800'
@@ -360,9 +360,9 @@ export default function AsistenciaRoute() {
                             <span>{rec.time?.slice(0, 5)}</span>
                           </span>
                         ) : isFuture ? (
-                          <span className="text-[10px] text-slate-400 italic">Pendiente</span>
+                          <span className="text-xs text-slate-400 italic">Pendiente</span>
                         ) : (
-                          <span className="text-[10px] text-slate-300">—</span>
+                          <span className="text-xs text-slate-300">—</span>
                         )}
                       </div>
                     </div>
@@ -418,3 +418,4 @@ export default function AsistenciaRoute() {
     </div>
   );
 }
+

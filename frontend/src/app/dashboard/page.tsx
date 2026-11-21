@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import React, { useState } from 'react';
 import Link from 'next/link';
@@ -137,7 +137,7 @@ export default function SecureDashboardPage() {
                     </div>
                     {childAverage && (
                       <div className="bg-lionGold-50 border border-lionGold-200 px-3.5 py-1.5 rounded-xl text-right">
-                        <span className="text-[10px] font-bold text-lionGold-800 uppercase block">Promedio de Notas</span>
+                        <span className="text-xs font-bold text-lionGold-800 uppercase block">Promedio de Notas</span>
                         <span className="text-base font-black text-burgundy-950">{childAverage} / 20</span>
                       </div>
                     )}
@@ -153,11 +153,11 @@ export default function SecureDashboardPage() {
                             <CheckCircle2 className="w-6 h-6" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Ingreso Hoy</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase">Ingreso Hoy</p>
                             <p className="text-sm font-black text-slate-900">
                               {todayRecord.status} ({todayRecord.time})
                             </p>
-                            <p className="text-[11px] text-slate-500">{todayRecord.notes || 'Ingreso en garita'}</p>
+                            <p className="text-xs text-slate-500">{todayRecord.notes || 'Ingreso en garita'}</p>
                           </div>
                         </>
                       ) : (
@@ -166,9 +166,9 @@ export default function SecureDashboardPage() {
                             <Clock className="w-6 h-6" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Ingreso Hoy</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase">Ingreso Hoy</p>
                             <p className="text-sm font-bold text-slate-700">Aún no ingresa</p>
-                            <p className="text-[11px] text-slate-400">Garita activa desde las 07:00 AM</p>
+                            <p className="text-xs text-slate-400">Garita activa desde las 07:00 AM</p>
                           </div>
                         </>
                       )}
@@ -182,11 +182,11 @@ export default function SecureDashboardPage() {
                             <CheckCircle2 className="w-6 h-6" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Salida Registrada</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase">Salida Registrada</p>
                             <p className="text-sm font-black text-slate-900">
                               Retiro a las {todayRecord.exitTime}
                             </p>
-                            <p className="text-[11px] text-emerald-700 font-semibold">Alumno salió del colegio</p>
+                            <p className="text-xs text-emerald-700 font-semibold">Alumno salió del colegio</p>
                           </div>
                         </>
                       ) : (
@@ -195,11 +195,11 @@ export default function SecureDashboardPage() {
                             <Clock className="w-6 h-6" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-bold text-slate-400 uppercase">Salida Hoy</p>
+                            <p className="text-xs font-bold text-slate-400 uppercase">Salida Hoy</p>
                             <p className="text-sm font-medium text-slate-600">
                               {todayRecord ? 'En clases (Pendiente)' : 'Pendiente de marcar'}
                             </p>
-                            <p className="text-[11px] text-slate-400">Se registrará en portería</p>
+                            <p className="text-xs text-slate-400">Se registrará en portería</p>
                           </div>
                         </>
                       )}
@@ -213,13 +213,13 @@ export default function SecureDashboardPage() {
                         <Award className="w-6 h-6 text-burgundy-800" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold text-slate-400 uppercase">Calificaciones & Evaluaciones</p>
+                        <p className="text-xs font-bold text-slate-400 uppercase">Calificaciones & Evaluaciones</p>
                         <p className="text-sm font-bold text-slate-800">
                           {childGrades.length > 0
                             ? `${childGrades.length} evaluación(es) registrada(s)`
                             : 'Sin evaluaciones registradas aún'}
                         </p>
-                        <p className="text-[11px] text-slate-500">
+                        <p className="text-xs text-slate-500">
                           {childGrades.length > 0
                             ? `Última: ${childGrades[0].title} (${childGrades[0].score}/20)`
                             : 'Se guardan en la base de datos'}
@@ -280,7 +280,7 @@ export default function SecureDashboardPage() {
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded">
+                    <span className="text-xs font-black uppercase text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded">
                       Ingreso Hoy Confirmado
                     </span>
                     <p className="text-base sm:text-lg font-black text-slate-900 mt-1">
@@ -295,7 +295,7 @@ export default function SecureDashboardPage() {
                     <Clock className="w-8 h-8" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded">
+                    <span className="text-xs font-bold uppercase text-slate-500 bg-slate-100 px-2.5 py-0.5 rounded">
                       Pendiente
                     </span>
                     <p className="text-base font-bold text-slate-800 mt-1">Aún no registras ingreso</p>
@@ -313,7 +313,7 @@ export default function SecureDashboardPage() {
                     <CheckCircle2 className="w-8 h-8" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-200">
+                    <span className="text-xs font-black uppercase text-amber-800 bg-amber-50 px-2.5 py-0.5 rounded border border-amber-200">
                       Salida Confirmada
                     </span>
                     <p className="text-base sm:text-lg font-black text-slate-900 mt-1">
@@ -328,7 +328,7 @@ export default function SecureDashboardPage() {
                     <Clock className="w-8 h-8" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-bold uppercase text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded">
+                    <span className="text-xs font-bold uppercase text-slate-400 bg-slate-100 px-2.5 py-0.5 rounded">
                       Salida Pendiente
                     </span>
                     <p className="text-base font-medium text-slate-600 mt-1">
@@ -370,7 +370,7 @@ export default function SecureDashboardPage() {
             <div className="flex items-center gap-3">
               {averageScore && (
                 <div className="bg-lionGold-50 border border-lionGold-200 px-3.5 py-1.5 rounded-xl text-right">
-                  <span className="text-[10px] font-bold text-lionGold-800 uppercase block">Promedio General</span>
+                  <span className="text-xs font-bold text-lionGold-800 uppercase block">Promedio General</span>
                   <span className="text-base font-black text-burgundy-950">{averageScore} / 20</span>
                 </div>
               )}
@@ -407,7 +407,7 @@ export default function SecureDashboardPage() {
                 >
                   <div>
                     <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-600">
+                      <span className="text-xs font-bold uppercase tracking-wider bg-white border border-slate-200 px-2 py-0.5 rounded text-slate-600">
                         {g.evaluationType}
                       </span>
                       <span className={`text-xs font-black px-2 py-0.5 rounded-lg border ${
@@ -423,13 +423,13 @@ export default function SecureDashboardPage() {
                     <h3 className="font-bold text-slate-900 text-sm line-clamp-1">{g.title}</h3>
                     <p className="text-xs font-medium text-burgundy-800">{g.course}</p>
                     {g.feedback && (
-                      <p className="text-[11px] text-slate-500 italic mt-2 line-clamp-2 bg-white p-2 rounded-lg border border-slate-100">
+                      <p className="text-xs text-slate-500 italic mt-2 line-clamp-2 bg-white p-2 rounded-lg border border-slate-100">
                         "{g.feedback}"
                       </p>
                     )}
                   </div>
 
-                  <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between text-[10px] text-slate-400">
+                  <div className="mt-3 pt-2 border-t border-slate-200/70 flex items-center justify-between text-xs text-slate-400">
                     <span>{g.date}</span>
                     <span className="font-medium text-slate-600 truncate max-w-[120px]">{g.teacherName}</span>
                   </div>
@@ -444,7 +444,11 @@ export default function SecureDashboardPage() {
   }
 
   // 4. DASHBOARD SEGURO PARA DOCENTES Y DIRECCIÓN
-  const todayStr = new Date().toISOString().split('T')[0];
+  const MONTH_NAMES_ES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+  const todayObj = new Date();
+  const todayStr = todayObj.toISOString().split('T')[0];
+  const currentMonthName = MONTH_NAMES_ES[todayObj.getMonth()];
+  const todayFormattedText = `${todayObj.getDate()} de ${currentMonthName} de ${todayObj.getFullYear()}`;
   const allRecordedDates = Array.from(new Set(attendance.map((a) => a.date))).sort();
 
   const previousRecordDate = (() => {
@@ -670,7 +674,7 @@ export default function SecureDashboardPage() {
           <h1 className="text-lg sm:text-2xl font-black font-serif text-white tracking-wide">
             Bienvenido, {currentUser.name}
           </h1>
-          <p className="text-[11px] text-lionGold-300 font-bold uppercase tracking-wider">
+          <p className="text-xs text-lionGold-300 font-bold uppercase tracking-wider">
             {currentUser.hierarchyTitle || 'Plana Docente'}
           </p>
         </div>
@@ -719,7 +723,7 @@ export default function SecureDashboardPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-black text-white text-sm">Gestión Académica & Matrícula Whitman</h3>
-                <span className="bg-lionGold-500 text-burgundy-950 text-[10px] font-black px-2 py-0.5 rounded-full">
+                <span className="bg-lionGold-500 text-burgundy-950 text-xs font-black px-2 py-0.5 rounded-full">
                   Exclusivo {currentUser.hierarchyTitle || 'Dirección / Normas / Coordinación'}
                 </span>
               </div>
@@ -748,7 +752,7 @@ export default function SecureDashboardPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="font-black text-slate-900 text-sm">Control de Garita y Portería (Pistola de Códigos)</h3>
-                <span className="bg-rose-100 text-rose-800 text-[10px] font-bold px-2 py-0.5 rounded-full">
+                <span className="bg-rose-100 text-rose-800 text-xs font-bold px-2 py-0.5 rounded-full">
                   Exclusivo {currentUser.hierarchyTitle}
                 </span>
               </div>
@@ -783,7 +787,7 @@ export default function SecureDashboardPage() {
                 <h3 className="font-black text-slate-900 text-sm sm:text-base group-hover:text-burgundy-800 transition">
                   Módulo de Asistencias & Control de Portería
                 </h3>
-                <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
+                <span className="text-xs font-bold uppercase px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">
                   Opcional
                 </span>
               </div>
@@ -821,7 +825,7 @@ export default function SecureDashboardPage() {
               >
                 <CalendarCheck className="w-4 h-4 text-lionGold-400 shrink-0" />
                 <span>1. Asistencias de Hoy</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
                   attendanceSubTab === 'hoy' ? 'bg-lionGold-500 text-burgundy-950' : 'bg-slate-100 text-slate-600'
                 }`}>
                   {todayRecords.length}
@@ -852,7 +856,7 @@ export default function SecureDashboardPage() {
               >
                 <Scale className="w-4 h-4 text-lionGold-400 shrink-0" />
                 <span>3. Diferencia entre Días</span>
-                <span className={`text-[10px] px-2 py-0.5 rounded-full font-black ${
+                <span className={`text-xs px-2 py-0.5 rounded-full font-black ${
                   attendanceSubTab === 'diferencia' ? 'bg-lionGold-500 text-burgundy-950' : 'bg-emerald-100 text-emerald-800'
                 }`}>
                   {countDifferencesTotal > 0 ? `${countDifferencesTotal} cambios` : 'Comparar'}
@@ -869,7 +873,7 @@ export default function SecureDashboardPage() {
                   <div className="flex items-center gap-2">
                     <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse" />
                     <h4 className="text-sm sm:text-base font-black text-slate-900 uppercase tracking-wide">
-                      Asistencias del Día ({todayStr})
+                      Asistencias del Día • {todayFormattedText}
                     </h4>
                   </div>
                   <div className="flex items-center gap-2">
@@ -888,16 +892,16 @@ export default function SecureDashboardPage() {
                 {/* Métricas del Día de Hoy con Diferencia vs Día Anterior */}
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5">
                   <div className="bg-white p-4 rounded-xl shadow-xs border-l-4 border-emerald-600 border border-slate-200">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Puntuales Hoy</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Puntuales Hoy</span>
                     <div className="text-2xl font-black text-slate-800 mt-0.5">{todayPresent}</div>
-                    <div className="flex items-center gap-1 mt-1 text-[11px] font-bold">
+                    <div className="flex items-center gap-1 mt-1 text-xs font-bold">
                       {deltaPresent >= 0 ? (
-                        <span className="inline-flex items-center text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">
+                        <span className="inline-flex items-center text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-xs">
                           <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
                           +{deltaPresent} vs día anterior
                         </span>
                       ) : (
-                        <span className="inline-flex items-center text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded text-[10px]">
+                        <span className="inline-flex items-center text-rose-700 bg-rose-50 px-1.5 py-0.5 rounded text-xs">
                           <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" />
                           {deltaPresent} vs día anterior
                         </span>
@@ -906,16 +910,16 @@ export default function SecureDashboardPage() {
                   </div>
 
                   <div className="bg-white p-4 rounded-xl shadow-xs border-l-4 border-amber-500 border border-slate-200">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Tardanzas Hoy</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Tardanzas Hoy</span>
                     <div className="text-2xl font-black text-slate-800 mt-0.5">{todayLate}</div>
-                    <div className="flex items-center gap-1 mt-1 text-[11px] font-bold">
+                    <div className="flex items-center gap-1 mt-1 text-xs font-bold">
                       {deltaLate <= 0 ? (
-                        <span className="inline-flex items-center text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[10px]">
+                        <span className="inline-flex items-center text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-xs">
                           <ArrowDownRight className="w-3.5 h-3.5 mr-0.5" />
                           {deltaLate === 0 ? 'Sin variación' : `${deltaLate}`} vs día anterior
                         </span>
                       ) : (
-                        <span className="inline-flex items-center text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded text-[10px]">
+                        <span className="inline-flex items-center text-amber-800 bg-amber-50 px-1.5 py-0.5 rounded text-xs">
                           <ArrowUpRight className="w-3.5 h-3.5 mr-0.5" />
                           +{deltaLate} vs día anterior
                         </span>
@@ -924,10 +928,10 @@ export default function SecureDashboardPage() {
                   </div>
 
                   <div className="bg-white p-4 rounded-xl shadow-xs border-l-4 border-burgundy-800 border border-slate-200">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Ingresos Totales</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Ingresos Totales</span>
                     <div className="text-2xl font-black text-slate-800 mt-0.5">{todayTotal}</div>
-                    <div className="flex items-center gap-1 mt-1 text-[11px] font-bold">
-                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-[10px] ${
+                    <div className="flex items-center gap-1 mt-1 text-xs font-bold">
+                      <span className={`inline-flex items-center px-1.5 py-0.5 rounded text-xs ${
                         deltaTotal >= 0 ? 'text-emerald-700 bg-emerald-50' : 'text-rose-700 bg-rose-50'
                       }`}>
                         {deltaTotal >= 0 ? `+${deltaTotal}` : deltaTotal} alumnos vs anterior
@@ -936,9 +940,9 @@ export default function SecureDashboardPage() {
                   </div>
 
                   <div className="bg-gradient-to-br from-burgundy-900 to-burgundy-800 text-white p-4 rounded-xl shadow-xs border border-lionGold-500/40">
-                    <span className="text-[10px] font-bold text-lionGold-300 uppercase">Ratio Asistencia</span>
+                    <span className="text-xs font-bold text-lionGold-300 uppercase">Ratio Asistencia</span>
                     <div className="text-2xl font-black text-white mt-0.5">{todayRate}%</div>
-                    <div className="flex items-center gap-1 mt-1 text-[10px] font-bold">
+                    <div className="flex items-center gap-1 mt-1 text-xs font-bold">
                       <span className={`inline-flex items-center px-1.5 py-0.5 rounded ${
                         deltaRate >= 0 ? 'text-lionGold-300 bg-burgundy-950/60' : 'text-rose-300 bg-burgundy-950/60'
                       }`}>
@@ -976,7 +980,7 @@ export default function SecureDashboardPage() {
                   {todayRecords.length > 0 ? (
                     <div className="overflow-x-auto max-h-72 overflow-y-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200 sticky top-0 bg-slate-50">
+                        <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-xs border-b border-slate-200 sticky top-0 bg-slate-50">
                           <tr>
                             <th className="py-2.5 px-3.5">Estudiante</th>
                             <th className="py-2.5 px-3.5">Nivel / Aula</th>
@@ -991,10 +995,10 @@ export default function SecureDashboardPage() {
                             <tr key={a.id} className="hover:bg-slate-50/80 transition">
                               <td className="py-2.5 px-3.5">
                                 <p className="font-bold text-slate-900">{a.userName}</p>
-                                <p className="text-[10px] text-slate-400 font-mono">DNI: {a.userDni}</p>
+                                <p className="text-xs text-slate-400 font-mono">DNI: {a.userDni}</p>
                               </td>
                               <td className="py-2.5 px-3.5">
-                                <span className="inline-block bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-[10px] font-semibold">
+                                <span className="inline-block bg-slate-100 text-slate-700 px-2 py-0.5 rounded text-xs font-semibold">
                                   {a.gradeOrClass}
                                 </span>
                               </td>
@@ -1005,17 +1009,17 @@ export default function SecureDashboardPage() {
                                 {a.exitTime ? (
                                   <span className="text-indigo-700 font-bold">🟠 {a.exitTime}</span>
                                 ) : (
-                                  <span className="text-slate-400 text-[10px] italic">Pendiente</span>
+                                  <span className="text-slate-400 text-xs italic">Pendiente</span>
                                 )}
                               </td>
                               <td className="py-2.5 px-3.5">
-                                <span className="text-[10px] font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
+                                <span className="text-xs font-mono bg-slate-100 px-1.5 py-0.5 rounded text-slate-600">
                                   {a.method}
                                 </span>
                               </td>
                               <td className="py-2.5 px-3.5">
                                 <span
-                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                                     a.status === 'PRESENTE'
                                       ? 'bg-emerald-100 text-emerald-800'
                                       : a.status === 'TARDANZA'
@@ -1035,7 +1039,7 @@ export default function SecureDashboardPage() {
                     <div className="p-8 text-center text-slate-400 space-y-1">
                       <Clock className="w-8 h-8 mx-auto text-slate-300 mb-2" />
                       <p className="text-xs font-bold text-slate-600">Aún no hay ingresos marcados el día de hoy.</p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-xs text-slate-400">
                         Cuando los alumnos escaneen su carnet o DNI en la garita, aparecerán registrados aquí al instante.
                       </p>
                     </div>
@@ -1129,7 +1133,7 @@ export default function SecureDashboardPage() {
                     Mostrando {filteredAttendance.length} registro(s) para:{' '}
                     <strong>
                       {attendanceDateMode === 'HOY'
-                        ? `Hoy (${todayStr})`
+                        ? `Hoy (${todayFormattedText})`
                         : attendanceDateMode === 'CUSTOM'
                         ? `Fecha ${attendanceCustomDate}`
                         : 'Todo el Historial'}
@@ -1155,7 +1159,7 @@ export default function SecureDashboardPage() {
                   {filteredAttendance.length > 0 ? (
                     <div className="overflow-x-auto max-h-80 overflow-y-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200 sticky top-0 bg-slate-50">
+                        <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-xs border-b border-slate-200 sticky top-0 bg-slate-50">
                           <tr>
                             <th className="py-2.5 px-3">Estudiante</th>
                             <th className="py-2.5 px-3">Fecha</th>
@@ -1170,13 +1174,13 @@ export default function SecureDashboardPage() {
                             <tr key={a.id} className="hover:bg-slate-50/80 transition">
                               <td className="py-2 px-3">
                                 <p className="font-bold text-slate-900">{a.userName}</p>
-                                <p className="text-[10px] text-slate-400 font-mono">DNI: {a.userDni}</p>
+                                <p className="text-xs text-slate-400 font-mono">DNI: {a.userDni}</p>
                               </td>
-                              <td className="py-2 px-3 font-mono text-[11px] text-slate-600">
+                              <td className="py-2 px-3 font-mono text-xs text-slate-600">
                                 {a.date}
                               </td>
                               <td className="py-2 px-3">
-                                <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium">
+                                <span className="text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium">
                                   {a.gradeOrClass}
                                 </span>
                               </td>
@@ -1184,11 +1188,11 @@ export default function SecureDashboardPage() {
                                 {a.time}
                               </td>
                               <td className="py-2 px-3 font-mono text-indigo-700 font-bold">
-                                {a.exitTime || <span className="text-slate-400 text-[10px] italic font-normal">Pendiente</span>}
+                                {a.exitTime || <span className="text-slate-400 text-xs italic font-normal">Pendiente</span>}
                               </td>
                               <td className="py-2 px-3">
                                 <span
-                                  className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                                  className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                                     a.status === 'PRESENTE'
                                       ? 'bg-emerald-100 text-emerald-800'
                                       : a.status === 'TARDANZA'
@@ -1209,7 +1213,7 @@ export default function SecureDashboardPage() {
                       <p className="text-xs font-bold text-slate-600">
                         No se encontraron registros para los criterios indicados.
                       </p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-xs text-slate-400">
                         Verifica la fecha seleccionada o los dígitos del DNI / nombres ingresados.
                       </p>
                     </div>
@@ -1239,7 +1243,7 @@ export default function SecureDashboardPage() {
                 <div className="bg-slate-50 p-4 rounded-2xl border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-4">
                   {/* Fecha 1 (Base) */}
                   <div className="w-full md:w-5/12 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
                       Día 1 (Fecha Base):
                     </label>
                     <input
@@ -1248,7 +1252,7 @@ export default function SecureDashboardPage() {
                       onChange={(e) => setCompareDateA(e.target.value)}
                       className="w-full font-mono text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-800 focus:outline-none focus:border-burgundy-700"
                     />
-                    <span className="text-[10px] text-slate-400 mt-0.5 block font-medium">
+                    <span className="text-xs text-slate-400 mt-0.5 block font-medium">
                       {totalA} alumnos registrados
                     </span>
                   </div>
@@ -1269,7 +1273,7 @@ export default function SecureDashboardPage() {
 
                   {/* Fecha 2 (A Comparar) */}
                   <div className="w-full md:w-5/12 bg-white p-3 rounded-xl border border-slate-200 shadow-xs">
-                    <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">
+                    <label className="block text-xs font-bold text-slate-500 uppercase mb-1">
                       Día 2 (Fecha a Contrastar):
                     </label>
                     <input
@@ -1278,7 +1282,7 @@ export default function SecureDashboardPage() {
                       onChange={(e) => setCompareDateB(e.target.value)}
                       className="w-full font-mono text-xs font-bold px-2.5 py-1.5 rounded-lg border border-slate-300 text-slate-800 focus:outline-none focus:border-burgundy-700"
                     />
-                    <span className="text-[10px] text-slate-400 mt-0.5 block font-medium">
+                    <span className="text-xs text-slate-400 mt-0.5 block font-medium">
                       {totalB} alumnos registrados
                     </span>
                   </div>
@@ -1287,7 +1291,7 @@ export default function SecureDashboardPage() {
                 {/* TARJETAS RESUMEN DE LA DIFERENCIA ENTRE LOS DOS DÍAS */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Diferencia de Ingresos</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Diferencia de Ingresos</span>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className={`text-2xl font-black ${
                         diffTotalAB > 0 ? 'text-emerald-700' : diffTotalAB < 0 ? 'text-rose-700' : 'text-slate-800'
@@ -1296,13 +1300,13 @@ export default function SecureDashboardPage() {
                       </span>
                       <span className="text-xs text-slate-400 font-bold">alumnos</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       {totalA} (Día 1) vs {totalB} (Día 2)
                     </p>
                   </div>
 
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Diferencia de Puntuales</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Diferencia de Puntuales</span>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className={`text-2xl font-black ${
                         diffPresentAB > 0 ? 'text-emerald-700' : diffPresentAB < 0 ? 'text-rose-700' : 'text-slate-800'
@@ -1311,13 +1315,13 @@ export default function SecureDashboardPage() {
                       </span>
                       <span className="text-xs text-slate-400 font-bold">puntuales</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       {presentA} (Día 1) vs {presentB} (Día 2)
                     </p>
                   </div>
 
                   <div className="bg-white p-4 rounded-xl border border-slate-200 shadow-xs">
-                    <span className="text-[10px] font-bold text-slate-400 uppercase">Diferencia de Tardanzas</span>
+                    <span className="text-xs font-bold text-slate-400 uppercase">Diferencia de Tardanzas</span>
                     <div className="flex items-baseline gap-2 mt-1">
                       <span className={`text-2xl font-black ${
                         diffLateAB < 0 ? 'text-emerald-700' : diffLateAB > 0 ? 'text-amber-700' : 'text-slate-800'
@@ -1326,17 +1330,17 @@ export default function SecureDashboardPage() {
                       </span>
                       <span className="text-xs text-slate-400 font-bold">tardanzas</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 mt-0.5">
+                    <p className="text-xs text-slate-500 mt-0.5">
                       {lateA} (Día 1) vs {lateB} (Día 2)
                     </p>
                   </div>
 
                   <div className="bg-gradient-to-br from-burgundy-900 to-burgundy-800 text-white p-4 rounded-xl shadow-xs border border-lionGold-500/40">
-                    <span className="text-[10px] font-bold text-lionGold-300 uppercase">Alumnos con Cambios</span>
+                    <span className="text-xs font-bold text-lionGold-300 uppercase">Alumnos con Cambios</span>
                     <div className="text-2xl font-black text-white mt-1">
                       {countDifferencesTotal}
                     </div>
-                    <p className="text-[10px] text-burgundy-200 mt-0.5">
+                    <p className="text-xs text-burgundy-200 mt-0.5">
                       {countAbsentB} faltaron en Día 2 • {countNewB} nuevos en Día 2
                     </p>
                   </div>
@@ -1428,7 +1432,7 @@ export default function SecureDashboardPage() {
                   {filteredComparison.length > 0 ? (
                     <div className="overflow-x-auto max-h-80 overflow-y-auto">
                       <table className="w-full text-left text-xs">
-                        <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-[10px] border-b border-slate-200 sticky top-0 bg-slate-50">
+                        <thead className="bg-slate-50 text-slate-600 font-bold uppercase text-xs border-b border-slate-200 sticky top-0 bg-slate-50">
                           <tr>
                             <th className="py-2.5 px-3">Estudiante</th>
                             <th className="py-2.5 px-3">Aula</th>
@@ -1442,47 +1446,47 @@ export default function SecureDashboardPage() {
                             <tr key={item.dni} className="hover:bg-slate-50/80 transition">
                               <td className="py-2 px-3">
                                 <p className="font-bold text-slate-900">{item.name}</p>
-                                <p className="text-[10px] text-slate-400 font-mono">DNI: {item.dni}</p>
+                                <p className="text-xs text-slate-400 font-mono">DNI: {item.dni}</p>
                               </td>
                               <td className="py-2 px-3">
-                                <span className="text-[10px] bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium">
+                                <span className="text-xs bg-slate-100 text-slate-700 px-1.5 py-0.5 rounded font-medium">
                                   {item.gradeOrClass}
                                 </span>
                               </td>
                               <td className="py-2 px-3">
                                 {item.recordA ? (
                                   <div className="flex items-center gap-1.5">
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                                       item.recordA.status === 'PRESENTE'
                                         ? 'bg-emerald-100 text-emerald-800'
                                         : 'bg-amber-100 text-amber-800'
                                     }`}>
                                       {item.recordA.status}
                                     </span>
-                                    <span className="font-mono text-[10px] text-slate-500">({item.recordA.time})</span>
+                                    <span className="font-mono text-xs text-slate-500">({item.recordA.time})</span>
                                   </div>
                                 ) : (
-                                  <span className="text-slate-400 text-[10px] italic">No registró</span>
+                                  <span className="text-slate-400 text-xs italic">No registró</span>
                                 )}
                               </td>
                               <td className="py-2 px-3">
                                 {item.recordB ? (
                                   <div className="flex items-center gap-1.5">
-                                    <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${
+                                    <span className={`text-xs font-bold px-1.5 py-0.5 rounded ${
                                       item.recordB.status === 'PRESENTE'
                                         ? 'bg-emerald-100 text-emerald-800'
                                         : 'bg-amber-100 text-amber-800'
                                     }`}>
                                       {item.recordB.status}
                                     </span>
-                                    <span className="font-mono text-[10px] text-slate-500">({item.recordB.time})</span>
+                                    <span className="font-mono text-xs text-slate-500">({item.recordB.time})</span>
                                   </div>
                                 ) : (
-                                  <span className="text-rose-600 font-bold text-[10px]">No registró</span>
+                                  <span className="text-rose-600 font-bold text-xs">No registró</span>
                                 )}
                               </td>
                               <td className="py-2 px-3">
-                                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${item.badgeClass}`}>
+                                <span className={`text-xs font-bold px-2 py-0.5 rounded-full border ${item.badgeClass}`}>
                                   {item.label}
                                 </span>
                               </td>
@@ -1496,7 +1500,7 @@ export default function SecureDashboardPage() {
                       <p className="text-xs font-bold text-slate-600">
                         No hay alumnos que coincidan con el filtro seleccionado.
                       </p>
-                      <p className="text-[11px] text-slate-400">
+                      <p className="text-xs text-slate-400">
                         Intenta con otro filtro de diferencias o verifica las fechas seleccionadas.
                       </p>
                     </div>
@@ -1526,7 +1530,7 @@ export default function SecureDashboardPage() {
               <div key={g.id} className="p-3 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-between">
                 <div>
                   <p className="font-bold text-xs text-slate-800">#{idx + 1} {g.userName}</p>
-                  <p className="text-[10px] text-burgundy-700 font-semibold">{g.course} • {g.title}</p>
+                  <p className="text-xs text-burgundy-700 font-semibold">{g.course} • {g.title}</p>
                 </div>
                 <span className="text-xs font-black text-emerald-700 bg-emerald-100/70 border border-emerald-200 px-2.5 py-1 rounded-lg">
                   {g.score.toFixed(1)} / 20
@@ -1544,4 +1548,5 @@ export default function SecureDashboardPage() {
     </div>
   );
 }
+
 
