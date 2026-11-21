@@ -1020,6 +1020,27 @@ export default function GestionAcademicaPage() {
         /* ACCESO PERMITIDO - MÓDULO ADMINISTRATIVO COMPLETO */
         <div className="space-y-6">
 
+          {/* BARRA DE BLINDAJE Y RESPALDO INSTITUCIONAL */}
+          <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-burgundy-900 via-burgundy-850 to-burgundy-900 text-white p-4 rounded-2xl shadow-sm">
+            <div className="flex items-center gap-2.5">
+              <ShieldCheck className="w-5 h-5 text-lionGold-400 shrink-0" />
+              <div>
+                <p className="text-xs font-black tracking-wide">Panel Directivo • Seguridad y Respaldo Institucional</p>
+                <p className="text-[11px] text-slate-200">
+                  Protección perimetral Cloudflare WAF, Restauración al segundo (Neon PITR) y Cifrado.
+                </p>
+              </div>
+            </div>
+            <a
+              href="/api/admin/backup?download=true"
+              className="bg-lionGold-500 hover:bg-lionGold-400 text-burgundy-950 font-black px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow active:scale-95 shrink-0"
+              title="Descargar copia de seguridad completa e instantánea de la base de datos"
+            >
+              <Download className="w-4 h-4" />
+              <span>Descargar Respaldo Total (.json)</span>
+            </a>
+          </div>
+
           {/* 2. PESTAÑAS DE NAVEGACIÓN (4 PESTAÑAS: MATRÍCULA, GRADOS Y AULAS, PERSONAL, CARGA MASIVA) */}
           <div className="bg-white rounded-2xl p-1.5 border border-slate-200 shadow-sm grid grid-cols-2 md:grid-cols-4 gap-1.5 text-xs font-bold">
             <button

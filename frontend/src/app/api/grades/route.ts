@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { checkRateLimit, getClientIp } from '@/lib/rateLimit';
-import { sanitizeString } from '@/lib/security';
+import { sanitizeString, authenticateRequest, recordAuditLog } from '@/lib/security';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -89,6 +89,15 @@ export async function POST(request: Request) {
       return NextResponse.json(
         { success: false, message: 'Demasiadas solicitudes. Espera un momento.' },
         { status: 429 }
+      );
+    }
+
+    // Blindaje de Seguridad: Solo docentes o directores autenticados pueden registrar calificaciones
+    const auth = await authenticateRequest(request, ['DOCENTE', 'ADMIN']);
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, message: auth.error || 'No autorizado para registrar notas.' },
+        { status: auth.statusCode || 401 }
       );
     }
 
@@ -232,6 +241,15 @@ export async function POST(request: Request) {
         });
       }
 
+      await recordAuditLog({
+        request,
+        userId: auth.user?.id,
+        userName: auth.user?.name,
+        action: 'GRADES_BULK_INSERT',
+        entityType: 'GRADE',
+        details: { count: insertedRecords.length },
+      });
+
       return NextResponse.json({
         success: true,
         message: `¡${insertedRecords.length} calificaciones registradas exitosamente en Neon PostgreSQL!`,
@@ -348,6 +366,16 @@ export async function POST(request: Request) {
       date: new Date().toISOString().split('T')[0],
     };
 
+    await recordAuditLog({
+      request,
+      userId: auth.user?.id,
+      userName: auth.user?.name,
+      action: 'GRADE_INSERT',
+      entityType: 'GRADE',
+      entityId: gradeId,
+      details: { student: student.name, course: cleanCourse, score: numScore, title: cleanTitle },
+    });
+
     return NextResponse.json({
       success: true,
       message: `¡Nota de ${numScore} registrada correctamente para ${student.name}!`,
@@ -365,6 +393,14 @@ export async function POST(request: Request) {
 // ACTUALIZACIÓN DIRECTA DE NOTA (PUT/PATCH)
 export async function PUT(request: Request) {
   try {
+    const auth = await authenticateRequest(request, ['DOCENTE', 'ADMIN']);
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, message: auth.error || 'No autorizado para editar calificaciones.' },
+        { status: auth.statusCode || 401 }
+      );
+    }
+
     const body = await request.json();
     const { id, score, feedback, title, period } = body;
 
@@ -429,6 +465,16 @@ export async function PUT(request: Request) {
       return NextResponse.json({ success: false, message: 'Calificación no encontrada' }, { status: 404 });
     }
 
+    await recordAuditLog({
+      request,
+      userId: auth.user?.id,
+      userName: auth.user?.name,
+      action: 'GRADE_UPDATE',
+      entityType: 'GRADE',
+      entityId: id,
+      details: { newScore: score, newFeedback: feedback, student: rows[0].userName },
+    });
+
     return NextResponse.json({
       success: true,
       message: '¡Calificación actualizada con éxito!',
@@ -442,6 +488,14 @@ export async function PUT(request: Request) {
 
 export async function DELETE(request: Request) {
   try {
+    const auth = await authenticateRequest(request, ['DOCENTE', 'ADMIN']);
+    if (!auth.authorized) {
+      return NextResponse.json(
+        { success: false, message: auth.error || 'No autorizado para eliminar calificaciones.' },
+        { status: auth.statusCode || 401 }
+      );
+    }
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
 
@@ -452,6 +506,15 @@ export async function DELETE(request: Request) {
     if (sql) {
       await (sql as any).query(`DELETE FROM grades WHERE id = $1;`, [id]);
     }
+
+    await recordAuditLog({
+      request,
+      userId: auth.user?.id,
+      userName: auth.user?.name,
+      action: 'GRADE_DELETE',
+      entityType: 'GRADE',
+      entityId: id,
+    });
 
     return NextResponse.json({ success: true, message: 'Calificación eliminada correctamente de Neon' });
   } catch (err: any) {

@@ -13,7 +13,7 @@ export function getApiBase(): string {
 
 const API_BASE = '';
 
-async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 3000): Promise<Response> {
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 8000): Promise<Response> {
   const controller = new AbortController();
   const id = setTimeout(() => controller.abort(), timeoutMs);
 
@@ -23,9 +23,32 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutM
     resolvedUrl = url.replace(/^https?:\/\/localhost:\d+/, '');
   }
 
+  // Adjuntar automáticamente encabezados de sesión e identidad institucional
+  const customHeaders: Record<string, string> = {};
+  if (typeof window !== 'undefined') {
+    try {
+      const saved = localStorage.getItem('whitman_user_session');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.sessionToken) {
+          customHeaders['x-session-token'] = parsed.sessionToken;
+        }
+        if (parsed.user?.id || parsed.user?.dni) {
+          customHeaders['x-user-id'] = String(parsed.user?.id || parsed.user?.dni);
+        }
+      }
+    } catch (e) {}
+  }
+
+  const mergedHeaders = {
+    ...customHeaders,
+    ...(options.headers || {}),
+  };
+
   try {
     const response = await fetch(resolvedUrl, {
       ...options,
+      headers: mergedHeaders,
       signal: controller.signal,
     });
     clearTimeout(id);
