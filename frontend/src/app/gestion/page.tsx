@@ -310,9 +310,9 @@ export default function GestionAcademicaPage() {
 
   const [isCreatingGrade, setIsCreatingGrade] = useState(false);
   const [newGradeName, setNewGradeName] = useState('');
-  const [newGradeLevel, setNewGradeLevel] = useState<'PRIMARIA' | 'SECUNDARIA'>('PRIMARIA');
+  const [newGradeLevel, setNewGradeLevel] = useState<'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA'>('PRIMARIA');
 
-  const [selectedLevelFilter, setSelectedLevelFilter] = useState<'TODOS' | 'PRIMARIA' | 'SECUNDARIA'>('TODOS');
+  const [selectedLevelFilter, setSelectedLevelFilter] = useState<'TODOS' | 'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA'>('TODOS');
   const [selectedGrade, setSelectedGrade] = useState<string>('1ro Primaria');
   const [isCreatingClass, setIsCreatingClass] = useState(false);
   const [redistributeAll, setRedistributeAll] = useState(false);
@@ -548,19 +548,12 @@ export default function GestionAcademicaPage() {
     }
   };
 
-  // Cargar Aulas directamente desde Neon DB (Solo Colegio: Primaria y Secundaria)
+  // Cargar Aulas directamente desde Neon DB (Colegio y Academia)
   const loadAcademicClasses = async () => {
     try {
       const cls = await fetchAcademicClasses();
       if (cls) {
-        const schoolClasses = cls.filter(
-          (c) =>
-            c.level !== 'ACADEMIA' &&
-            !c.grade.toLowerCase().includes('pre') &&
-            !c.grade.toLowerCase().includes('acad') &&
-            !c.grade.toLowerCase().includes('repaso')
-        );
-        setClasses(schoolClasses);
+        setClasses(cls);
       }
     } catch (e) {
       console.warn('Error cargando aulas desde Neon:', e);
@@ -624,6 +617,10 @@ export default function GestionAcademicaPage() {
 
   // Helper para deducir el nivel de un grado (Colegio: Primaria o Secundaria, o Academia)
   const getLevelForGrade = (gradeName: string): EducationLevel => {
+    const found = gradesList.find((g) => g.name.toLowerCase() === gradeName.toLowerCase());
+    if (found && (found.level === 'PRIMARIA' || found.level === 'SECUNDARIA' || found.level === 'ACADEMIA')) {
+      return found.level as EducationLevel;
+    }
     const lower = gradeName.toLowerCase();
     if (lower.includes('prim')) return 'PRIMARIA';
     if (lower.includes('acad') || lower.includes('ciclo') || lower.includes('uni') || lower.includes('san marcos') || lower.includes('repaso')) return 'ACADEMIA';
@@ -923,30 +920,52 @@ export default function GestionAcademicaPage() {
   };
 
   // CÁLCULOS DINÁMICOS PARA LA PESTAÑA DE GRADOS Y AULAS (DESDE NEON DB)
-  const filteredGrades = gradesList
+  const allAvailableGrades =
+    gradesList.length > 0
+      ? gradesList
+      : [
+          ...BASE_GRADES_BY_LEVEL.PRIMARIA.map((name) => ({ id: name, name, level: 'PRIMARIA' })),
+          ...BASE_GRADES_BY_LEVEL.SECUNDARIA.map((name) => ({ id: name, name, level: 'SECUNDARIA' })),
+          ...BASE_GRADES_BY_LEVEL.ACADEMIA.map((name) => ({ id: name, name, level: 'ACADEMIA' })),
+        ];
+
+  const filteredGrades = allAvailableGrades
     .filter((g) => {
       if (selectedLevelFilter === 'TODOS') return true;
       return g.level === selectedLevelFilter;
     })
     .map((g) => g.name);
 
-  // Alumnos del grado seleccionado
+  const activeGradeName = filteredGrades.includes(selectedGrade)
+    ? selectedGrade
+    : filteredGrades[0] || selectedGrade;
+
+  // Alumnos del grado o ciclo seleccionado
   const studentsInSelectedGrade = users.filter((u) => {
     if (u.role !== 'ALUMNO') return false;
     const gOrC = (u.gradeOrClass || '').toLowerCase();
-    const targetG = selectedGrade.toLowerCase();
-    return gOrC.includes(targetG) || (u.level === getLevelForGrade(selectedGrade) && gOrC.includes('sin asignar'));
+    const targetG = activeGradeName.toLowerCase();
+    const targetLevel = getLevelForGrade(activeGradeName);
+    return (
+      gOrC.includes(targetG) ||
+      (u.level === targetLevel && (gOrC.includes('sin asignar') || gOrC.includes('por asignar')))
+    );
   });
 
-  // Alumnos que están 'Sin Asignar'
+  // Alumnos que están 'Sin Asignar' / 'Por Asignar'
   const unassignedStudents = studentsInSelectedGrade.filter((u) => {
     const gOrC = (u.gradeOrClass || '').toLowerCase();
-    return gOrC.includes('sin asignar') || gOrC === selectedGrade.toLowerCase() || !gOrC.includes(' - ');
+    return (
+      gOrC.includes('sin asignar') ||
+      gOrC.includes('por asignar') ||
+      gOrC === activeGradeName.toLowerCase() ||
+      !gOrC.includes(' - ')
+    );
   });
 
-  // Aulas activas de este grado
+  // Aulas activas de este grado o ciclo
   const classesForSelectedGrade = classes.filter(
-    (c) => c.grade.toLowerCase() === selectedGrade.toLowerCase() && c.active !== false
+    (c) => c.grade.toLowerCase() === activeGradeName.toLowerCase() && c.active !== false
   );
 
   return (
@@ -1109,7 +1128,7 @@ export default function GestionAcademicaPage() {
               }`}
             >
               <BookOpen className="w-4 h-4 text-lionGold-400" />
-              <span>4. Cursos (Primaria & Secundaria)</span>
+              <span>4. Cursos (Colegio & Academia)</span>
             </button>
           </div>
 
@@ -1501,38 +1520,52 @@ export default function GestionAcademicaPage() {
                   <div>
                     <h3 className="font-serif font-black text-xl text-slate-900 flex items-center gap-2">
                       <Layers className="w-5 h-5 text-burgundy-900" />
-                      <span>Control de Grados, Aulas & Mezcla Automática</span>
+                      <span>Control de Grados, Ciclos & Aulas</span>
                     </h3>
                     <p className="text-xs text-slate-500 mt-0.5">
-                      Crea aulas para cada grado, distribuye a los alumnos recién matriculados y balancea secciones.
+                      Crea aulas para cada grado o ciclo de academia, distribuye a los alumnos y balancea secciones.
                     </p>
                   </div>
 
                   <div className="flex flex-wrap items-center gap-2">
-                    {/* Filtro de Nivel (Solo Primaria y Secundaria) */}
+                    {/* Filtro de Nivel (Todos, Primaria, Secundaria y Academia) */}
                     <div className="flex items-center gap-1.5 bg-slate-100 p-1 rounded-2xl text-xs font-bold">
-                      {(['TODOS', 'PRIMARIA', 'SECUNDARIA'] as const).map((lvl) => (
+                      {(['TODOS', 'PRIMARIA', 'SECUNDARIA', 'ACADEMIA'] as const).map((lvl) => (
                         <button
                           key={lvl}
-                          onClick={() => setSelectedLevelFilter(lvl)}
+                          onClick={() => {
+                            setSelectedLevelFilter(lvl);
+                            const gradesForLvl = allAvailableGrades.filter(
+                              (g) => lvl === 'TODOS' || g.level === lvl
+                            );
+                            if (gradesForLvl.length > 0) {
+                              setSelectedGrade(gradesForLvl[0].name);
+                            }
+                          }}
                           className={`px-3 py-1.5 rounded-xl transition ${
                             selectedLevelFilter === lvl
                               ? 'bg-burgundy-900 text-white shadow-sm font-black'
                               : 'text-slate-600 hover:text-slate-900'
                           }`}
                         >
-                          {lvl === 'TODOS' ? 'Todos los Grados' : lvl === 'PRIMARIA' ? 'Primaria' : 'Secundaria'}
+                          {lvl === 'TODOS'
+                            ? 'Todos los Grados / Ciclos'
+                            : lvl === 'PRIMARIA'
+                            ? 'Primaria'
+                            : lvl === 'SECUNDARIA'
+                            ? 'Secundaria'
+                            : '🦁 Academia'}
                         </button>
                       ))}
                     </div>
 
-                    {/* Botón para crear nuevo grado */}
+                    {/* Botón para crear nuevo grado o ciclo */}
                     <button
                       onClick={() => setIsCreatingGrade(!isCreatingGrade)}
                       className="bg-burgundy-900 hover:bg-burgundy-950 text-white font-bold text-xs px-3.5 py-2 rounded-2xl shadow transition flex items-center gap-1.5"
                     >
                       <Plus className="w-4 h-4 text-lionGold-400" />
-                      <span>{isCreatingGrade ? 'Cerrar' : '+ Crear Grado'}</span>
+                      <span>{isCreatingGrade ? 'Cerrar' : '+ Crear Grado o Ciclo'}</span>
                     </button>
                   </div>
                 </div>
@@ -1546,7 +1579,7 @@ export default function GestionAcademicaPage() {
                     <div className="flex items-center justify-between">
                       <h4 className="font-bold text-xs uppercase tracking-wider text-burgundy-950 flex items-center gap-2">
                         <Plus className="w-4 h-4 text-burgundy-800" />
-                        <span>Crear Nuevo Grado o Año Escolar</span>
+                        <span>Crear Nuevo Grado Escolar o Ciclo de Academia</span>
                       </h4>
                       <span className="text-xs font-mono text-burgundy-700">Se guardará en Neon DB</span>
                     </div>
@@ -1554,12 +1587,12 @@ export default function GestionAcademicaPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                       <div className="sm:col-span-2">
                         <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                          Nombre del Grado *
+                          Nombre del Grado o Ciclo *
                         </label>
                         <input
                           type="text"
                           required
-                          placeholder="Ej: Inicial 5 años, 1ro de Secundaria, etc."
+                          placeholder="Ej: 1ro de Secundaria, Ciclo Semianual UNI, etc."
                           value={newGradeName}
                           onChange={(e) => setNewGradeName(e.target.value)}
                           className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-burgundy-700"
@@ -1577,7 +1610,7 @@ export default function GestionAcademicaPage() {
                         >
                           <option value="PRIMARIA">Primaria</option>
                           <option value="SECUNDARIA">Secundaria</option>
-                          <option value="ACADEMIA">Academia</option>
+                          <option value="ACADEMIA">🦁 Academia Preuniversitaria</option>
                         </select>
                       </div>
                     </div>
@@ -1601,13 +1634,13 @@ export default function GestionAcademicaPage() {
                   </form>
                 )}
 
-                {/* Chips de Grados */}
+                {/* Chips de Grados y Ciclos */}
                 {filteredGrades.length === 0 ? (
                   <div className="p-8 text-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl">
                     <Layers className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                    <h4 className="font-black text-slate-700 text-sm">No hay grados creados en el colegio todavía</h4>
+                    <h4 className="font-black text-slate-700 text-sm">No hay grados ni ciclos creados todavía</h4>
                     <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-                      Usa el botón <strong>&quot;+ Crear Grado&quot;</strong> arriba para comenzar a agregar los grados escolares (ej. 1ro Primaria, 2do Primaria, etc.).
+                      Usa el botón <strong>&quot;+ Crear Grado o Ciclo&quot;</strong> arriba para comenzar a agregar grados escolares o ciclos de academia.
                     </p>
                   </div>
                 ) : (
@@ -1616,10 +1649,14 @@ export default function GestionAcademicaPage() {
                       const countInGrade = users.filter((u) => {
                         if (u.role !== 'ALUMNO') return false;
                         const gOrC = (u.gradeOrClass || '').toLowerCase();
-                        return gOrC.includes(g.toLowerCase()) || (u.level === getLevelForGrade(g) && gOrC.includes('sin asignar'));
+                        return (
+                          gOrC.includes(g.toLowerCase()) ||
+                          (u.level === getLevelForGrade(g) &&
+                            (gOrC.includes('sin asignar') || gOrC.includes('por asignar')))
+                        );
                       }).length;
 
-                      const isSelected = selectedGrade === g;
+                      const isSelected = activeGradeName === g;
 
                       return (
                         <button
@@ -1649,18 +1686,18 @@ export default function GestionAcademicaPage() {
                 )}
               </div>
 
-              {/* Panel del Grado Seleccionado */}
-              {selectedGrade && filteredGrades.includes(selectedGrade) && (
+              {/* Panel del Grado o Ciclo Seleccionado */}
+              {activeGradeName && (
                 <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
                 
                 {/* Cabecera del Grado + Estadísticas + Botones de Acción */}
                 <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 border-b border-slate-100 pb-6">
                   <div>
                     <span className="text-xs font-black uppercase text-burgundy-900 tracking-wider">
-                      GRADO SELECCIONADO
+                      {getLevelForGrade(activeGradeName) === 'ACADEMIA' ? '🦁 CICLO DE ACADEMIA' : 'GRADO SELECCIONADO'}
                     </span>
                     <h2 className="text-2xl sm:text-3xl font-black font-serif text-slate-900 mt-1">
-                      {selectedGrade}
+                      {activeGradeName}
                     </h2>
                     <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-2 text-xs">
                       <span className="bg-slate-100 text-slate-800 font-bold px-3 py-1 rounded-full border border-slate-200">
@@ -1692,17 +1729,17 @@ export default function GestionAcademicaPage() {
                     </button>
 
                     <button
-                      onClick={() => handleDeleteGrade(selectedGrade)}
+                      onClick={() => handleDeleteGrade(activeGradeName)}
                       disabled={loading || studentsInSelectedGrade.length > 0}
                       className="bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs px-3.5 py-3 rounded-2xl transition flex items-center justify-center gap-1.5 disabled:opacity-40 disabled:cursor-not-allowed"
                       title={
                         studentsInSelectedGrade.length > 0
                           ? `No se puede eliminar porque tiene ${studentsInSelectedGrade.length} alumno(s) matriculado(s). Primero debes mover o reasignar a los alumnos.`
-                          : 'Eliminar este grado escolar'
+                          : 'Eliminar este grado escolar o ciclo'
                       }
                     >
                       <Trash2 className="w-4 h-4 text-rose-600" />
-                      <span>Eliminar Grado</span>
+                      <span>{getLevelForGrade(activeGradeName) === 'ACADEMIA' ? 'Eliminar Ciclo' : 'Eliminar Grado'}</span>
                     </button>
 
                     <div className="flex flex-col gap-1">
@@ -1737,7 +1774,11 @@ export default function GestionAcademicaPage() {
                     <div className="flex items-center justify-between">
                       <h4 className="font-bold text-sm text-burgundy-950 flex items-center gap-2">
                         <School className="w-4 h-4 text-burgundy-800" />
-                        <span>Crear Nueva Aula / Sección para {selectedGrade}</span>
+                        <span>
+                          {getLevelForGrade(activeGradeName) === 'ACADEMIA'
+                            ? `Crear Nueva Aula / Grupo para ${activeGradeName}`
+                            : `Crear Nueva Aula / Sección para ${activeGradeName}`}
+                        </span>
                       </h4>
                       <span className="text-xs font-mono text-burgundy-700">Se guardará en Neon DB</span>
                     </div>
@@ -1745,12 +1786,16 @@ export default function GestionAcademicaPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
                       <div>
                         <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                          Sección / Nombre *
+                          {getLevelForGrade(activeGradeName) === 'ACADEMIA' ? 'Aula / Grupo / Sección *' : 'Sección / Nombre *'}
                         </label>
                         <input
                           type="text"
                           required
-                          placeholder="Ej: Alfa, Beta, Sección C"
+                          placeholder={
+                            getLevelForGrade(activeGradeName) === 'ACADEMIA'
+                              ? 'Ej: Aula 101, Grupo UNI A, Turno Mañana'
+                              : 'Ej: Alfa, Beta, Sección A'
+                          }
                           value={newClassForm.section}
                           onChange={(e) => setNewClassForm({ ...newClassForm, section: e.target.value })}
                           className="w-full px-3 py-2 rounded-xl border border-slate-300 text-xs font-bold bg-white focus:outline-none focus:border-burgundy-700"
@@ -1829,7 +1874,7 @@ export default function GestionAcademicaPage() {
                             Alumnos Sin Asignar a Ningún Aula ({unassignedStudents.length} pendientes)
                           </h4>
                           <p className="text-xs text-amber-800">
-                            Están matriculados en {selectedGrade} pero aún no tienen aula o sección asignada.
+                            Están matriculados en {activeGradeName} pero aún no tienen aula o sección asignada.
                           </p>
                         </div>
                       </div>

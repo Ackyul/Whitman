@@ -35,7 +35,7 @@ export async function GET(request: Request) {
                COALESCE(tutor_teacher_name, '') as "tutorTeacherName",
                active
         FROM academic_classes
-        WHERE active = TRUE AND level != 'ACADEMIA'
+        WHERE active = TRUE
       `;
       const params: any[] = [];
       if (level) {
