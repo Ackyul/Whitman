@@ -53,30 +53,6 @@ interface GoogleAdminProfile {
   picture?: string;
 }
 
-const BASE_GRADES_BY_LEVEL: Record<'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA', string[]> = {
-  PRIMARIA: [
-    '1ro Primaria',
-    '2do Primaria',
-    '3ro Primaria',
-    '4to Primaria',
-    '5to Primaria',
-    '6to Primaria',
-  ],
-  SECUNDARIA: [
-    '1ro Secundaria',
-    '2do Secundaria',
-    '3ro Secundaria',
-    '4to Secundaria',
-    '5to Secundaria',
-  ],
-  ACADEMIA: [
-    'Ciclo Semianual UNI',
-    'Ciclo San Marcos',
-    'Ciclo Anual',
-    'Ciclo Repaso Intensivo',
-  ],
-};
-
 export default function GestionAcademicaPage() {
   const { users, currentUser, refreshData } = useWhitman();
   const [activeTab, setActiveTab] = useState<'individual' | 'classes' | 'staff' | 'courses' | 'bulk'>('individual');
@@ -285,7 +261,7 @@ export default function GestionAcademicaPage() {
     dni: '',
     name: '',
     level: 'PRIMARIA' as EducationLevel,
-    grade: '1ro Primaria',
+    grade: '',
     phone: '',
     password: '',
     // Datos de la Madre
@@ -313,7 +289,7 @@ export default function GestionAcademicaPage() {
   const [newGradeLevel, setNewGradeLevel] = useState<'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA'>('PRIMARIA');
 
   const [selectedLevelFilter, setSelectedLevelFilter] = useState<'TODOS' | 'PRIMARIA' | 'SECUNDARIA' | 'ACADEMIA'>('TODOS');
-  const [selectedGrade, setSelectedGrade] = useState<string>('1ro Primaria');
+  const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [isCreatingClass, setIsCreatingClass] = useState(false);
   const [redistributeAll, setRedistributeAll] = useState(false);
   const [newClassForm, setNewClassForm] = useState({
@@ -343,7 +319,7 @@ export default function GestionAcademicaPage() {
 
   // --- ESTADOS Y HANDLERS PARA TAB 4: CREACIÓN Y GESTIÓN DE CURSOS ---
   const [courseTabLevel, setCourseTabLevel] = useState<'SECUNDARIA' | 'PRIMARIA' | 'ACADEMIA'>('SECUNDARIA');
-  const [courseTabGrade, setCourseTabGrade] = useState<string>('3ro Secundaria');
+  const [courseTabGrade, setCourseTabGrade] = useState<string>('');
   const [courseTabList, setCourseTabList] = useState<Course[]>([]);
   const [courseTabLoading, setCourseTabLoading] = useState(false);
 
@@ -537,9 +513,20 @@ export default function GestionAcademicaPage() {
             const exists = g.some((x) => x.name === prev);
             return exists ? prev : g[0].name;
           });
+          setCourseTabGrade((prev) => {
+            const exists = g.some((x) => x.name === prev);
+            return exists ? prev : g[0].name;
+          });
           setStudentForm((prev) => ({
             ...prev,
             grade: prev.grade || g[0].name,
+          }));
+        } else {
+          setSelectedGrade('');
+          setCourseTabGrade('');
+          setStudentForm((prev) => ({
+            ...prev,
+            grade: '',
           }));
         }
       }
@@ -612,43 +599,26 @@ export default function GestionAcademicaPage() {
     }
   };
 
-  // Cargar ciclos sugeridos de academia en Neon DB (como filas reales)
-  const handleSeedAcademicCycles = async () => {
-    if (!confirm('¿Deseas registrar en Neon DB los 4 ciclos sugeridos de Academia (Semianual UNI, San Marcos, Anual, Repaso Intensivo)?')) return;
-    setLoading(true);
-    try {
-      const ciclos = ['Ciclo Semianual UNI', 'Ciclo San Marcos', 'Ciclo Anual', 'Ciclo Repaso Intensivo'];
-      for (const ciclo of ciclos) {
-        await createAcademicGradeApi(ciclo, 'ACADEMIA');
-      }
-      notify('success', '¡Ciclos de Academia guardados en Neon PostgreSQL!');
-      await loadGrades();
-      setSelectedGrade('Ciclo Semianual UNI');
-    } catch (e: any) {
-      notify('error', e.message || 'Error al guardar ciclos');
-    } finally {
-      setLoading(false);
+  // --- ELIMINAR TODOS LOS GRADOS Y AULAS EN NEON DB ---
+  const handleDeleteAllGrades = async () => {
+    if (!confirm('¿Estás seguro de eliminar TODOS los grados y aulas de la base de datos? Esta acción dejará la base de datos completamente vacía.')) {
+      return;
     }
-  };
-
-  // Cargar grados sugeridos de colegio en Neon DB (como filas reales)
-  const handleSeedSchoolGrades = async () => {
-    if (!confirm('¿Deseas registrar en Neon DB los grados escolares oficiales de Primaria y Secundaria?')) return;
     setLoading(true);
     try {
-      const gradosPrimaria = ['1ro Primaria', '2do Primaria', '3ro Primaria', '4to Primaria', '5to Primaria', '6to Primaria'];
-      const gradosSecundaria = ['1ro Secundaria', '2do Secundaria', '3ro Secundaria', '4to Secundaria', '5to Secundaria'];
-      for (const g of gradosPrimaria) {
-        await createAcademicGradeApi(g, 'PRIMARIA');
+      const res = await fetch('/api/academic/grades?all=true', { method: 'DELETE' });
+      const data = await res.json();
+      if (data.success) {
+        notify('success', 'Todos los grados y aulas han sido eliminados de la base de datos.');
+        await loadGrades();
+        await loadAcademicClasses();
+        setSelectedGrade('');
+        setCourseTabGrade('');
+      } else {
+        notify('error', data.message || 'Error al vaciar grados');
       }
-      for (const g of gradosSecundaria) {
-        await createAcademicGradeApi(g, 'SECUNDARIA');
-      }
-      notify('success', '¡Grados escolares guardados en Neon PostgreSQL!');
-      await loadGrades();
-      setSelectedGrade('1ro Primaria');
-    } catch (e: any) {
-      notify('error', e.message || 'Error al guardar grados');
+    } catch (err: any) {
+      notify('error', err.message || 'Error al conectar con la base de datos');
     } finally {
       setLoading(false);
     }
@@ -883,7 +853,7 @@ export default function GestionAcademicaPage() {
           gradeOrClass =
             level === 'ACADEMIA'
               ? 'Academia - Por Asignar'
-              : `${level === 'PRIMARIA' ? '1ro Primaria' : '1ro Secundaria'} - Sin Asignar`;
+              : `${level === 'PRIMARIA' ? 'Primaria' : 'Secundaria'} - Sin Asignar`;
         } else if (!gradeOrClass.includes(' - ')) {
           gradeOrClass = `${gradeOrClass} - Sin Asignar`;
         }
@@ -1234,8 +1204,7 @@ export default function GestionAcademicaPage() {
                             const firstGrade =
                               lvl === 'ACADEMIA'
                                 ? 'ASIGNAR_LUEGO'
-                                : gradesOfLvl[0]?.name ||
-                                  (lvl === 'PRIMARIA' ? '1ro Primaria' : '1ro Secundaria');
+                                : gradesOfLvl[0]?.name || '';
                             setStudentForm({
                               ...studentForm,
                               level: lvl,
@@ -1588,6 +1557,20 @@ export default function GestionAcademicaPage() {
                       ))}
                     </div>
 
+                    {/* Botón para vaciar todo si hay registros */}
+                    {gradesList.length > 0 && (
+                      <button
+                        type="button"
+                        onClick={handleDeleteAllGrades}
+                        disabled={loading}
+                        title="Eliminar todos los grados y ciclos de la base de datos"
+                        className="bg-rose-50 hover:bg-rose-100 text-rose-700 font-bold text-xs px-3 py-2 rounded-2xl border border-rose-200 transition flex items-center gap-1.5"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                        <span>Vaciar Todo</span>
+                      </button>
+                    )}
+
                     {/* Botón para crear nuevo grado o ciclo */}
                     <button
                       onClick={() => setIsCreatingGrade(!isCreatingGrade)}
@@ -1678,7 +1661,7 @@ export default function GestionAcademicaPage() {
                           : 'No hay grados ni ciclos registrados en la base de datos'}
                       </h4>
                       <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
-                        Todos los grados y ciclos se guardan y se leen directamente de Neon DB. Puedes crearlos uno a uno o guardar los sugeridos en la base de datos con un clic.
+                        La base de datos está completamente limpia. Todo lo que registres aquí se guardará y sincronizará directamente en Neon PostgreSQL.
                       </p>
                     </div>
 
@@ -1691,30 +1674,6 @@ export default function GestionAcademicaPage() {
                         <Plus className="w-4 h-4 text-lionGold-400" />
                         <span>+ Crear Grado / Ciclo</span>
                       </button>
-
-                      {selectedLevelFilter === 'ACADEMIA' && (
-                        <button
-                          type="button"
-                          onClick={handleSeedAcademicCycles}
-                          disabled={loading}
-                          className="bg-lionGold-500 hover:bg-lionGold-400 text-burgundy-950 font-black text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
-                        >
-                          <Sparkles className="w-4 h-4" />
-                          <span>⚡ Cargar Ciclos Base en Neon DB</span>
-                        </button>
-                      )}
-
-                      {(selectedLevelFilter === 'TODOS' || selectedLevelFilter === 'PRIMARIA' || selectedLevelFilter === 'SECUNDARIA') && (
-                        <button
-                          type="button"
-                          onClick={handleSeedSchoolGrades}
-                          disabled={loading}
-                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-xl border border-slate-300 transition flex items-center gap-1.5"
-                        >
-                          <Sparkles className="w-4 h-4 text-burgundy-800" />
-                          <span>⚡ Cargar Grados Colegio en Neon DB</span>
-                        </button>
-                      )}
                     </div>
                   </div>
                 ) : (
@@ -2449,7 +2408,8 @@ export default function GestionAcademicaPage() {
                       type="button"
                       onClick={() => {
                         setCourseTabLevel('SECUNDARIA');
-                        setCourseTabGrade('3ro Secundaria');
+                        const found = gradesList.find((g) => g.level === 'SECUNDARIA');
+                        setCourseTabGrade(found ? found.name : '');
                       }}
                       className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                         courseTabLevel === 'SECUNDARIA'
@@ -2464,7 +2424,8 @@ export default function GestionAcademicaPage() {
                       type="button"
                       onClick={() => {
                         setCourseTabLevel('PRIMARIA');
-                        setCourseTabGrade('1ro Primaria');
+                        const found = gradesList.find((g) => g.level === 'PRIMARIA');
+                        setCourseTabGrade(found ? found.name : '');
                       }}
                       className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                         courseTabLevel === 'PRIMARIA'
@@ -2479,7 +2440,8 @@ export default function GestionAcademicaPage() {
                       type="button"
                       onClick={() => {
                         setCourseTabLevel('ACADEMIA');
-                        setCourseTabGrade('Ciclo Semianual UNI');
+                        const found = gradesList.find((g) => g.level === 'ACADEMIA');
+                        setCourseTabGrade(found ? found.name : '');
                       }}
                       className={`px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
                         courseTabLevel === 'ACADEMIA'
@@ -2533,7 +2495,19 @@ export default function GestionAcademicaPage() {
               </div>
 
               {/* Sección Dual: Creación Individual con Asistente + Carga Masiva de Cursos */}
-              <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+              {!courseTabGrade ? (
+                <div className="bg-white rounded-3xl p-10 border border-slate-200 text-center space-y-3 shadow-sm">
+                  <GraduationCap className="w-12 h-12 text-slate-300 mx-auto" />
+                  <h4 className="font-bold text-slate-800 text-sm">
+                    No hay ningún grado o ciclo seleccionado para {courseTabLevel}
+                  </h4>
+                  <p className="text-xs text-slate-400 max-w-md mx-auto">
+                    Crea primero los grados o ciclos en la pestaña &quot;2. Grados, Aulas & Mezcla&quot; para poder configurar y añadir sus asignaturas oficiales.
+                  </p>
+                </div>
+              ) : (
+                <>
+                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
                 
                 {/* Izquierda: Creador Individual con Asistente de Prefijos (5 columnas) */}
                 <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
@@ -2756,9 +2730,11 @@ export default function GestionAcademicaPage() {
                   </div>
                 )}
               </div>
-
-            </div>
+            </>
           )}
+
+        </div>
+      )}
 
         </div>
       )}
