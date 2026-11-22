@@ -397,7 +397,7 @@ export default function GestionAcademicaPage() {
     }
 
     if (lines.length === 0) {
-      notify('error', 'Escribe al menos un nombre de curso o selecciona una plantilla sugerida.');
+      notify('error', 'Escribe al menos un nombre de curso o asignatura en el campo de texto.');
       return;
     }
 
@@ -479,26 +479,6 @@ export default function GestionAcademicaPage() {
       loadCoursesForSelectedGrade(selectedGrade);
     } catch (err: any) {
       notify('error', err.message || 'Error al eliminar curso');
-    }
-  };
-
-  const handleSeedCoursesForGrade = async () => {
-    if (!selectedGrade) return;
-    const lvl = getLevelForGrade(selectedGrade);
-    const defaults =
-      lvl === 'PRIMARIA'
-        ? ['Matemática', 'Comunicación', 'Ciencia y Tecnología', 'Personal Social', 'Inglés', 'Arte y Cultura', 'Educación Física', 'Religión']
-        : ['Álgebra y Aritmética', 'Geometría y Trigonometría', 'Lenguaje y Literatura', 'Física y Química', 'Biología y Anatomía', 'Historia y Geografía', 'Inglés', 'Razonamiento Matemático', 'Razonamiento Verbal'];
-
-    if (!confirm(`¿Agregar ${defaults.length} cursos oficiales sugeridos para ${selectedGrade}?`)) return;
-    try {
-      for (const c of defaults) {
-        await createCourseApi({ gradeName: selectedGrade, courseName: c, level: lvl });
-      }
-      notify('success', `¡Cursos asignados exitosamente a ${selectedGrade}!`);
-      loadCoursesForSelectedGrade(selectedGrade);
-    } catch (err: any) {
-      notify('error', err.message || 'Error al agregar cursos');
     }
   };
 
@@ -2124,17 +2104,6 @@ export default function GestionAcademicaPage() {
                       >
                         {isAddingCourse ? 'Cerrar' : '+ Añadir Curso'}
                       </button>
-
-                      {coursesOfGrade.length === 0 && (
-                        <button
-                          type="button"
-                          onClick={handleSeedCoursesForGrade}
-                          className="bg-lionGold-500 hover:bg-lionGold-400 text-burgundy-950 font-black px-3.5 py-1.5 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm"
-                        >
-                          <Sparkles className="w-3.5 h-3.5" />
-                          <span>Cargar Cursos Sugeridos</span>
-                        </button>
-                      )}
                     </div>
                   </div>
 
@@ -2162,7 +2131,7 @@ export default function GestionAcademicaPage() {
 
                   {coursesOfGrade.length === 0 ? (
                     <div className="text-center py-6 text-xs text-slate-400 italic">
-                      Aún no hay cursos creados para {selectedGrade}. Haz clic en <strong>"+ Añadir Curso"</strong> o <strong>"Cargar Cursos Sugeridos"</strong> para crearlos.
+                      Aún no hay cursos creados para {selectedGrade}. Haz clic en <strong>"+ Añadir Curso"</strong> para crearlo.
                     </div>
                   ) : (
                     <div className="flex flex-wrap gap-2">
