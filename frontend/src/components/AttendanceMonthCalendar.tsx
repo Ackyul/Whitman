@@ -6,6 +6,7 @@ import {
   Calendar as CalendarIcon,
   ChevronLeft,
   ChevronRight,
+  ChevronDown,
   Check,
   CheckCheck,
   LogIn,
@@ -36,6 +37,7 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
   const [currentMonth, setCurrentMonth] = useState<number>(today.getMonth()); // 0-11
   const [selectedDayRecord, setSelectedDayRecord] = useState<AttendanceRecord | null>(null);
   const [selectedDateStr, setSelectedDateStr] = useState<string | null>(null);
+  const [isSelectingMonth, setIsSelectingMonth] = useState<boolean>(false);
 
   // Navegación de mes
   const handlePrevMonth = () => {
@@ -143,47 +145,72 @@ export const AttendanceMonthCalendar: React.FC<Props> = ({
         </div>
       </div>
 
-      {/* 2. SELECTOR DE MESES: PÍLDORAS PARA SALTAR A CUALQUIER MES DEL AÑO */}
-      <div className="space-y-1.5">
+      {/* 2. SELECTOR DE MES: MUESTRA SOLO EL MES ACTUAL Y AL HACER CLIC PERMITE CAMBIARLO */}
+      <div className="space-y-2">
         <div className="flex items-center justify-between text-xs">
           <span className="font-bold text-slate-500 uppercase flex items-center gap-1">
             <span>📅 Seleccionar Mes:</span>
           </span>
-          <span className="font-bold text-burgundy-900">
-            Viendo: {MONTH_NAMES[currentMonth]} {currentYear}
-          </span>
+          <button
+            type="button"
+            onClick={() => setIsSelectingMonth((prev) => !prev)}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-burgundy-900 hover:bg-burgundy-950 text-white rounded-xl text-xs font-bold transition shadow-xs cursor-pointer group"
+          >
+            <span>{MONTH_NAMES[currentMonth]} {currentYear}</span>
+            <ChevronDown
+              className={`w-3.5 h-3.5 text-lionGold-400 transition-transform duration-200 ${
+                isSelectingMonth ? 'rotate-180' : ''
+              }`}
+            />
+          </button>
         </div>
 
-        {/* Barra horizontal desplazable con los 12 meses */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1.5 no-scrollbar scroll-smooth">
-          {MONTH_NAMES.map((mName, idx) => {
-            const isSelectedMonth = idx === currentMonth;
-            const isRealCurrentMonth = idx === today.getMonth() && currentYear === today.getFullYear();
-            
-            return (
+        {/* Al hacer clic en el mes actual se despliegan todos los meses para cambiar */}
+        {isSelectingMonth && (
+          <div className="p-3 bg-slate-50 rounded-2xl border border-slate-200 shadow-sm space-y-2 animate-in fade-in zoom-in-95">
+            <div className="flex items-center justify-between text-[11px] text-slate-500 font-bold px-1">
+              <span>Selecciona un mes para visualizar:</span>
               <button
-                key={mName}
                 type="button"
-                onClick={() => {
-                  setCurrentMonth(idx);
-                  setSelectedDayRecord(null);
-                }}
-                className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 flex items-center gap-1 ${
-                  isSelectedMonth
-                    ? 'bg-burgundy-900 text-white shadow font-black ring-2 ring-lionGold-400/50'
-                    : isRealCurrentMonth
-                    ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200 hover:text-slate-900'
-                }`}
+                onClick={() => setIsSelectingMonth(false)}
+                className="text-slate-400 hover:text-slate-700 cursor-pointer"
               >
-                <span>{mName}</span>
-                {isRealCurrentMonth && !isSelectedMonth && (
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-600" title="Mes en curso" />
-                )}
+                Cerrar ✕
               </button>
-            );
-          })}
-        </div>
+            </div>
+
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-1.5">
+              {MONTH_NAMES.map((mName, idx) => {
+                const isSelectedMonth = idx === currentMonth;
+                const isRealCurrentMonth = idx === today.getMonth() && currentYear === today.getFullYear();
+
+                return (
+                  <button
+                    key={mName}
+                    type="button"
+                    onClick={() => {
+                      setCurrentMonth(idx);
+                      setSelectedDayRecord(null);
+                      setIsSelectingMonth(false);
+                    }}
+                    className={`px-3 py-2 rounded-xl text-xs font-bold transition-all flex items-center justify-center gap-1 cursor-pointer ${
+                      isSelectedMonth
+                        ? 'bg-burgundy-900 text-white shadow font-black ring-2 ring-lionGold-400/50'
+                        : isRealCurrentMonth
+                        ? 'bg-amber-100 text-amber-900 border border-amber-300 hover:bg-amber-200'
+                        : 'bg-white text-slate-700 hover:bg-slate-200/80 border border-slate-200'
+                    }`}
+                  >
+                    <span>{mName}</span>
+                    {isRealCurrentMonth && !isSelectedMonth && (
+                      <span className="w-1.5 h-1.5 rounded-full bg-amber-600" title="Mes en curso" />
+                    )}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* 3. LEYENDA RÁPIDA COMPACTA: PUNTUALES, TARDANZAS Y SALIDAS */}
