@@ -38,13 +38,12 @@ export async function POST(request: Request) {
     const cleanDni = String(dni || '').trim();
     const cleanName = sanitizeString(name, 150);
     const studentPassword = String(password || cleanDni).trim();
-    const hasFamily = (motherDni && String(motherDni).trim()) || (fatherDni && String(fatherDni).trim()) || (parentDni && String(parentDni).trim());
 
-    if (!cleanDni || !cleanName || !hasFamily) {
+    if (!cleanDni || !cleanName) {
       return NextResponse.json(
         {
           success: false,
-          message: 'DNI, Nombre del alumno y al menos un DNI familiar (Madre, Padre o Apoderado) son obligatorios.',
+          message: 'El DNI y Nombre del alumno son obligatorios.',
         },
         { status: 400 }
       );
@@ -62,10 +61,10 @@ export async function POST(request: Request) {
     const studentCode = `WHT-${year}-${rand}`;
     const userId = `u-alu-${Date.now()}-${Math.floor(Math.random() * 1000)}`;
 
-    const effectiveParentDni = parentDni?.trim() || motherDni?.trim() || fatherDni?.trim() || undefined;
-    const effectiveParentName = parentName?.trim() || motherName?.trim() || fatherName?.trim() || `Apoderado de ${cleanName}`;
-    const effectiveParentPhone = parentPhone?.trim() || motherPhone?.trim() || fatherPhone?.trim() || phone || undefined;
-    const effectiveRelationship = parentRelationship?.trim() || (motherDni ? 'Madre' : fatherDni ? 'Padre' : 'Apoderado');
+    const effectiveParentDni = parentDni?.trim() || motherDni?.trim() || fatherDni?.trim() || null;
+    const effectiveParentName = parentName?.trim() || motherName?.trim() || fatherName?.trim() || (effectiveParentDni ? `Apoderado de ${cleanName}` : null);
+    const effectiveParentPhone = parentPhone?.trim() || motherPhone?.trim() || fatherPhone?.trim() || null;
+    const effectiveRelationship = parentRelationship?.trim() || (motherDni ? 'Madre' : fatherDni ? 'Padre' : parentDni ? 'Apoderado' : null);
 
     const newUser = {
       id: userId,

@@ -644,15 +644,11 @@ export default function GestionAcademicaPage() {
   // --- MATRÍCULA INDIVIDUAL (Madre, Padre y/o Apoderado) ---
   const handleEnrollStudent = async (e: React.FormEvent) => {
     e.preventDefault();
-    const hasFamilyDni =
-      studentForm.motherDni?.trim() ||
-      studentForm.fatherDni?.trim() ||
-      studentForm.parentDni?.trim();
 
-    if (!studentForm.dni || !studentForm.name || !hasFamilyDni) {
+    if (!studentForm.dni || !studentForm.name) {
       notify(
         'error',
-        'El DNI del alumno, nombre y al menos un DNI familiar (Madre, Padre o Apoderado) son obligatorios.'
+        'El DNI del alumno y nombre completo son obligatorios.'
       );
       return;
     }
@@ -858,8 +854,8 @@ export default function GestionAcademicaPage() {
           gradeOrClass = `${gradeOrClass} - Sin Asignar`;
         }
 
-        const parentDni = parts[4] || '40000000';
-        const parentName = parts[5] || `Apoderado de ${name}`;
+        const parentDni = parts[4] || '';
+        const parentName = parts[5] || '';
         const phone = parts[6] || '';
         const parentPhone = parts[7] || phone;
 
@@ -1294,10 +1290,10 @@ export default function GestionAcademicaPage() {
                   <div className="space-y-4 pt-4 border-t border-slate-100">
                     <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                       <span className="text-xs font-black uppercase text-burgundy-900 tracking-wider">
-                        B. Datos Familiares (Acceso al Portal para Madre, Padre y Apoderado)
+                        B. Datos Familiares / Apoderados (Opcional)
                       </span>
-                      <span className="text-xs font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200 w-fit">
-                        ✓ Cada uno podrá ingresar con su propio DNI
+                      <span className="text-xs font-bold text-slate-500 bg-slate-100 px-2 py-0.5 rounded-full border border-slate-200 w-fit">
+                        No obligatorio
                       </span>
                     </div>
 
