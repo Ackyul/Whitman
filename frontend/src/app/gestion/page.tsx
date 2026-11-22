@@ -588,23 +588,67 @@ export default function GestionAcademicaPage() {
     }
   };
 
-  // --- ELIMINAR GRADO EN NEON DB ---
+  // --- ELIMINAR GRADO O CICLO EN NEON DB ---
   const handleDeleteGrade = async (gradeNameToDelete: string) => {
-    if (!confirm(`¿Estás seguro de eliminar el grado "${gradeNameToDelete}"? Esta acción borrará también sus aulas vacías.`)) {
+    if (!confirm(`¿Estás seguro de eliminar "${gradeNameToDelete}"? Esta acción borrará también sus aulas asociadas en la base de datos.`)) {
       return;
     }
     setLoading(true);
     try {
       const res = await deleteAcademicGradeApi(undefined, gradeNameToDelete);
-      notify('success', res.message || `Grado "${gradeNameToDelete}" eliminado.`);
+      notify('success', res.message || `"${gradeNameToDelete}" eliminado de la base de datos.`);
       await loadGrades();
       await loadAcademicClasses();
       const remaining = gradesList.filter((g) => g.name !== gradeNameToDelete);
       if (remaining.length > 0) {
         setSelectedGrade(remaining[0].name);
+      } else {
+        setSelectedGrade('');
       }
     } catch (err: any) {
       notify('error', err.message || 'Error al eliminar grado.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar ciclos sugeridos de academia en Neon DB (como filas reales)
+  const handleSeedAcademicCycles = async () => {
+    if (!confirm('¿Deseas registrar en Neon DB los 4 ciclos sugeridos de Academia (Semianual UNI, San Marcos, Anual, Repaso Intensivo)?')) return;
+    setLoading(true);
+    try {
+      const ciclos = ['Ciclo Semianual UNI', 'Ciclo San Marcos', 'Ciclo Anual', 'Ciclo Repaso Intensivo'];
+      for (const ciclo of ciclos) {
+        await createAcademicGradeApi(ciclo, 'ACADEMIA');
+      }
+      notify('success', '¡Ciclos de Academia guardados en Neon PostgreSQL!');
+      await loadGrades();
+      setSelectedGrade('Ciclo Semianual UNI');
+    } catch (e: any) {
+      notify('error', e.message || 'Error al guardar ciclos');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Cargar grados sugeridos de colegio en Neon DB (como filas reales)
+  const handleSeedSchoolGrades = async () => {
+    if (!confirm('¿Deseas registrar en Neon DB los grados escolares oficiales de Primaria y Secundaria?')) return;
+    setLoading(true);
+    try {
+      const gradosPrimaria = ['1ro Primaria', '2do Primaria', '3ro Primaria', '4to Primaria', '5to Primaria', '6to Primaria'];
+      const gradosSecundaria = ['1ro Secundaria', '2do Secundaria', '3ro Secundaria', '4to Secundaria', '5to Secundaria'];
+      for (const g of gradosPrimaria) {
+        await createAcademicGradeApi(g, 'PRIMARIA');
+      }
+      for (const g of gradosSecundaria) {
+        await createAcademicGradeApi(g, 'SECUNDARIA');
+      }
+      notify('success', '¡Grados escolares guardados en Neon PostgreSQL!');
+      await loadGrades();
+      setSelectedGrade('1ro Primaria');
+    } catch (e: any) {
+      notify('error', e.message || 'Error al guardar grados');
     } finally {
       setLoading(false);
     }
@@ -919,26 +963,18 @@ export default function GestionAcademicaPage() {
     document.body.removeChild(link);
   };
 
-  // CÁLCULOS DINÁMICOS PARA LA PESTAÑA DE GRADOS Y AULAS (DESDE NEON DB)
-  const allAvailableGrades =
-    gradesList.length > 0
-      ? gradesList
-      : [
-          ...BASE_GRADES_BY_LEVEL.PRIMARIA.map((name) => ({ id: name, name, level: 'PRIMARIA' })),
-          ...BASE_GRADES_BY_LEVEL.SECUNDARIA.map((name) => ({ id: name, name, level: 'SECUNDARIA' })),
-          ...BASE_GRADES_BY_LEVEL.ACADEMIA.map((name) => ({ id: name, name, level: 'ACADEMIA' })),
-        ];
-
-  const filteredGrades = allAvailableGrades
+  // CÁLCULOS DINÁMICOS PARA LA PESTAÑA DE GRADOS Y AULAS (100% DIRECTO DESDE NEON DB)
+  const filteredGrades = gradesList
     .filter((g) => {
       if (selectedLevelFilter === 'TODOS') return true;
       return g.level === selectedLevelFilter;
     })
     .map((g) => g.name);
 
-  const activeGradeName = filteredGrades.includes(selectedGrade)
-    ? selectedGrade
-    : filteredGrades[0] || selectedGrade;
+  const activeGradeName =
+    filteredGrades.includes(selectedGrade)
+      ? selectedGrade
+      : filteredGrades[0] || '';
 
   // Alumnos del grado o ciclo seleccionado
   const studentsInSelectedGrade = users.filter((u) => {
@@ -1230,19 +1266,12 @@ export default function GestionAcademicaPage() {
                               ⏳ Asignar luego a curso o sección (Por definir)
                             </option>
                           )}
-                          {studentForm.level === 'ACADEMIA' ? (
-                            (gradesList.filter((g) => g.level === 'ACADEMIA').length > 0
-                              ? gradesList.filter((g) => g.level === 'ACADEMIA').map((g) => g.name)
-                              : BASE_GRADES_BY_LEVEL['ACADEMIA']
-                            ).map((gName) => (
-                              <option key={gName} value={gName}>
-                                {gName}
+                          {gradesList.filter((g) => g.level === studentForm.level).length === 0 ? (
+                            studentForm.level !== 'ACADEMIA' && (
+                              <option value="">
+                                ⚠️ No hay grados creados en {studentForm.level}. Créalos en la pestaña 2
                               </option>
-                            ))
-                          ) : gradesList.filter((g) => g.level === studentForm.level).length === 0 ? (
-                            <option value="">
-                              ⚠️ No hay grados creados en {studentForm.level}. Créalos en la pestaña 2
-                            </option>
+                            )
                           ) : (
                             gradesList
                               .filter((g) => g.level === studentForm.level)
@@ -1535,8 +1564,8 @@ export default function GestionAcademicaPage() {
                           key={lvl}
                           onClick={() => {
                             setSelectedLevelFilter(lvl);
-                            const gradesForLvl = allAvailableGrades.filter(
-                              (g) => lvl === 'TODOS' || g.level === lvl
+                            const gradesForLvl = gradesList.filter(
+                              (g: { id?: string; name: string; level: string }) => lvl === 'TODOS' || g.level === lvl
                             );
                             if (gradesForLvl.length > 0) {
                               setSelectedGrade(gradesForLvl[0].name);
@@ -1634,14 +1663,59 @@ export default function GestionAcademicaPage() {
                   </form>
                 )}
 
-                {/* Chips de Grados y Ciclos */}
+                {/* Chips de Grados y Ciclos (100% Neon DB) */}
                 {filteredGrades.length === 0 ? (
-                  <div className="p-8 text-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl">
-                    <Layers className="w-10 h-10 text-slate-300 mx-auto mb-2" />
-                    <h4 className="font-black text-slate-700 text-sm">No hay grados ni ciclos creados todavía</h4>
-                    <p className="text-xs text-slate-400 max-w-sm mx-auto mt-1">
-                      Usa el botón <strong>&quot;+ Crear Grado o Ciclo&quot;</strong> arriba para comenzar a agregar grados escolares o ciclos de academia.
-                    </p>
+                  <div className="p-8 text-center bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl space-y-3">
+                    <Layers className="w-10 h-10 text-slate-300 mx-auto" />
+                    <div>
+                      <h4 className="font-black text-slate-700 text-sm">
+                        {selectedLevelFilter === 'ACADEMIA'
+                          ? 'No hay ciclos de academia registrados en la base de datos'
+                          : selectedLevelFilter === 'PRIMARIA'
+                          ? 'No hay grados de primaria registrados en la base de datos'
+                          : selectedLevelFilter === 'SECUNDARIA'
+                          ? 'No hay grados de secundaria registrados en la base de datos'
+                          : 'No hay grados ni ciclos registrados en la base de datos'}
+                      </h4>
+                      <p className="text-xs text-slate-400 max-w-md mx-auto mt-1">
+                        Todos los grados y ciclos se guardan y se leen directamente de Neon DB. Puedes crearlos uno a uno o guardar los sugeridos en la base de datos con un clic.
+                      </p>
+                    </div>
+
+                    <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setIsCreatingGrade(true)}
+                        className="bg-burgundy-900 hover:bg-burgundy-950 text-white font-bold text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
+                      >
+                        <Plus className="w-4 h-4 text-lionGold-400" />
+                        <span>+ Crear Grado / Ciclo</span>
+                      </button>
+
+                      {selectedLevelFilter === 'ACADEMIA' && (
+                        <button
+                          type="button"
+                          onClick={handleSeedAcademicCycles}
+                          disabled={loading}
+                          className="bg-lionGold-500 hover:bg-lionGold-400 text-burgundy-950 font-black text-xs px-4 py-2 rounded-xl transition flex items-center gap-1.5 shadow"
+                        >
+                          <Sparkles className="w-4 h-4" />
+                          <span>⚡ Cargar Ciclos Base en Neon DB</span>
+                        </button>
+                      )}
+
+                      {(selectedLevelFilter === 'TODOS' || selectedLevelFilter === 'PRIMARIA' || selectedLevelFilter === 'SECUNDARIA') && (
+                        <button
+                          type="button"
+                          onClick={handleSeedSchoolGrades}
+                          disabled={loading}
+                          className="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs px-4 py-2 rounded-xl border border-slate-300 transition flex items-center gap-1.5"
+                        >
+                          <Sparkles className="w-4 h-4 text-burgundy-800" />
+                          <span>⚡ Cargar Grados Colegio en Neon DB</span>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ) : (
                   <div className="flex flex-wrap gap-2 pt-1">
@@ -1659,27 +1733,49 @@ export default function GestionAcademicaPage() {
                       const isSelected = activeGradeName === g;
 
                       return (
-                        <button
+                        <div
                           key={g}
-                          onClick={() => {
-                            setSelectedGrade(g);
-                            setIsCreatingClass(false);
-                          }}
-                          className={`px-3.5 py-2 rounded-2xl text-xs font-bold transition flex items-center gap-2 border ${
+                          className={`inline-flex items-center rounded-2xl border transition shadow-xs ${
                             isSelected
-                              ? 'bg-burgundy-900 text-white border-burgundy-950 shadow-md font-black'
-                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                              ? 'bg-burgundy-900 text-white border-burgundy-950 font-black'
+                              : 'bg-white hover:bg-slate-50 text-slate-700 border-slate-200'
                           }`}
                         >
-                          <span>{g}</span>
-                          <span
-                            className={`text-xs px-2 py-0.5 rounded-full font-mono ${
-                              isSelected ? 'bg-lionGold-500 text-burgundy-950 font-black' : 'bg-slate-200 text-slate-600'
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedGrade(g);
+                              setIsCreatingClass(false);
+                            }}
+                            className="px-3.5 py-2 text-xs font-bold flex items-center gap-2"
+                          >
+                            <span>{g}</span>
+                            <span
+                              className={`text-xs px-2 py-0.5 rounded-full font-mono ${
+                                isSelected ? 'bg-lionGold-500 text-burgundy-950 font-black' : 'bg-slate-100 text-slate-600'
+                              }`}
+                            >
+                              {countInGrade}
+                            </span>
+                          </button>
+
+                          {/* Botón rápido para eliminar de Neon DB */}
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteGrade(g);
+                            }}
+                            title={`Eliminar "${g}" de Neon DB`}
+                            className={`pr-2.5 pl-1 py-2 text-xs transition ${
+                              isSelected
+                                ? 'text-white/60 hover:text-rose-300'
+                                : 'text-slate-400 hover:text-rose-600'
                             }`}
                           >
-                            {countInGrade}
-                          </span>
-                        </button>
+                            <Trash2 className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -1687,7 +1783,7 @@ export default function GestionAcademicaPage() {
               </div>
 
               {/* Panel del Grado o Ciclo Seleccionado */}
-              {activeGradeName && (
+              {Boolean(activeGradeName && filteredGrades.includes(activeGradeName)) && (
                 <div className="bg-white rounded-3xl p-6 sm:p-8 border border-slate-200 shadow-sm space-y-6">
                 
                 {/* Cabecera del Grado + Estadísticas + Botones de Acción */}
@@ -2405,27 +2501,33 @@ export default function GestionAcademicaPage() {
                       : 'Selecciona el Grado para configurar sus cursos:'}
                   </label>
                   <div className="flex flex-wrap gap-2">
-                    {(gradesList.length > 0 && gradesList.some((g) => g.level === courseTabLevel)
-                      ? gradesList.filter((g) => g.level === courseTabLevel).map((g) => g.name)
-                      : BASE_GRADES_BY_LEVEL[courseTabLevel]
-                    ).map((gradeName) => {
-                      const isSelected = courseTabGrade === gradeName;
-                      return (
-                        <button
-                          key={gradeName}
-                          type="button"
-                          onClick={() => setCourseTabGrade(gradeName)}
-                          className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
-                            isSelected
-                              ? 'bg-lionGold-500 text-burgundy-950 font-black shadow-md border-2 border-lionGold-600'
-                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
-                          }`}
-                        >
-                          <span>{gradeName}</span>
-                          {isSelected && <span className="w-2 h-2 rounded-full bg-burgundy-950" />}
-                        </button>
-                      );
-                    })}
+                    {gradesList.filter((g) => g.level === courseTabLevel).length === 0 ? (
+                      <p className="text-xs text-slate-400 italic py-2">
+                        No hay grados ni ciclos registrados en {courseTabLevel}. Créalos en la pestaña &quot;2. Grados, Aulas & Mezcla&quot;.
+                      </p>
+                    ) : (
+                      gradesList
+                        .filter((g) => g.level === courseTabLevel)
+                        .map((gradeObj) => {
+                          const gradeName = gradeObj.name;
+                          const isSelected = courseTabGrade === gradeName;
+                          return (
+                            <button
+                              key={gradeName}
+                              type="button"
+                              onClick={() => setCourseTabGrade(gradeName)}
+                              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 ${
+                                isSelected
+                                  ? 'bg-lionGold-500 text-burgundy-950 font-black shadow-md border-2 border-lionGold-600'
+                                  : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border border-slate-200'
+                              }`}
+                            >
+                              <span>{gradeName}</span>
+                              {isSelected && <span className="w-2 h-2 rounded-full bg-burgundy-950" />}
+                            </button>
+                          );
+                        })
+                    )}
                   </div>
                 </div>
               </div>
