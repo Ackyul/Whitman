@@ -45,6 +45,8 @@ import {
   ArrowRight,
   LogOut,
   BookOpen,
+  Search,
+  X,
 } from 'lucide-react';
 
 interface GoogleAdminProfile {
@@ -298,6 +300,13 @@ export default function GestionAcademicaPage() {
     capacity: 35,
     classroomNumber: '',
   });
+
+  // Estado para Modal de Añadir Alumnos a un Aula Específica
+  const [assignModalClass, setAssignModalClass] = useState<AcademicClass | null>(null);
+  const [assignSearchQuery, setAssignSearchQuery] = useState('');
+  const [assignScopeFilter, setAssignScopeFilter] = useState<'GRADE' | 'UNASSIGNED' | 'ALL'>('GRADE');
+  const [selectedStudentIds, setSelectedStudentIds] = useState<string[]>([]);
+  const [assigningLoading, setAssigningLoading] = useState(false);
 
   // 3. Estado Formulario Docente
   const [staffForm, setStaffForm] = useState({
@@ -738,6 +747,39 @@ export default function GestionAcademicaPage() {
     }
   };
 
+  // --- ASIGNAR ALUMNO INDIVIDUAL O EN GRUPO DIRECTAMENTE AL AULA DESDE EL MODAL ---
+  const handleAssignSingleStudentToClass = async (student: User, targetClass: AcademicClass) => {
+    setAssigningLoading(true);
+    try {
+      await moveStudentClassApi(student.id, targetClass.name);
+      notify('success', `✓ ${student.name} asignado(a) correctamente a ${targetClass.name}`);
+      refreshData();
+    } catch (err: any) {
+      notify('error', err.message || 'Error al asignar alumno');
+    } finally {
+      setAssigningLoading(false);
+    }
+  };
+
+  const handleAssignSelectedStudentsToClass = async (targetClass: AcademicClass) => {
+    if (selectedStudentIds.length === 0) return;
+    setAssigningLoading(true);
+    try {
+      let count = 0;
+      for (const id of selectedStudentIds) {
+        await moveStudentClassApi(id, targetClass.name);
+        count++;
+      }
+      notify('success', `¡${count} alumno(s) asignado(s) exitosamente a ${targetClass.name}!`);
+      setSelectedStudentIds([]);
+      refreshData();
+    } catch (err: any) {
+      notify('error', err.message || 'Error al asignar alumnos');
+    } finally {
+      setAssigningLoading(false);
+    }
+  };
+
   // --- MEZCLA / BALANCEO AUTOMÁTICO DE ALUMNOS ---
   const handleAutoBalance = async () => {
     const lvl = getLevelForGrade(selectedGrade);
@@ -949,6 +991,41 @@ export default function GestionAcademicaPage() {
   const classesForSelectedGrade = classes.filter(
     (c) => c.grade.toLowerCase() === activeGradeName.toLowerCase() && c.active !== false
   );
+
+  // Candidatos para el modal superpuesto de añadir alumnos a un aula
+  const candidateStudentsForModal = users.filter((u) => {
+    if (u.role !== 'ALUMNO') return false;
+
+    // Filtro por alcance
+    if (assignScopeFilter === 'GRADE' && assignModalClass) {
+      const gOrC = (u.gradeOrClass || '').toLowerCase();
+      const targetG = assignModalClass.grade.toLowerCase();
+      const targetLevel = getLevelForGrade(assignModalClass.grade);
+      const matchesGrade =
+        gOrC.includes(targetG) ||
+        (u.level === targetLevel && (gOrC.includes('sin asignar') || gOrC.includes('por asignar')));
+      if (!matchesGrade) return false;
+    } else if (assignScopeFilter === 'UNASSIGNED') {
+      const gOrC = (u.gradeOrClass || '').toLowerCase();
+      const isUnassigned =
+        !gOrC ||
+        gOrC.includes('sin asignar') ||
+        gOrC.includes('por asignar') ||
+        !gOrC.includes(' - ');
+      if (!isUnassigned) return false;
+    }
+
+    // Filtro por texto de búsqueda (Nombre, Apellidos, DNI o Código)
+    if (assignSearchQuery.trim()) {
+      const q = assignSearchQuery.toLowerCase().trim();
+      const nameMatch = (u.name || '').toLowerCase().includes(q);
+      const dniMatch = (u.dni || '').includes(q);
+      const codeMatch = (u.studentCode || '').toLowerCase().includes(q);
+      return nameMatch || dniMatch || codeMatch;
+    }
+
+    return true;
+  });
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -1985,15 +2062,30 @@ export default function GestionAcademicaPage() {
                             <h4 className="font-serif font-black text-sm text-slate-900 truncate">
                               {cls.name}
                             </h4>
-                            {studentsInThisClass.length === 0 && (
+                            <div className="flex items-center gap-1.5 shrink-0">
                               <button
-                                onClick={() => handleDeleteClass(cls.id, cls.name)}
-                                title="Eliminar aula vacía"
-                                className="p-1 text-slate-400 hover:text-rose-600 transition"
+                                type="button"
+                                onClick={() => {
+                                  setAssignModalClass(cls);
+                                  setAssignSearchQuery('');
+                                  setSelectedStudentIds([]);
+                                }}
+                                title="Buscar y añadir alumnos a esta aula"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 bg-burgundy-50 hover:bg-burgundy-100 text-burgundy-900 border border-burgundy-200 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
                               >
-                                <Trash2 className="w-3.5 h-3.5" />
+                                <UserPlus className="w-3 h-3" />
+                                <span>+ Añadir</span>
                               </button>
-                            )}
+                              {studentsInThisClass.length === 0 && (
+                                <button
+                                  onClick={() => handleDeleteClass(cls.id, cls.name)}
+                                  title="Eliminar aula vacía"
+                                  className="p-1 text-slate-400 hover:text-rose-600 transition cursor-pointer"
+                                >
+                                  <Trash2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+                            </div>
                           </div>
 
                           <div className="flex items-center justify-between text-xs text-slate-500 mt-1">
@@ -2015,8 +2107,20 @@ export default function GestionAcademicaPage() {
                         {/* Lista de Alumnos en esta Aula */}
                         <div className="space-y-2 max-h-[460px] overflow-y-auto pr-1">
                           {studentsInThisClass.length === 0 ? (
-                            <div className="p-6 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-                              Aula vacía. Usa la mezcla automática o mueve alumnos aquí.
+                            <div className="p-6 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200 flex flex-col items-center justify-center gap-2.5">
+                              <span>Aula vacía. Usa la mezcla automática o añade alumnos aquí.</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setAssignModalClass(cls);
+                                  setAssignSearchQuery('');
+                                  setSelectedStudentIds([]);
+                                }}
+                                className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-burgundy-900 hover:bg-burgundy-950 text-white rounded-xl font-bold text-xs shadow-xs transition cursor-pointer"
+                              >
+                                <UserPlus className="w-3.5 h-3.5" />
+                                <span>+ Añadir Alumno(s)</span>
+                              </button>
                             </div>
                           ) : (
                             studentsInThisClass.map((stu) => (
@@ -2060,6 +2164,22 @@ export default function GestionAcademicaPage() {
                             ))
                           )}
                         </div>
+
+                        {/* Botón para añadir alumnos a esta aula */}
+                        {studentsInThisClass.length > 0 && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setAssignModalClass(cls);
+                              setAssignSearchQuery('');
+                              setSelectedStudentIds([]);
+                            }}
+                            className="w-full py-2 bg-slate-50 hover:bg-burgundy-50 text-slate-700 hover:text-burgundy-900 border border-dashed border-slate-300 hover:border-burgundy-300 rounded-2xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+                          >
+                            <UserPlus className="w-3.5 h-3.5" />
+                            <span>+ Añadir Alumno(s)</span>
+                          </button>
+                        )}
                       </div>
                     );
                   })}
@@ -2703,6 +2823,262 @@ export default function GestionAcademicaPage() {
 
         </div>
       )}
+
+      {/* ========================================================================= */}
+      {/* MODAL SUPERPUESTO: BUSCAR Y AÑADIR ALUMNOS A UN AULA ESPECÍFICA          */}
+      {/* ========================================================================= */}
+      {assignModalClass && (() => {
+        const candidatesAvailableToSelect = candidateStudentsForModal.filter(
+          (s) => (s.gradeOrClass || '').toLowerCase().trim() !== assignModalClass.name.toLowerCase().trim()
+        );
+        const allAvailableSelected =
+          candidatesAvailableToSelect.length > 0 &&
+          candidatesAvailableToSelect.every((s) => selectedStudentIds.includes(s.id));
+
+        const currentOccupancy = users.filter(
+          (u) => u.role === 'ALUMNO' && (u.gradeOrClass || '').toLowerCase().trim() === assignModalClass.name.toLowerCase().trim()
+        ).length;
+
+        return (
+          <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-xs flex items-center justify-center p-3 sm:p-5 animate-in fade-in">
+            <div className="bg-white rounded-3xl shadow-2xl border border-slate-200 w-full max-w-2xl max-h-[90vh] flex flex-col overflow-hidden animate-in zoom-in-95">
+              {/* Cabecera del Modal */}
+              <div className="p-5 border-b border-slate-200 bg-linear-to-r from-slate-900 via-burgundy-950 to-burgundy-900 text-white flex items-center justify-between shrink-0">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-amber-400 font-bold border border-white/10 shadow-xs">
+                    <UserPlus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="font-serif font-black text-lg text-white flex items-center gap-2">
+                      <span>Añadir Alumnos a:</span>
+                      <span className="text-amber-300 underline decoration-amber-400/50 underline-offset-4">{assignModalClass.name}</span>
+                    </h3>
+                    <p className="text-xs text-slate-300">
+                      {assignModalClass.grade} • Turno: {assignModalClass.shift} • Capacidad: {currentOccupancy} / {assignModalClass.capacity || 35} alumnos
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setAssignModalClass(null);
+                    setAssignSearchQuery('');
+                    setSelectedStudentIds([]);
+                  }}
+                  className="w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-slate-300 hover:text-white transition cursor-pointer"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Barra de Búsqueda por Nombre o DNI & Filtros */}
+              <div className="p-4 border-b border-slate-100 bg-slate-50 space-y-3 shrink-0">
+                <div className="relative">
+                  <Search className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                  <input
+                    type="text"
+                    value={assignSearchQuery}
+                    onChange={(e) => setAssignSearchQuery(e.target.value)}
+                    placeholder="Buscar por Nombre, Apellidos o DNI del alumno..."
+                    className="w-full pl-10 pr-10 py-2.5 bg-white border border-slate-300 rounded-xl text-sm font-medium text-slate-900 placeholder:text-slate-400 focus:outline-hidden focus:ring-2 focus:ring-burgundy-500 focus:border-burgundy-500 shadow-xs transition"
+                    autoFocus
+                  />
+                  {assignSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setAssignSearchQuery('')}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+
+                {/* Filtros de Alcance */}
+                <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                  <div className="flex flex-wrap items-center gap-1.5">
+                    <span className="font-bold text-slate-500 mr-1">Filtrar:</span>
+                    <button
+                      type="button"
+                      onClick={() => setAssignScopeFilter('GRADE')}
+                      className={`px-3 py-1 rounded-full font-bold transition cursor-pointer ${
+                        assignScopeFilter === 'GRADE'
+                          ? 'bg-burgundy-900 text-white shadow-xs'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      {assignModalClass.grade}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssignScopeFilter('UNASSIGNED')}
+                      className={`px-3 py-1 rounded-full font-bold transition cursor-pointer ${
+                        assignScopeFilter === 'UNASSIGNED'
+                          ? 'bg-burgundy-900 text-white shadow-xs'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Sin Aula Asignada
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssignScopeFilter('ALL')}
+                      className={`px-3 py-1 rounded-full font-bold transition cursor-pointer ${
+                        assignScopeFilter === 'ALL'
+                          ? 'bg-burgundy-900 text-white shadow-xs'
+                          : 'bg-white border border-slate-200 text-slate-600 hover:bg-slate-100'
+                      }`}
+                    >
+                      Todos los Alumnos
+                    </button>
+                  </div>
+
+                  {candidatesAvailableToSelect.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (allAvailableSelected) {
+                          setSelectedStudentIds([]);
+                        } else {
+                          setSelectedStudentIds(candidatesAvailableToSelect.map((s) => s.id));
+                        }
+                      }}
+                      className="text-xs font-bold text-burgundy-900 hover:underline cursor-pointer"
+                    >
+                      {allAvailableSelected
+                        ? 'Deseleccionar todos'
+                        : `Seleccionar todos (${candidatesAvailableToSelect.length})`}
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              {/* Lista de Alumnos */}
+              <div className="flex-1 overflow-y-auto p-4 space-y-2">
+                {candidateStudentsForModal.length === 0 ? (
+                  <div className="p-8 text-center text-slate-400 text-xs bg-slate-50 rounded-2xl border border-dashed border-slate-200 space-y-2">
+                    <p className="font-bold text-slate-600 text-sm">No se encontraron alumnos con los filtros actuales.</p>
+                    <p className="text-slate-400">Prueba cambiando el texto de búsqueda o seleccionando "Todos los Alumnos".</p>
+                  </div>
+                ) : (
+                  candidateStudentsForModal.map((stu) => {
+                    const isInThisClass = (stu.gradeOrClass || '').toLowerCase().trim() === assignModalClass.name.toLowerCase().trim();
+                    const isSelected = selectedStudentIds.includes(stu.id);
+
+                    return (
+                      <div
+                        key={stu.id}
+                        className={`p-3 rounded-2xl border transition flex items-center justify-between gap-3 ${
+                          isInThisClass
+                            ? 'bg-emerald-50/70 border-emerald-200'
+                            : isSelected
+                            ? 'bg-burgundy-50 border-burgundy-300 shadow-xs'
+                            : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50/50'
+                        }`}
+                      >
+                        {/* Checkbox y Datos del alumno */}
+                        <div className="flex items-center gap-3 min-w-0">
+                          {!isInThisClass && (
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setSelectedStudentIds((prev) => [...prev, stu.id]);
+                                } else {
+                                  setSelectedStudentIds((prev) => prev.filter((id) => id !== stu.id));
+                                }
+                              }}
+                              className="w-4 h-4 text-burgundy-800 rounded border-slate-300 focus:ring-burgundy-500 cursor-pointer"
+                            />
+                          )}
+                          <div className="min-w-0">
+                            <p className="font-bold text-sm text-slate-900 truncate">
+                              {stu.name}
+                            </p>
+                            <div className="flex flex-wrap items-center gap-2 text-xs text-slate-500 mt-0.5">
+                              <span className="font-mono bg-slate-100 text-slate-800 px-1.5 py-0.5 rounded font-bold">
+                                DNI: {stu.dni}
+                              </span>
+                              {stu.studentCode && (
+                                <span className="font-mono text-slate-500">
+                                  Cód: {stu.studentCode}
+                                </span>
+                              )}
+                              <span className="text-slate-400">•</span>
+                              <span className="truncate max-w-[200px]">
+                                Actual: <strong className="text-slate-700">{stu.gradeOrClass || 'Sin Asignar'}</strong>
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Acción directa */}
+                        <div className="shrink-0">
+                          {isInThisClass ? (
+                            <span className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-100 text-emerald-800 rounded-xl text-xs font-bold">
+                              <Check className="w-3.5 h-3.5" />
+                              <span>En esta aula</span>
+                            </span>
+                          ) : (
+                            <button
+                              type="button"
+                              disabled={assigningLoading}
+                              onClick={() => handleAssignSingleStudentToClass(stu, assignModalClass)}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-burgundy-900 hover:bg-burgundy-950 text-white rounded-xl text-xs font-bold shadow-xs transition disabled:opacity-50 cursor-pointer"
+                            >
+                              <Plus className="w-3.5 h-3.5" />
+                              <span>Añadir</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Footer con asignación masiva */}
+              <div className="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-between gap-3 shrink-0">
+                <div className="text-xs font-bold text-slate-600">
+                  {selectedStudentIds.length > 0 ? (
+                    <span className="text-burgundy-900 font-extrabold">
+                      {selectedStudentIds.length} alumno(s) seleccionado(s)
+                    </span>
+                  ) : (
+                    <span>Selecciona alumnos con las casillas para asignarlos en bloque</span>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setAssignModalClass(null);
+                      setAssignSearchQuery('');
+                      setSelectedStudentIds([]);
+                    }}
+                    className="px-4 py-2 border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 rounded-xl text-xs font-bold transition cursor-pointer"
+                  >
+                    Cerrar
+                  </button>
+                  {selectedStudentIds.length > 0 && (
+                    <button
+                      type="button"
+                      disabled={assigningLoading}
+                      onClick={() => handleAssignSelectedStudentsToClass(assignModalClass)}
+                      className="px-4 py-2 bg-burgundy-900 hover:bg-burgundy-950 text-white rounded-xl text-xs font-bold shadow transition flex items-center gap-1.5 disabled:opacity-50 cursor-pointer"
+                    >
+                      <Check className="w-3.5 h-3.5" />
+                      <span>Añadir Seleccionados ({selectedStudentIds.length})</span>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
     </div>
   );
