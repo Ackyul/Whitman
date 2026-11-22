@@ -1,6 +1,6 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useWhitman } from '../context/WhitmanContext';
@@ -43,12 +43,25 @@ export const TopNavBar: React.FC<TopNavBarProps> = ({ activeTab, onTabChange }) 
   const isAuthorizedGarita =
     currentUser.role === 'DOCENTE' &&
     (currentUser.hierarchy === 'JEFE_NORMAS' || currentUser.hierarchy === 'DIRECTOR');
-  const canAccessGestion =
-    currentUser.role === 'ADMIN' ||
-    (currentUser.role === 'DOCENTE' &&
-      (currentUser.hierarchy === 'DIRECTOR' ||
-       currentUser.hierarchy === 'COORDINADOR' ||
-       currentUser.hierarchy === 'JEFE_NORMAS'));
+
+  // Acceso exclusivo a Gestión solo mediante correo autorizado (ya no basta ser Director)
+  const AUTHORIZED_ADMIN_EMAILS = ['949237217yoshua@gmail.com'];
+  const [googleAdminEmail, setGoogleAdminEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    try {
+      const s = localStorage.getItem('whitman_google_admin_session');
+      if (s) {
+        const p = JSON.parse(s);
+        if (p?.email) setGoogleAdminEmail(p.email.toLowerCase().trim());
+      }
+    } catch {}
+  }, []);
+
+  const canAccessGestion = Boolean(
+    (currentUser.email && AUTHORIZED_ADMIN_EMAILS.includes(currentUser.email.toLowerCase().trim())) ||
+    (googleAdminEmail && AUTHORIZED_ADMIN_EMAILS.includes(googleAdminEmail))
+  );
 
   const avatarInitial = currentUser.name.trim().charAt(0).toUpperCase();
 

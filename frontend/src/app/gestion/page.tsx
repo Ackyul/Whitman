@@ -63,16 +63,8 @@ export default function GestionAcademicaPage() {
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
 
-  // --- SEGURIDAD: ACCESO PARA COORDINADORES, JEFES DE NORMAS Y DIRECTOR O VÍA GOOGLE ---
+  // --- SEGURIDAD: ACCESO EXCLUSIVO POR CORREO AUTORIZADO (YA NO BASTA CON SER DIRECTOR) ---
   const AUTHORIZED_ADMIN_EMAIL = '949237217yoshua@gmail.com';
-
-  const isInstitutionalAuthorized =
-    currentUser &&
-    (currentUser.role === 'ADMIN' ||
-      (currentUser.role === 'DOCENTE' &&
-        (currentUser.hierarchy === 'DIRECTOR' ||
-         currentUser.hierarchy === 'COORDINADOR' ||
-         currentUser.hierarchy === 'JEFE_NORMAS')));
 
   const [googleAdmin, setGoogleAdmin] = useState<GoogleAdminProfile | null>(null);
   const [googleClientId] = useState<string>(
@@ -80,7 +72,10 @@ export default function GestionAcademicaPage() {
   );
   const [googleBtnRendered, setGoogleBtnRendered] = useState(false);
 
-  const hasAccess = Boolean(googleAdmin || isInstitutionalAuthorized);
+  const hasAccess = Boolean(
+    (currentUser?.email && currentUser.email.toLowerCase().trim() === AUTHORIZED_ADMIN_EMAIL) ||
+    (googleAdmin?.email && googleAdmin.email.toLowerCase().trim() === AUTHORIZED_ADMIN_EMAIL)
+  );
 
   // Cargar sesión de Google guardada
   useEffect(() => {
@@ -1063,7 +1058,7 @@ export default function GestionAcademicaPage() {
         </div>
       )}
 
-      {/* BLOQUEO DE SEGURIDAD SI NO ESTÁ AUTENTICADO */}
+      {/* BLOQUEO DE SEGURIDAD SI NO ESTÁ AUTENTICADO POR CORREO */}
       {!hasAccess ? (
         <div className="max-w-md mx-auto bg-white rounded-3xl p-8 sm:p-10 border-2 border-slate-200 shadow-xl text-center space-y-6 animate-in zoom-in-95">
           <div className="w-16 h-16 rounded-2xl bg-burgundy-100 text-burgundy-900 flex items-center justify-center mx-auto border-2 border-burgundy-300">
@@ -1072,13 +1067,13 @@ export default function GestionAcademicaPage() {
 
           <div>
             <span className="text-xs font-black uppercase tracking-wider text-rose-700 bg-rose-50 px-3 py-1 rounded-full border border-rose-200">
-              ACCESO A COORDINACIÓN, NORMAS Y DIRECCIÓN
+              ACCESO EXCLUSIVO POR CORREO
             </span>
             <h2 className="text-2xl font-black font-serif text-slate-900 mt-2">
               Gestión Académica Whitman
             </h2>
             <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1 leading-relaxed">
-              Inicia sesión con tu cuenta oficial de Google o ingresa con tu cuenta institucional de directivo / docente.
+              Módulo restringido. Inicia sesión con la cuenta de correo oficial autorizada ({AUTHORIZED_ADMIN_EMAIL}).
             </p>
           </div>
 
@@ -1091,7 +1086,7 @@ export default function GestionAcademicaPage() {
               <button
                 type="button"
                 onClick={handleCustomGoogleLogin}
-                className="w-full max-w-[280px] py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-300 rounded-full shadow-sm flex items-center justify-center gap-3 transition text-sm hover:shadow active:scale-[0.98]"
+                className="w-full max-w-[280px] py-2.5 px-4 bg-white hover:bg-slate-50 text-slate-700 font-bold border border-slate-300 rounded-full shadow-sm flex items-center justify-center gap-3 transition text-sm hover:shadow active:scale-[0.98] cursor-pointer"
               >
                 <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
                   <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
@@ -1102,17 +1097,6 @@ export default function GestionAcademicaPage() {
                 <span>Continuar con Google</span>
               </button>
             )}
-
-            {/* Acceso con DNI Institucional */}
-            <div className="pt-2 border-t border-slate-100 w-full flex justify-center">
-              <Link
-                href="/login"
-                className="text-xs text-burgundy-900 hover:text-burgundy-950 font-bold hover:underline flex items-center gap-1.5"
-              >
-                <span>Ingresar con DNI Institucional</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
           </div>
         </div>
       ) : (
@@ -2592,163 +2576,89 @@ export default function GestionAcademicaPage() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                
-                {/* Izquierda: Creador Individual con Asistente de Prefijos (5 columnas) */}
-                <div className="lg:col-span-5 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-                  <div className="border-b border-slate-100 pb-3">
-                    <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                      <Plus className="w-4 h-4 text-burgundy-900" />
-                      <span>Agregar Curso Individual</span>
-                    </h4>
-                    <p className="text-xs text-slate-500">
-                      Crea un curso con código (ej. Mate 1, 7 CyT) o nombre libre.
-                    </p>
-                  </div>
-
-                  {/* Botones de prefijos rápidos */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-400 uppercase mb-1.5">
-                      Botones de Código Rápido:
-                    </label>
-                    <div className="flex flex-wrap gap-1.5">
-                      {['Mate 1', 'Mate 2', 'Mate 4', '7 CyT', '8 CyT', '10 CyT'].map((pre) => (
-                        <button
-                          key={pre}
-                          type="button"
-                          onClick={() => setCourseCodePrefix(pre)}
-                          className={`text-xs font-mono px-2 py-1 rounded-lg border transition ${
-                            courseCodePrefix === pre
-                              ? 'bg-burgundy-900 text-white border-burgundy-950 font-bold'
-                              : 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
-                          }`}
-                        >
-                          {pre}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-
-                  <form onSubmit={handleAddSingleCourse} className="space-y-3.5">
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                          Prefijo / Código:
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Ej: Mate 1, 7 CyT"
-                          value={courseCodePrefix}
-                          onChange={(e) => setCourseCodePrefix(e.target.value)}
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 font-mono focus:outline-none focus:border-burgundy-600"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                          Asignatura:
-                        </label>
-                        <input
-                          type="text"
-                          placeholder="Ej: Aritmética, Física 1"
-                          value={courseSubjectName}
-                          onChange={(e) => setCourseSubjectName(e.target.value)}
-                          required
-                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 focus:outline-none focus:border-burgundy-600"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Previsualización del Nombre del Curso */}
-                    <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
-                      <span className="text-xs text-slate-400 font-bold uppercase block mb-0.5">
-                        Nombre Resultante en Boleta:
-                      </span>
-                      <span className="font-bold text-burgundy-950">
-                        {courseCodePrefix && courseSubjectName
-                          ? `${courseCodePrefix} (${courseSubjectName})`
-                          : courseCodePrefix || courseSubjectName || '—'}
-                      </span>
-                    </div>
-
-                    {/* Selector de Docente Encargado (Opcional) */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                        Profesor(a) Encargado(a) (Opcional):
-                      </label>
-                      <select
-                        value={courseTeacherSelected}
-                        onChange={(e) => setCourseTeacherSelected(e.target.value)}
-                        className="w-full px-3 py-2 text-xs rounded-xl border border-slate-200 bg-white focus:outline-none focus:border-burgundy-600"
-                      >
-                        <option value="">Sin profesor asignado aún</option>
-                        {users
-                          .filter((u) => u.role === 'DOCENTE')
-                          .map((doc) => (
-                            <option key={doc.id} value={doc.name}>
-                              {doc.name} ({doc.dni})
-                            </option>
-                          ))}
-                      </select>
-                    </div>
-
-                    <button
-                      type="submit"
-                      className="w-full bg-burgundy-900 hover:bg-burgundy-950 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center gap-1.5"
-                    >
-                      <Plus className="w-4 h-4 text-lionGold-400" />
-                      <span>Agregar Curso a {courseTabGrade}</span>
-                    </button>
-                  </form>
-                </div>
-
-                {/* Derecha: Carga Masiva de Cursos en Bloque (7 columnas) */}
-                <div className="lg:col-span-7 bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
-                  <div className="border-b border-slate-100 pb-3 flex items-center justify-between">
-                    <div>
+                  {/* Formulario para Agregar Curso Individual a este Grado/Ciclo */}
+                  <div className="bg-white rounded-3xl p-6 sm:p-7 border border-slate-200 shadow-sm space-y-4 max-w-2xl">
+                    <div className="border-b border-slate-100 pb-3">
                       <h4 className="font-bold text-sm text-slate-900 flex items-center gap-2">
-                        <FileSpreadsheet className="w-4 h-4 text-emerald-600" />
-                        <span>Carga Masiva de Cursos en Bloque</span>
+                        <Plus className="w-4 h-4 text-burgundy-900" />
+                        <span>Agregar Curso a {courseTabGrade}</span>
                       </h4>
                       <p className="text-xs text-slate-500">
-                        Pega una lista de cursos (uno por renglón) para crearlos todos simultáneamente.
+                        Crea una asignatura o curso oficial para este {courseTabLevel === 'ACADEMIA' ? 'ciclo de academia' : 'grado'}.
                       </p>
                     </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    <label className="block text-xs font-bold text-slate-700 uppercase">
-                      Lista de Cursos para {courseTabGrade} (uno por línea):
-                    </label>
-                    <textarea
-                      rows={6}
-                      value={bulkCoursesText}
-                      onChange={(e) => setBulkCoursesText(e.target.value)}
-                      placeholder={`Mate 1 (Aritmética)\nMate 2 (Álgebra)\nMate 4 (Geometría)\n7 CyT (Física)\n10 CyT (Anatomía)\nLenguaje y Literatura\nInglés`}
-                      className="w-full p-3 rounded-2xl border border-slate-300 font-mono text-xs text-slate-800 focus:outline-none focus:border-burgundy-700"
-                    />
-                    <span className="text-xs text-slate-400">
-                      💡 Tip: Puedes copiar directamente una columna de Excel o Word y pegarla aquí.
-                    </span>
-                  </div>
+                    <form onSubmit={handleAddSingleCourse} className="space-y-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Prefijo / Código (Opcional):
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ej: Mate 1, 7 CyT"
+                            value={courseCodePrefix}
+                            onChange={(e) => setCourseCodePrefix(e.target.value)}
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 font-mono focus:outline-hidden focus:border-burgundy-600 shadow-xs"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                            Asignatura / Nombre del Curso:
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="Ej: Aritmética, Física 1, Lenguaje"
+                            value={courseSubjectName}
+                            onChange={(e) => setCourseSubjectName(e.target.value)}
+                            required
+                            className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 focus:outline-hidden focus:border-burgundy-600 shadow-xs"
+                          />
+                        </div>
+                      </div>
 
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="button"
-                      disabled={bulkCoursesLoading || !bulkCoursesText.trim()}
-                      onClick={() => handleAddBulkCourses()}
-                      className="bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-black text-xs px-6 py-2.5 rounded-xl shadow-md transition flex items-center gap-2 disabled:opacity-50"
-                    >
-                      <CheckCircle2 className="w-4 h-4" />
-                      <span>
-                        {bulkCoursesLoading
-                          ? 'Guardando cursos en Neon DB...'
-                          : `🚀 Crear Todos los Cursos para ${courseTabGrade}`}
-                      </span>
-                    </button>
-                  </div>
-                </div>
+                      {/* Previsualización del Nombre del Curso */}
+                      <div className="bg-slate-50 p-3 rounded-xl border border-slate-200 text-xs">
+                        <span className="text-xs text-slate-400 font-bold uppercase block mb-0.5">
+                          Nombre Resultante en Boleta:
+                        </span>
+                        <span className="font-bold text-burgundy-950">
+                          {courseCodePrefix && courseSubjectName
+                            ? `${courseCodePrefix} (${courseSubjectName})`
+                            : courseCodePrefix || courseSubjectName || '—'}
+                        </span>
+                      </div>
 
-              </div>
+                      {/* Selector de Docente Encargado (Opcional) */}
+                      <div>
+                        <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                          Profesor(a) Encargado(a) (Opcional):
+                        </label>
+                        <select
+                          value={courseTeacherSelected}
+                          onChange={(e) => setCourseTeacherSelected(e.target.value)}
+                          className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-white focus:outline-hidden focus:border-burgundy-600 shadow-xs"
+                        >
+                          <option value="">Sin profesor asignado aún</option>
+                          {users
+                            .filter((u) => u.role === 'DOCENTE')
+                            .map((doc) => (
+                              <option key={doc.id} value={doc.name}>
+                                {doc.name} ({doc.dni})
+                              </option>
+                            ))}
+                        </select>
+                      </div>
+
+                      <button
+                        type="submit"
+                        className="w-full bg-burgundy-900 hover:bg-burgundy-950 text-white font-bold text-xs py-2.5 px-4 rounded-xl shadow transition flex items-center justify-center gap-1.5 cursor-pointer"
+                      >
+                        <Plus className="w-4 h-4 text-lionGold-400" />
+                        <span>Agregar Curso a {courseTabGrade}</span>
+                      </button>
+                    </form>
+                  </div>
 
               {/* LISTADO DE CURSOS EXISTENTES PARA EL GRADO SELECCIONADO */}
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm space-y-4">
