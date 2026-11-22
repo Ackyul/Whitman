@@ -43,6 +43,7 @@ import {
   School,
   Clock,
   ArrowRight,
+  ArrowLeft,
   LogOut,
   BookOpen,
   Search,
@@ -1024,21 +1025,29 @@ export default function GestionAcademicaPage() {
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {googleAdmin && (
-        <div className="flex justify-end">
+      <div className="flex items-center justify-between gap-3">
+        <Link
+          href="/login"
+          className="inline-flex items-center gap-2 px-3.5 py-1.5 bg-white border border-slate-200 hover:border-slate-300 hover:bg-slate-50 text-slate-700 rounded-xl text-xs font-bold transition shadow-xs"
+        >
+          <ArrowLeft className="w-3.5 h-3.5 text-burgundy-900" />
+          <span>Volver al Login de la Plataforma</span>
+        </Link>
+
+        {googleAdmin && (
           <div className="inline-flex items-center gap-2 bg-white border border-slate-200 px-3 py-1.5 rounded-xl shadow-xs text-xs">
             <span className="font-bold text-slate-700">{googleAdmin.name || googleAdmin.email}</span>
             <button
               onClick={handleLogoutGoogle}
               title="Cerrar sesión de Google"
-              className="text-burgundy-900 hover:text-burgundy-750 font-bold ml-1 flex items-center gap-1"
+              className="text-burgundy-900 hover:text-burgundy-750 font-bold ml-1 flex items-center gap-1 cursor-pointer"
             >
               <LogOut className="w-3.5 h-3.5" />
               <span>Salir</span>
             </button>
           </div>
-        </div>
-      )}
+        )}
+      </div>
 
       {/* NOTIFICACIÓN FLOTANTE */}
       {notification && (
@@ -1097,6 +1106,17 @@ export default function GestionAcademicaPage() {
                 <span>Continuar con Google</span>
               </button>
             )}
+
+            {/* Botón para volver al login de la plataforma */}
+            <div className="pt-3 border-t border-slate-100 w-full flex justify-center">
+              <Link
+                href="/login"
+                className="inline-flex items-center gap-2 px-4 py-2 bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 hover:text-slate-900 rounded-xl text-xs font-bold transition shadow-xs"
+              >
+                <ArrowLeft className="w-3.5 h-3.5 text-burgundy-900" />
+                <span>Volver al Login de la Plataforma</span>
+              </Link>
+            </div>
           </div>
         </div>
       ) : (
