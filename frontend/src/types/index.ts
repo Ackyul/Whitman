@@ -27,6 +27,7 @@ export interface User {
   avatar?: string;
   phone?: string;
   parentPhone?: string;
+  availableRoles?: UserRole[];
   active: boolean;
   createdAt: string;
 }

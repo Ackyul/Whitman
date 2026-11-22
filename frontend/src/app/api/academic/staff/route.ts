@@ -55,7 +55,7 @@ export async function POST(request: Request) {
           id, dni, name, email, role, hierarchy, hierarchy_title,
           level, grade_or_class, phone, password, active
         ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, true)
-        ON CONFLICT (dni) DO UPDATE SET
+        ON CONFLICT (dni, role) DO UPDATE SET
           name = EXCLUDED.name,
           email = EXCLUDED.email,
           role = EXCLUDED.role,

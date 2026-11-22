@@ -19,7 +19,7 @@ import {
 
 export const UserBubbleMenu: React.FC = () => {
   const router = useRouter();
-  const { currentUser, logout, updateUserProfile } = useWhitman();
+  const { currentUser, logout, updateUserProfile, currentRole, switchRole, availableRoles } = useWhitman();
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
@@ -160,6 +160,37 @@ export const UserBubbleMenu: React.FC = () => {
                   </span>
                 </div>
               </div>
+            </div>
+
+            {/* Selector de Rol / Modo de Cuenta (Multi-Rol) */}
+            <div className="p-2 border-b border-slate-100 bg-slate-50/70 space-y-1">
+              <p className="text-[10px] font-black uppercase tracking-wider text-slate-400 px-2 py-0.5">
+                Cambiar Modo de Cuenta
+              </p>
+              {(['DOCENTE', 'PADRE', 'ALUMNO'] as const)
+                .filter((r) => r !== currentRole)
+                .map((r) => (
+                  <button
+                    key={r}
+                    type="button"
+                    onClick={async () => {
+                      setMenuOpen(false);
+                      const res = await switchRole(r);
+                      if (!res.success) {
+                        router.push(`/login`);
+                      }
+                    }}
+                    className="w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg text-slate-700 hover:bg-white hover:text-burgundy-900 border border-transparent hover:border-slate-200 transition text-xs font-bold"
+                  >
+                    <span className="flex items-center gap-1.5">
+                      <span>{r === 'PADRE' ? '👨‍👩‍👦' : r === 'DOCENTE' ? '👨‍🏫' : '🎒'}</span>
+                      <span>{r === 'PADRE' ? 'Modo Padre' : r === 'DOCENTE' ? 'Modo Docente' : 'Modo Alumno'}</span>
+                    </span>
+                    <span className="text-[10px] text-burgundy-900 font-semibold bg-burgundy-50 px-1.5 py-0.5 rounded">
+                      Cambiar
+                    </span>
+                  </button>
+                ))}
             </div>
 
             {/* Opciones del Menú */}

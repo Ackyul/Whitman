@@ -147,13 +147,15 @@ export async function loginUser(
 export async function registerStudent(payload: {
   dni: string;
   name: string;
-  level: string;
-  gradeOrClass: string;
+  role?: string;
+  level?: string;
+  gradeOrClass?: string;
   parentDni?: string;
   parentName?: string;
   parentPhone?: string;
   phone?: string;
   email?: string;
+  password?: string;
 }): Promise<{ success: boolean; user: User; message: string }> {
   try {
     const res = await fetchWithTimeout(`${getApiBase()}/api/auth/register`, {
@@ -170,15 +172,16 @@ export async function registerStudent(payload: {
     const year = new Date().getFullYear();
     const rand = Math.floor(100 + Math.random() * 900);
     const studentCode = `WHT-${year}-${rand}`;
+    const targetRole = (payload.role as any) || 'ALUMNO';
     const newUser: User = {
       id: `u-${Date.now()}`,
       dni: payload.dni,
       studentCode,
       name: payload.name,
       email: payload.email || `${payload.dni}@whitman.edu.pe`,
-      role: 'ALUMNO',
-      level: payload.level as any,
-      gradeOrClass: payload.gradeOrClass,
+      role: targetRole,
+      level: (payload.level as any) || 'SECUNDARIA',
+      gradeOrClass: payload.gradeOrClass || 'General',
       parentDni: payload.parentDni,
       parentName: payload.parentName,
       parentPhone: payload.parentPhone,

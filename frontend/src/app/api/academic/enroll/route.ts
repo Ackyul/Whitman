@@ -100,7 +100,7 @@ export async function POST(request: Request) {
             parent_dni, parent_name, parent_phone, parent_relationship,
             active, password
           ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, $18, $19, $20)
-          ON CONFLICT (dni) DO UPDATE SET
+          ON CONFLICT (dni, role) DO UPDATE SET
             name = EXCLUDED.name,
             level = EXCLUDED.level,
             grade_or_class = EXCLUDED.grade_or_class,

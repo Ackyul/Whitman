@@ -12,14 +12,17 @@ import {
   CheckCircle2,
   AlertCircle,
   ArrowRight,
-  Sparkles,
+  BookOpen,
   QrCode,
   ShieldCheck,
 } from 'lucide-react';
+import { UserRole } from '../../types';
 
 export default function RegistroPage() {
   const router = useRouter();
   const { registerNewStudent, login } = useWhitman();
+
+  const [selectedRole, setSelectedRole] = useState<UserRole>('ALUMNO');
 
   const [formData, setFormData] = useState({
     name: '',
@@ -27,6 +30,7 @@ export default function RegistroPage() {
     level: 'SECUNDARIA',
     gradeOrClass: '5to Secundaria - Alfa',
     phone: '',
+    password: '',
     parentName: '',
     parentDni: '',
     parentPhone: '',
@@ -38,15 +42,20 @@ export default function RegistroPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.name || !formData.dni || !formData.parentDni) {
-      setErrorMsg('El nombre, DNI del alumno y DNI del apoderado son obligatorios.');
+    if (!formData.name.trim() || !formData.dni.trim()) {
+      setErrorMsg('El nombre completo y DNI son obligatorios.');
       return;
     }
 
     setLoading(true);
     setErrorMsg(null);
 
-    const res = await registerNewStudent(formData);
+    const payload = {
+      ...formData,
+      role: selectedRole,
+    };
+
+    const res = await registerNewStudent(payload);
 
     if (res.success && res.user) {
       setRegisteredUser(res.user);
@@ -58,8 +67,8 @@ export default function RegistroPage() {
 
   const handleLoginImmediately = async () => {
     if (!registeredUser) return;
-    await login(registeredUser.dni, 'ALUMNO');
-    router.push('/asistencia');
+    await login(registeredUser.dni, registeredUser.role);
+    router.push(registeredUser.role === 'DOCENTE' ? '/gestion' : '/asistencia');
   };
 
   return (
@@ -74,13 +83,13 @@ export default function RegistroPage() {
 
           <div>
             <span className="text-xs font-black uppercase tracking-wider text-emerald-700 bg-emerald-50 px-3 py-1 rounded-full border border-emerald-200">
-              ¡MATRÍCULA & REGISTRO EXITOSO!
+              ¡REGISTRO EXITOSO COMO {registeredUser.role}!
             </span>
             <h2 className="text-2xl font-black font-serif text-slate-900 mt-2">
-              ¡Bienvenido a la Manada de Leones Whitman!
+              ¡Bienvenido(a) a Whitman!
             </h2>
             <p className="text-xs text-slate-500 mt-1">
-              Tu cuenta y la de tu apoderado han sido creadas y sincronizadas en la base de datos Neon.
+              Tu cuenta ha sido creada y sincronizada en tiempo real en la base de datos Neon PostgreSQL.
             </p>
           </div>
 
@@ -94,24 +103,28 @@ export default function RegistroPage() {
                 </span>
               </div>
               <span className="text-[10px] font-mono bg-lionGold-500 text-burgundy-950 px-2 py-0.5 rounded font-black">
-                {registeredUser.studentCode}
+                {registeredUser.studentCode || registeredUser.role}
               </span>
             </div>
 
             <div className="space-y-1">
-              <p className="text-xs text-burgundy-200 uppercase font-semibold">Estudiante:</p>
+              <p className="text-xs text-burgundy-200 uppercase font-semibold">
+                {registeredUser.role === 'DOCENTE' ? 'Docente / Profesor:' : registeredUser.role === 'PADRE' ? 'Padre / Apoderado:' : 'Estudiante:'}
+              </p>
               <h3 className="text-lg font-black text-white">{registeredUser.name}</h3>
               <p className="text-xs text-lionGold-300 font-mono font-bold">DNI: {registeredUser.dni}</p>
               <p className="text-xs text-burgundy-200">{registeredUser.gradeOrClass}</p>
             </div>
 
-            <div className="mt-4 pt-3 border-t border-burgundy-800 flex items-center justify-between text-[11px] text-burgundy-300">
-              <div>
-                <span>Apoderado asociado:</span>
-                <p className="font-bold text-white font-mono">DNI: {registeredUser.parentDni}</p>
+            {registeredUser.parentDni && (
+              <div className="mt-4 pt-3 border-t border-burgundy-800 flex items-center justify-between text-[11px] text-burgundy-300">
+                <div>
+                  <span>Apoderado asociado:</span>
+                  <p className="font-bold text-white font-mono">DNI: {registeredUser.parentDni}</p>
+                </div>
+                <QrCode className="w-8 h-8 text-lionGold-400 opacity-90" />
               </div>
-              <QrCode className="w-8 h-8 text-lionGold-400 opacity-90" />
-            </div>
+            )}
           </div>
 
           <div className="flex flex-col sm:flex-row gap-3 justify-center pt-2">
@@ -119,7 +132,7 @@ export default function RegistroPage() {
               onClick={handleLoginImmediately}
               className="bg-burgundy-800 hover:bg-burgundy-900 text-white font-black px-6 py-3 rounded-xl shadow-md text-xs transition flex items-center justify-center gap-2"
             >
-              <span>Entrar Ahora a Asistencias</span>
+              <span>Ingresar con esta Cuenta</span>
               <ArrowRight className="w-4 h-4" />
             </button>
             <Link
@@ -140,14 +153,61 @@ export default function RegistroPage() {
             </div>
             <div>
               <span className="bg-lionGold-500/20 text-lionGold-300 text-xs font-black px-3 py-0.5 rounded-full border border-lionGold-400/30">
-                REGISTRO ACADÉMICO 2026
+                REGISTRO WHITMAN 2026
               </span>
               <h1 className="text-xl sm:text-2xl font-black font-serif tracking-tight mt-1">
-                Ficha de Inscripción de Alumno
+                Ficha de Inscripción y Creación de Cuenta
               </h1>
               <p className="text-xs text-burgundy-200">
-                Al registrarte se vinculará el DNI de tu apoderado para que pueda revisar tu asistencia.
+                Un mismo DNI puede tener cuenta como Profesor, Padre y/o Alumno al mismo tiempo.
               </p>
+            </div>
+          </div>
+
+          {/* Selector de Perfil / Rol a Registrar */}
+          <div className="p-6 pb-0">
+            <label className="block text-xs font-bold text-slate-500 uppercase mb-2">
+              Selecciona el Tipo de Perfil que deseas crear:
+            </label>
+            <div className="grid grid-cols-3 gap-2 bg-slate-100 p-1.5 rounded-2xl">
+              <button
+                type="button"
+                onClick={() => setSelectedRole('ALUMNO')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 ${
+                  selectedRole === 'ALUMNO'
+                    ? 'bg-burgundy-900 text-white shadow-md'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <GraduationCap className="w-4 h-4" />
+                <span>Estudiante</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedRole('PADRE')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 ${
+                  selectedRole === 'PADRE'
+                    ? 'bg-amber-600 text-white shadow-md'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <Users className="w-4 h-4" />
+                <span>Padre / Tutor</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setSelectedRole('DOCENTE')}
+                className={`py-2.5 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 ${
+                  selectedRole === 'DOCENTE'
+                    ? 'bg-emerald-700 text-white shadow-md'
+                    : 'text-slate-600 hover:text-slate-900'
+                }`}
+              >
+                <BookOpen className="w-4 h-4" />
+                <span>Profesor</span>
+              </button>
             </div>
           </div>
 
@@ -160,11 +220,11 @@ export default function RegistroPage() {
               </div>
             )}
 
-            {/* Sección 1: Datos del Estudiante */}
+            {/* Datos Principales del Usuario */}
             <div className="space-y-4">
               <div className="flex items-center gap-2 text-burgundy-900 font-bold text-sm border-b border-slate-100 pb-2">
-                <GraduationCap className="w-4 h-4 text-burgundy-800" />
-                <span>1. Datos del Estudiante</span>
+                <ShieldCheck className="w-4 h-4 text-burgundy-800" />
+                <span>Datos de la Cuenta ({selectedRole})</span>
               </div>
 
               <div>
@@ -174,7 +234,7 @@ export default function RegistroPage() {
                 <input
                   type="text"
                   required
-                  placeholder="Ej: Daniel Quispe Huamán"
+                  placeholder="Ej: Yoshua Josafat Núñez Huaccoto"
                   value={formData.name}
                   onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700"
@@ -184,130 +244,159 @@ export default function RegistroPage() {
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    DNI del Estudiante *
+                    Número de DNI *
                   </label>
                   <input
                     type="text"
                     required
                     maxLength={8}
-                    placeholder="74859612"
+                    placeholder="Ej: 61460126"
                     value={formData.dni}
                     onChange={(e) => setFormData({ ...formData, dni: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 font-mono font-bold text-sm focus:outline-none focus:border-burgundy-700"
                   />
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    Si este DNI ya tiene otro rol en el colegio, este nuevo rol se sumará a tu cuenta.
+                  </p>
                 </div>
 
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Nivel Educativo *
-                  </label>
-                  <select
-                    value={formData.level}
-                    onChange={(e) => {
-                      const lvl = e.target.value;
-                      let defaultClass = '1ro Secundaria - Alfa';
-                      if (lvl === 'PRIMARIA') defaultClass = '6to Primaria - Leones';
-                      if (lvl === 'ACADEMIA') defaultClass = 'Ciclo Semianual UNI';
-                      setFormData({ ...formData, level: lvl, gradeOrClass: defaultClass });
-                    }}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700 bg-white"
-                  >
-                    <option value="PRIMARIA">🎒 Primaria</option>
-                    <option value="SECUNDARIA">🏫 Secundaria</option>
-                    <option value="ACADEMIA">🦁 Academia Preuniversitaria</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Grado, Ciclo o Aula *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    placeholder={
-                      formData.level === 'PRIMARIA'
-                        ? 'Ej: 6to Primaria - Leones'
-                        : formData.level === 'SECUNDARIA'
-                        ? 'Ej: 5to Secundaria - Alfa'
-                        : 'Ej: Ciclo Semianual UNI'
-                    }
-                    value={formData.gradeOrClass}
-                    onChange={(e) => setFormData({ ...formData, gradeOrClass: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Teléfono del Alumno (Opcional)
+                    Celular / Teléfono (Opcional)
                   </label>
                   <input
                     type="tel"
-                    placeholder="+51 987654321"
+                    placeholder="+51 949237217"
                     value={formData.phone}
                     onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700"
                   />
                 </div>
               </div>
-            </div>
 
-            {/* Sección 2: Datos del Apoderado (Papá/Mamá) */}
-            <div className="space-y-4 pt-3 border-t border-slate-100">
-              <div className="flex items-center gap-2 text-burgundy-900 font-bold text-sm border-b border-slate-100 pb-2">
-                <Users className="w-4 h-4 text-amber-600" />
-                <span>2. Datos del Padre / Apoderado (Para acceso a la cuenta)</span>
-              </div>
-
-              <div>
-                <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                  Nombre Completo del Apoderado (Papá / Mamá)
-                </label>
-                <input
-                  type="text"
-                  placeholder="Ej: Don Miguel Quispe"
-                  value={formData.parentName}
-                  onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
-                  className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {selectedRole !== 'PADRE' && (
                 <div>
                   <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    DNI del Apoderado * (Con este DNI ingresará el papá)
+                    Contraseña de Acceso (Opcional)
                   </label>
                   <input
-                    type="text"
-                    required
-                    maxLength={8}
-                    placeholder="41223344"
-                    value={formData.parentDni}
-                    onChange={(e) => setFormData({ ...formData, parentDni: e.target.value })}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 font-mono font-bold text-sm focus:outline-none focus:border-burgundy-700"
-                  />
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    El papá podrá ingresar con este DNI para ver las asistencias de su hijo.
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
-                    Teléfono del Apoderado (Para alertas)
-                  </label>
-                  <input
-                    type="tel"
-                    placeholder="+51 998877665"
-                    value={formData.parentPhone}
-                    onChange={(e) => setFormData({ ...formData, parentPhone: e.target.value })}
+                    type="password"
+                    placeholder="Si lo dejas vacío, tu contraseña será tu DNI"
+                    value={formData.password}
+                    onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                     className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700"
                   />
                 </div>
-              </div>
+              )}
+
+              {/* Campos específicos para Estudiante */}
+              {selectedRole === 'ALUMNO' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Nivel Educativo *
+                    </label>
+                    <select
+                      value={formData.level}
+                      onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700 bg-white"
+                    >
+                      <option value="PRIMARIA">🎒 Primaria</option>
+                      <option value="SECUNDARIA">🏫 Secundaria</option>
+                      <option value="ACADEMIA">🦁 Academia Preuniversitaria</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Grado, Ciclo o Aula
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: 5to Secundaria, Ciclo San Marcos, etc."
+                      value={formData.gradeOrClass}
+                      onChange={(e) => setFormData({ ...formData, gradeOrClass: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Campos específicos para Docente */}
+              {selectedRole === 'DOCENTE' && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Nivel donde Enseña *
+                    </label>
+                    <select
+                      value={formData.level}
+                      onChange={(e) => setFormData({ ...formData, level: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700 bg-white"
+                    >
+                      <option value="SECUNDARIA">🏫 Secundaria</option>
+                      <option value="PRIMARIA">🎒 Primaria</option>
+                      <option value="ACADEMIA">🦁 Academia Preuniversitaria</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Área o Asignatura
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Matemática, Ciencias, Letras"
+                      value={formData.gradeOrClass}
+                      onChange={(e) => setFormData({ ...formData, gradeOrClass: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700"
+                    />
+                  </div>
+                </div>
+              )}
             </div>
+
+            {/* Datos de Apoderado / Hijos (Opcional) */}
+            {selectedRole === 'ALUMNO' && (
+              <div className="space-y-4 pt-3 border-t border-slate-100">
+                <div className="flex items-center justify-between text-burgundy-900 font-bold text-sm border-b border-slate-100 pb-2">
+                  <div className="flex items-center gap-2">
+                    <Users className="w-4 h-4 text-amber-600" />
+                    <span>Datos del Padre o Apoderado (Opcional)</span>
+                  </div>
+                  <span className="text-[10px] text-slate-400 font-normal">No obligatorio</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      Nombre del Apoderado
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Ej: Don Miguel Quispe"
+                      value={formData.parentName}
+                      onChange={(e) => setFormData({ ...formData, parentName: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 text-sm focus:outline-none focus:border-burgundy-700"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 uppercase mb-1">
+                      DNI del Apoderado
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={8}
+                      placeholder="41223344"
+                      value={formData.parentDni}
+                      onChange={(e) => setFormData({ ...formData, parentDni: e.target.value })}
+                      className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-slate-900 font-mono font-bold text-sm focus:outline-none focus:border-burgundy-700"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
 
             <button
               type="submit"
@@ -319,7 +408,7 @@ export default function RegistroPage() {
               ) : (
                 <>
                   <UserPlus className="w-4 h-4 text-lionGold-400" />
-                  <span>Completar Registro y Generar Código Whitman</span>
+                  <span>Completar Registro como {selectedRole}</span>
                 </>
               )}
             </button>
@@ -344,4 +433,3 @@ export default function RegistroPage() {
     </div>
   );
 }
-

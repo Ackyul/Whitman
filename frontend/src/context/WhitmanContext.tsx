@@ -35,6 +35,8 @@ interface WhitmanContextType {
   isConnected: boolean;
   currentRole: UserRole;
   setCurrentRole: (role: UserRole) => void;
+  availableRoles: UserRole[];
+  switchRole: (role: UserRole) => Promise<{ success: boolean; message: string }>;
   login: (identifier: string, role: UserRole, password?: string) => Promise<{ success: boolean; message: string }>;
   logout: () => void;
   registerNewStudent: (data: any) => Promise<{ success: boolean; message: string; user?: User }>;
@@ -60,6 +62,7 @@ export const WhitmanProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const [loading, setLoading] = useState<boolean>(false);
   const [isConnected, setIsConnected] = useState<boolean>(false);
   const [currentRole, setCurrentRole] = useState<UserRole>('ALUMNO');
+  const [availableRoles, setAvailableRoles] = useState<UserRole[]>([]);
   const [realtimeToast, setRealtimeToast] = useState<{ title: string; description: string } | null>(null);
 
   const lastActivityRef = useRef<number>(Date.now());
@@ -84,6 +87,7 @@ export const WhitmanProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSessionToken(null);
     setLinkedStudents([]);
     setCurrentRole('ALUMNO');
+    setAvailableRoles([]);
     try {
       localStorage.removeItem('whitman_user_session');
     } catch (e) {
@@ -114,6 +118,9 @@ export const WhitmanProvider: React.FC<{ children: React.ReactNode }> = ({ child
           setSessionToken(parsed.sessionToken || null);
           if (parsed.linkedStudents) {
             setLinkedStudents(parsed.linkedStudents);
+          }
+          if (parsed.availableRoles) {
+            setAvailableRoles(parsed.availableRoles);
           }
           // Actualizar hora de actividad
           lastActivityRef.current = now;
@@ -209,9 +216,11 @@ export const WhitmanProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const res = await loginUser(identifier, role, password);
       const token = res.sessionToken || `tok_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
 
+      const userRoles = (res as any).availableRoles || res.user.availableRoles || [res.user.role];
       setCurrentUser(res.user);
       setCurrentRole(res.user.role);
       setSessionToken(token);
+      setAvailableRoles(userRoles);
 
       if (res.linkedStudents) {
         setLinkedStudents(res.linkedStudents);
@@ -227,6 +236,7 @@ export const WhitmanProvider: React.FC<{ children: React.ReactNode }> = ({ child
         JSON.stringify({
           user: res.user,
           linkedStudents: res.linkedStudents || [],
+          availableRoles: userRoles,
           sessionToken: token,
           lastActivity: now,
         })
@@ -236,6 +246,19 @@ export const WhitmanProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch (err: any) {
       return { success: false, message: err.message || 'Error al iniciar sesión' };
     }
+  };
+
+  const switchRole = async (targetRole: UserRole) => {
+    if (!currentUser) return { success: false, message: 'No hay usuario autenticado' };
+    const res = await login(currentUser.dni, targetRole);
+    if (res.success) {
+      showToast({
+        type: 'success',
+        title: 'Modo de Acceso Cambiado',
+        message: `Ahora estás en modo ${targetRole === 'PADRE' ? 'Padre de Familia' : targetRole === 'DOCENTE' ? 'Profesor / Docente' : 'Estudiante'}.`,
+      });
+    }
+    return res;
   };
 
   const registerNewStudent = async (data: any) => {
@@ -410,6 +433,8 @@ export const WhitmanProvider: React.FC<{ children: React.ReactNode }> = ({ child
         isConnected,
         currentRole,
         setCurrentRole,
+        availableRoles,
+        switchRole,
         login,
         logout,
         registerNewStudent,
