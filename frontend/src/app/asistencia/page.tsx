@@ -63,23 +63,14 @@ export default function AsistenciaRoute() {
         {student ? (
           <div className="bg-white rounded-3xl shadow-sm border border-slate-200 p-6 space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 pb-5">
-              <div className="flex items-center gap-4">
-                <div className="w-16 h-16 rounded-2xl overflow-hidden bg-burgundy-100 border-2 border-lionGold-400/50 shrink-0">
-                  <img
-                    src={student.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=150'}
-                    alt={student.name}
-                    className="w-full h-full object-cover"
-                  />
-                </div>
-                <div>
-                  <span className="text-xs font-bold uppercase bg-burgundy-100 text-burgundy-900 px-2 py-0.5 rounded">
-                    {student.level === 'ACADEMIA' ? '🦁 Academia Preuniversitaria' : '🏫 Colegio'}
-                  </span>
-                  <h2 className="text-xl font-black text-slate-900 mt-1">{student.name}</h2>
-                  <p className="text-xs text-slate-500">
-                    {student.gradeOrClass} • <span className="font-mono font-bold">DNI: {student.dni}</span> • Código: <span className="font-mono font-bold text-burgundy-800">{student.studentCode || 'WHT-2026'}</span>
-                  </p>
-                </div>
+              <div>
+                <span className="text-xs font-bold uppercase bg-burgundy-100 text-burgundy-900 px-2 py-0.5 rounded">
+                  {student.level === 'ACADEMIA' ? '🦁 Academia Preuniversitaria' : '🏫 Colegio'}
+                </span>
+                <h2 className="text-xl font-black text-slate-900 mt-1">{student.name}</h2>
+                <p className="text-xs text-slate-500">
+                  {student.gradeOrClass} • <span className="font-mono font-bold">DNI: {student.dni}</span> • Código: <span className="font-mono font-bold text-burgundy-800">{student.studentCode || 'WHT-2026'}</span>
+                </p>
               </div>
 
               {/* Estado de Hoy (Ingreso y Salida) */}
