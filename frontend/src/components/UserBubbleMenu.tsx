@@ -15,13 +15,16 @@ import {
   X,
   ChevronDown,
   Lock,
+  IdCard,
 } from 'lucide-react';
+import { StudentCardModal } from './StudentCardModal';
 
 export const UserBubbleMenu: React.FC = () => {
   const router = useRouter();
   const { currentUser, logout, updateUserProfile, currentRole, switchRole, availableRoles } = useWhitman();
   const [menuOpen, setMenuOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [showCardModal, setShowCardModal] = useState(false);
   const [savedSuccess, setSavedSuccess] = useState(false);
 
   // Formulario de edición de perfil
@@ -195,6 +198,25 @@ export const UserBubbleMenu: React.FC = () => {
 
             {/* Opciones del Menú */}
             <div className="p-2 space-y-1 text-xs font-semibold">
+              {(currentRole === 'ALUMNO' || currentUser.role === 'ALUMNO') && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setShowCardModal(true);
+                  }}
+                  className="w-full flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-slate-700 hover:bg-lionGold-50 hover:text-burgundy-950 transition cursor-pointer"
+                >
+                  <div className="w-7 h-7 rounded-lg bg-lionGold-100 text-burgundy-950 flex items-center justify-center">
+                    <IdCard className="w-4 h-4 text-burgundy-900" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-slate-800">Mi Carnet Digital</p>
+                    <p className="text-[10px] text-slate-400">Ver carnet oficial y código QR</p>
+                  </div>
+                </button>
+              )}
+
               <button
                 onClick={() => {
                   setMenuOpen(false);
@@ -365,6 +387,14 @@ export const UserBubbleMenu: React.FC = () => {
 
           </div>
         </div>
+      )}
+
+      {/* Modal Carnet Oficial del Alumno */}
+      {showCardModal && (
+        <StudentCardModal
+          student={currentUser}
+          onClose={() => setShowCardModal(false)}
+        />
       )}
     </>
   );

@@ -638,6 +638,43 @@ export async function deleteCourseApi(id: string): Promise<any> {
   return json;
 }
 
+export async function fetchSessionsApi(courseName?: string, gradeName?: string): Promise<any[]> {
+  try {
+    const params = new URLSearchParams();
+    if (courseName) params.set('courseName', courseName);
+    if (gradeName) params.set('gradeName', gradeName);
+    const res = await fetchWithTimeout(`${getApiBase()}/api/academic/sessions?${params.toString()}`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.data || [];
+  } catch {
+    return [];
+  }
+}
+
+export async function createSessionApi(payload: {
+  courseId?: string;
+  courseName: string;
+  gradeName: string;
+  sessionNumber: number;
+  title: string;
+  topic?: string;
+  date?: string;
+  materials?: any[];
+  homework?: string;
+}): Promise<any> {
+  const res = await fetchWithTimeout(`${getApiBase()}/api/academic/sessions`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload),
+  });
+  const json = await res.json();
+  if (!res.ok) throw new Error(json.message || 'Error al registrar sesión');
+  return json;
+}
+
 export interface AttendanceSchedule {
   entryStart: string;
   entryEnd: string;

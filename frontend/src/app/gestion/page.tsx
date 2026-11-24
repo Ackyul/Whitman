@@ -48,7 +48,10 @@ import {
   BookOpen,
   Search,
   X,
+  IdCard,
 } from 'lucide-react';
+import { StudentCardModal } from '../../components/StudentCardModal';
+import { StudentBulkCardModal } from '../../components/StudentBulkCardModal';
 
 interface GoogleAdminProfile {
   email: string;
@@ -63,6 +66,11 @@ export default function GestionAcademicaPage() {
   const [classes, setClasses] = useState<AcademicClass[]>([]);
   const [loading, setLoading] = useState(false);
   const [notification, setNotification] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Carnets estudiantiles
+  const [selectedStudentForCard, setSelectedStudentForCard] = useState<User | null>(null);
+  const [bulkCardStudents, setBulkCardStudents] = useState<User[] | null>(null);
+  const [bulkCardTitle, setBulkCardTitle] = useState<string>('');
 
   // --- SEGURIDAD: ACCESO EXCLUSIVO POR CORREO AUTORIZADO (YA NO BASTA CON SER DIRECTOR) ---
   const AUTHORIZED_ADMIN_EMAIL = '949237217yoshua@gmail.com';
@@ -2080,6 +2088,20 @@ export default function GestionAcademicaPage() {
                                 <UserPlus className="w-3 h-3" />
                                 <span>+ Añadir</span>
                               </button>
+                              {studentsInThisClass.length > 0 && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setBulkCardStudents(studentsInThisClass);
+                                    setBulkCardTitle(`${selectedGrade} - ${cls.name}`);
+                                  }}
+                                  title="Imprimir Carnets con QR de esta aula"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-lionGold-100 hover:bg-lionGold-200 text-burgundy-950 border border-lionGold-300 rounded-lg text-xs font-bold transition shadow-xs cursor-pointer"
+                                >
+                                  <IdCard className="w-3 h-3 text-burgundy-900" />
+                                  <span>Carnets ({studentsInThisClass.length})</span>
+                                </button>
+                              )}
                               {studentsInThisClass.length === 0 && (
                                 <button
                                   onClick={() => handleDeleteClass(cls.id, cls.name)}
@@ -2134,7 +2156,17 @@ export default function GestionAcademicaPage() {
                               >
                                 <div className="flex items-start justify-between gap-1">
                                   <p className="font-bold text-xs text-slate-900 leading-tight truncate">{stu.name}</p>
-                                  <span className="text-xs font-mono text-slate-400 shrink-0">{stu.dni}</span>
+                                  <div className="flex items-center gap-1.5 shrink-0">
+                                    <span className="text-xs font-mono text-slate-400">{stu.dni}</span>
+                                    <button
+                                      type="button"
+                                      onClick={() => setSelectedStudentForCard(stu)}
+                                      title="Ver carnet oficial del alumno"
+                                      className="p-1 text-slate-400 hover:text-burgundy-900 transition cursor-pointer"
+                                    >
+                                      <IdCard className="w-3.5 h-3.5 text-lionGold-600" />
+                                    </button>
+                                  </div>
                                 </div>
 
                                 {/* Selector para mover alumno */}
@@ -3009,6 +3041,26 @@ export default function GestionAcademicaPage() {
           </div>
         );
       })()}
+
+      {/* Modal Carnet Individual */}
+      {selectedStudentForCard && (
+        <StudentCardModal
+          student={selectedStudentForCard}
+          onClose={() => setSelectedStudentForCard(null)}
+        />
+      )}
+
+      {/* Modal Impresión Masiva de Carnets del Aula */}
+      {bulkCardStudents && (
+        <StudentBulkCardModal
+          students={bulkCardStudents}
+          classroomTitle={bulkCardTitle}
+          onClose={() => {
+            setBulkCardStudents(null);
+            setBulkCardTitle('');
+          }}
+        />
+      )}
 
     </div>
   );

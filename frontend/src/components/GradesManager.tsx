@@ -39,12 +39,21 @@ interface GradesManagerProps {
   onRefresh: () => void;
 }
 
-const PERIODS = [
+const COLEGIO_PERIODS = [
   'Bimestre I',
   'Bimestre II',
   'Bimestre III',
   'Bimestre IV',
-  'Simulacro Mensual',
+];
+
+const ACADEMIA_PERIODS = [
+  'Examen Ranking 1',
+  'Examen Ranking 2',
+  'Examen Ranking 3',
+  'Examen Ranking 4',
+  'Examen Ranking 5',
+  'Examen Ranking 6',
+  'Simulacro General',
 ];
 
 export const GradesManager: React.FC<GradesManagerProps> = ({
@@ -65,7 +74,7 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
   // Filtros
   const [selectedGrade, setSelectedGrade] = useState<string>('');
   const [selectedSection, setSelectedSection] = useState<string>('TODAS');
-  const [selectedPeriod, setSelectedPeriod] = useState<string>('Bimestre I');
+  const [selectedPeriod, setSelectedPeriod] = useState<string>('TODOS');
   const [searchQuery, setSearchQuery] = useState('');
 
   // Selector para Padre
@@ -155,6 +164,19 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
     }
     return null;
   }, [currentRole, currentUser, linkedStudents, selectedStudentForParent]);
+
+  const isAcademiaMode = useMemo(() => {
+    if (currentRole === 'ALUMNO' || currentRole === 'PADRE') {
+      const gr = activeStudent?.gradeOrClass?.toUpperCase() || '';
+      return gr.includes('ACADEMIA') || gr.includes('UNSA') || gr.includes('CICLO') || activeStudent?.level === 'ACADEMIA' || true;
+    }
+    const currentGradeObj = academicGrades.find((g) => g.name === selectedGrade);
+    const lvl = currentGradeObj?.level?.toUpperCase() || '';
+    const gName = selectedGrade?.toUpperCase() || '';
+    return lvl.includes('ACADEMIA') || gName.includes('ACADEMIA') || gName.includes('UNSA') || gName.includes('CICLO');
+  }, [currentRole, activeStudent, academicGrades, selectedGrade]);
+
+  const activePeriods = isAcademiaMode ? ACADEMIA_PERIODS : COLEGIO_PERIODS;
 
   const availableSections = useMemo(() => {
     if (!selectedGrade) return [];
@@ -260,7 +282,7 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
         score: numScore,
         maxScore: 20,
         evaluationType,
-        period: selectedPeriod,
+        period: selectedPeriod === 'TODOS' ? activePeriods[0] : selectedPeriod,
         teacherName: currentUser?.name || 'Docente Whitman',
         feedback: feedback.trim(),
       });
@@ -302,7 +324,7 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
           score: num,
           maxScore: 20,
           evaluationType: rosterEvalType,
-          period: selectedPeriod,
+          period: selectedPeriod === 'TODOS' ? activePeriods[0] : selectedPeriod,
           teacherName: currentUser?.name || 'Docente Whitman',
           feedback: rosterFeedbacks[student.id] || '',
         });
@@ -458,7 +480,7 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
       score: r.score!,
       maxScore: 20,
       evaluationType: excelEvalType,
-      period: selectedPeriod,
+      period: selectedPeriod === 'TODOS' ? activePeriods[0] : selectedPeriod,
       teacherName: currentUser?.name || 'Docente Whitman',
       feedback: r.feedback || '',
     }));
@@ -482,7 +504,7 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
     setEditScore(String(grade.score));
     setEditTitle(grade.title);
     setEditFeedback(grade.feedback || '');
-    setEditPeriod(grade.period || selectedPeriod);
+    setEditPeriod(grade.period || (selectedPeriod === 'TODOS' ? activePeriods[0] : selectedPeriod));
   };
 
   const handleSaveEdit = async (e: React.FormEvent) => {
@@ -595,8 +617,10 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
               onChange={(e) => setSelectedPeriod(e.target.value)}
               className="text-xs font-bold border border-slate-200 bg-slate-50 text-slate-800 rounded-xl px-3 py-2"
             >
-              <option value="TODOS">Todos los Periodos</option>
-              {PERIODS.map((p) => (
+              <option value="TODOS">
+                {isAcademiaMode ? 'Todos los Exámenes Ranking' : 'Todos los Periodos'}
+              </option>
+              {activePeriods.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
@@ -749,13 +773,18 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-slate-600 mb-1">Periodo</label>
+            <label className="block text-xs font-bold text-slate-600 mb-1">
+              {isAcademiaMode ? 'Examen Ranking' : 'Periodo'}
+            </label>
             <select
               value={selectedPeriod}
               onChange={(e) => setSelectedPeriod(e.target.value)}
               className="w-full text-xs font-bold border border-slate-200 rounded-xl px-3 py-2 bg-white text-burgundy-900"
             >
-              {PERIODS.map((p) => (
+              <option value="TODOS">
+                {isAcademiaMode ? 'Todos los Exámenes Ranking' : 'Todos los Periodos'}
+              </option>
+              {activePeriods.map((p) => (
                 <option key={p} value={p}>{p}</option>
               ))}
             </select>
@@ -1281,13 +1310,15 @@ export const GradesManager: React.FC<GradesManagerProps> = ({
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-600 mb-1">Periodo</label>
+                  <label className="block text-xs font-bold text-slate-600 mb-1">
+                    {isAcademiaMode ? 'Examen Ranking' : 'Periodo'}
+                  </label>
                   <select
                     value={editPeriod}
                     onChange={(e) => setEditPeriod(e.target.value)}
                     className="w-full text-xs border border-slate-200 rounded-xl px-3 py-2 bg-white"
                   >
-                    {PERIODS.map((p) => (
+                    {activePeriods.map((p) => (
                       <option key={p} value={p}>{p}</option>
                     ))}
                   </select>
